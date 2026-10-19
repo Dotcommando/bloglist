@@ -34,7 +34,7 @@ export class Blog {
     required: true,
     trim: true,
     immutable: true,
-    match: /^\S+$/,
+    match: /^[A-Za-z][A-Za-z0-9]*$/,
   })
   declare mark: string;
 

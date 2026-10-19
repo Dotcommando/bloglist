@@ -21,7 +21,7 @@ export class Cluster {
     required: true,
     trim: true,
     immutable: true,
-    match: /^\S+$/,
+    match: /^[A-Za-z][A-Za-z0-9]*$/,
   })
   declare mark: string;
 
@@ -46,6 +46,7 @@ export class Cluster {
     required: true,
     lowercase: true,
     trim: true,
+    match: /^[a-z]{2}$/,
   })
   declare language: string;
 

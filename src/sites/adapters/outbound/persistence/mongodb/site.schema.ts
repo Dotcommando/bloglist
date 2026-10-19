@@ -21,7 +21,7 @@ export class Site {
     required: true,
     trim: true,
     immutable: true,
-    match: /^\S+$/,
+    match: /^[A-Za-z][A-Za-z0-9]*$/,
   })
   declare mark: string;
 
@@ -44,6 +44,14 @@ export class Site {
     type: [String],
     required: true,
     default: ['en'],
+    set: (values: string[]) =>
+      values.map((value) => value.trim().toLowerCase()),
+    validate: {
+      validator: (values: string[]): boolean =>
+        values.every((value) => /^[a-z]{2}$/.test(value))
+            && new Set(values).size === values.length,
+      message: 'languages must contain unique two-letter language codes',
+    },
   })
   declare languages: string[];
 

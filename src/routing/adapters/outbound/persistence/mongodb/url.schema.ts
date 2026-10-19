@@ -26,7 +26,7 @@ export class Url {
     required: true,
     trim: true,
     immutable: true,
-    match: /^\S+$/,
+    match: /^[A-Za-z][A-Za-z0-9]*$/,
   })
   declare mark: string;
 
@@ -43,6 +43,7 @@ export class Url {
     ref: 'Url',
     default: null,
     index: true,
+    immutable: true,
   })
   declare parentUrlId: Types.ObjectId | null;
 
@@ -50,6 +51,7 @@ export class Url {
     type: String,
     required: true,
     trim: true,
+    immutable: true,
   })
   declare segment: string;
 
@@ -57,6 +59,7 @@ export class Url {
     type: String,
     required: true,
     trim: true,
+    immutable: true,
   })
   declare path: string;
 

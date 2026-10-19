@@ -1,15 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
-export enum UrlHistoryKind {
-  PAGE = 'PAGE',
-  REDIRECT = 'REDIRECT',
-}
-
-export enum UrlHistoryRedirectStatus {
-  HTTP_301 = 301,
-  HTTP_308 = 308,
-}
+import { UrlKind, UrlRedirectStatus } from './url.schema.js';
 
 // Site ownership is inherited from the referenced URL.
 @Schema({
@@ -36,9 +28,9 @@ export class UrlHistory {
   @Prop({
     type: String,
     required: true,
-    enum: UrlHistoryKind,
+    enum: UrlKind,
   })
-  declare kind: UrlHistoryKind;
+  declare kind: UrlKind;
 
   @Prop({
     type: Types.ObjectId,
@@ -56,16 +48,15 @@ export class UrlHistory {
 
   @Prop({
     type: Number,
-    enum: UrlHistoryRedirectStatus,
+    enum: UrlRedirectStatus,
     default: null,
   })
-  declare redirectStatus: UrlHistoryRedirectStatus | null;
+  declare redirectStatus: UrlRedirectStatus | null;
 
   declare createdAt: Date;
 }
 
-export const UrlHistorySchema =
-  SchemaFactory.createForClass(UrlHistory);
+export const UrlHistorySchema = SchemaFactory.createForClass(UrlHistory);
 
 UrlHistorySchema.index({
   urlId: 1,
