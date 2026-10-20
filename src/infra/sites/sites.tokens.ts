@@ -1,5 +1,7 @@
 export const SITE_REPOSITORY = Symbol('sites.SiteRepository');
 
+export const SITE_CREATION_VALUES = Symbol('sites.SiteCreationValues');
+
 export const CREATE_SITE = Symbol('sites.CreateSite');
 
 export const UPDATE_SITE = Symbol('sites.UpdateSite');

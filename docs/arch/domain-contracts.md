@@ -6,7 +6,7 @@ The shared backend uses top-level architectural layers, as recorded in
 [ADR 0002](../adr/0002-layer-first-source-layout.md):
 
 - Domain models: `src/domain/<capability>/`.
-- Empty use-case files: `src/app/use-cases/<capability>/`.
+- Use-case files: `src/app/use-cases/<capability>/` (sites implemented; other capabilities remain empty).
 - Inbound and outbound contracts: `src/ports/<direction>/<capability>/`.
 - MongoDB schemas: `src/adapters/outbound/persistence/mongodb/<capability>/`.
 - Capability DI tokens: `src/infra/<capability>/`.
@@ -55,7 +55,7 @@ operations do not synthesize wall-clock times or manage persistence timestamps;
 
 ## Inbound operations
 
-There is one inbound `I<Action>` contract per empty use-case file. Each exposes
+There is one inbound `I<Action>` contract per use-case file. Each exposes
 `execute` returning a Promise. Create inputs contain business fields, without
 caller-assigned entity IDs or persistence timestamps. Optional update fields mean
 unchanged when omitted; `null` clears a nullable field. Marks, site identity,
@@ -67,17 +67,72 @@ introduced. Mutating entity operations return the saved entity. Removing a
 cluster placement and reordering placements return `void`. URL history returns
 an array of readonly `IUrlHistoryEntry` snapshots.
 
-All application contracts are declarations only. Their future implementations
-must reject failed preconditions rather than return partial success. Expected
+The five site operations are implemented as described below. Other application
+contracts remain declarations only. Implementations must reject failed
+preconditions rather than return partial success. Expected
 failure categories are missing referenced entities, uniqueness conflicts,
 invalid language/site/parent relationships, hierarchy cycles and stale writes.
-No concrete application error taxonomy or REST error encoding is implemented
-yet; those contracts require agreement before implementing the use cases.
+The agreed site errors are described below. Other application error taxonomies
+and REST error encoding require agreement before implementation.
 
 Site and user identities must come from trusted, authorized administrative
 context. A string in an input or repository signature is not proof of authority.
-Future orchestration must validate site ownership before reads and writes,
+Site operations require a trusted platform administrative caller; no new public
+endpoint or authentication policy is introduced here. Future site-owned
+orchestration must validate site ownership before reads and writes,
 including operations whose repository lookup accepts only an entity identifier.
+
+### Implemented site operations
+
+The existing inbound inputs and results are unchanged. All five operations use
+`ISiteRepository`; creation additionally uses `ISiteCreationValues` for a new
+opaque identity and an explicit current instant. The system adapter generates
+UUIDs and UTC instants; tests supply deterministic values.
+
+- Create constructs and validates an ACTIVE site, normalizing its hostname and
+  language codes through the domain entity. Its initial `createdAt` and
+  `updatedAt` use the same instant. It checks the mark and normalized primary
+  domain for uniqueness before saving.
+- Update loads the requested site and modifies a detached copy. It adds languages,
+  changes the default, then removes languages, permitting replacement of the old
+  default in one operation. Invalid intermediate domain states fail. Omitted
+  fields remain unchanged. A changed normalized hostname must not belong to
+  another site. Mark, identity, status and timestamps cannot be edited by this
+  operation.
+- Archive loads the requested site, archives a detached copy and saves it.
+  An already archived site remains archived. No related content is deleted or
+  published, and no publication output is switched by this operation.
+- Get returns the requested site or `null`; list returns all repository results,
+  including archived sites, without filtering or truncation.
+- Mutations return the repository's saved entity. Update and archive leave the
+  loaded entity unchanged even if validation, uniqueness checks or saving fails.
+  Their persistence timestamps remain adapter-owned.
+
+Agreed failures:
+
+| Condition | Outcome |
+| --- | --- |
+| Missing site for update/archive | `SiteNotFoundError`, including `siteId` |
+| Existing mark on create, or primary domain owned by another site | `SiteConflictError` |
+| Invalid domain state or hostname syntax | Existing domain `RangeError` / parser `TypeError` |
+| Repository read or save failure | Original error propagated; no partial success returned |
+
+Pre-save uniqueness checks do not replace atomic uniqueness enforcement. The
+supplied repository must enforce case-insensitive mark and normalized-domain
+uniqueness during save, including concurrent requests, and translate technical
+conflicts into `SiteConflictError`. The current contract has no version argument;
+no new stale-write guarantee is claimed for site updates. Atomic save semantics,
+durability, identifier mapping and persistence timestamps belong to the supplied
+adapter. No persistence implementation or production binding is added here.
+
+`SitesModule.register({ repository, imports? })` binds the five inbound tokens to
+their use cases. The repository is a Nest provider using `SITE_REPOSITORY`;
+optional imports supply its dependencies. Invalid provider tokens fail during
+registration. `AppModule.registerSites(options)` imports and re-exports the
+configured sites module. Plain `AppModule` remains usable by the existing
+bootstrap without a repository. Callers enable sites by supplying a repository
+to `AppModule.registerSites`; no fallback storage is selected. See
+[ADR 0003](../adr/0003-site-use-cases-and-composition.md).
 
 ## Outbound obligations for future adapters
 
@@ -121,4 +176,4 @@ transaction behavior.
 
 Persistence adapters for all seven entities, the atomic routing operation and
 all five lookup adapters remain future work. No database changes or adapter
-bindings are introduced by this increment.
+bindings for persistence are introduced by the site use cases.

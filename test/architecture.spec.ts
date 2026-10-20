@@ -64,7 +64,7 @@ describe('Capability boundaries', () => {
     }
   });
 
-  it('creates exactly the requested empty use-case files, each with a corresponding inbound contract', () => {
+  it('keeps one use-case file per inbound contract and implements only the authorized capability', () => {
     const expected: Record<string, string[]> = {
       sites: ['create-site', 'update-site', 'archive-site', 'get-site', 'list-sites'],
       clusters: [
@@ -89,7 +89,14 @@ describe('Capability boundaries', () => {
         .toEqual(operations.map((operation) => `${operation}.use-case.ts`).sort());
 
       for (const operation of operations) {
-        expect(readFileSync(`src/app/use-cases/${module}/${operation}.use-case.ts`, 'utf8')).toBe('');
+        const implementation = readFileSync(`src/app/use-cases/${module}/${operation}.use-case.ts`, 'utf8');
+
+        if (module === 'sites') {
+          expect(implementation).toContain('export class ');
+          expect(implementation).toContain('implements I');
+        } else {
+          expect(implementation).toBe('');
+        }
         expect(readFileSync(`src/ports/inbound/${module}/${operation}.port.ts`, 'utf8')).toContain('execute(');
       }
     }
@@ -139,7 +146,7 @@ describe('Capability boundaries', () => {
           expect(targetParts[1], `${file}: wrong port direction`).toBe(parts[1]);
         }
         if (targetLayer === 'adapters') {
-          const integrationDepth = parts[1] === 'outbound' ? 5 : 3;
+          const integrationDepth = parts[1] === 'outbound' ? parts.length - 1 : 3;
 
           expect(targetParts.slice(0, integrationDepth), `${file}: another adapter implementation`)
             .toEqual(parts.slice(0, integrationDepth));
@@ -147,7 +154,7 @@ describe('Capability boundaries', () => {
         if (parts[1] === 'outbound' && ['domain', 'ports', 'infra'].includes(targetLayer)) {
           const targetCapability = targetParts[targetLayer === 'ports' ? 2 : 1];
 
-          expect(targetCapability, `${file}: another capability implementation`).toBe(parts[4]);
+          expect(targetCapability, `${file}: another capability implementation`).toBe(parts.at(-2));
         }
       }
     }
