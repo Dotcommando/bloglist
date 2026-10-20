@@ -16,7 +16,7 @@ Treat tenant isolation, publication correctness and access entitlements as
 business requirements.
 
 Use npm, Docker, strict TypeScript, NestJS and MongoDB with Mongoose. Preserve
-Hexagonal Architecture within capability modules of the shared backend. Do not
+Hexagonal Architecture with layer-first directories in the shared backend. Do not
 split capabilities into microservices without a concrete requirement.
 Do not scaffold unused services, integrations or directories.
 
@@ -69,17 +69,44 @@ Follow Hexagonal Architecture / Ports & Adapters. Dependencies point inward:
 `app`, adapters or `infra`. Inbound adapters call inbound interfaces, not concrete
 use-case classes. Define operation contracts in ports and business types in
 domain so an interface never needs an implementation import.
-Adapters may import feature-owned `infra/*.tokens.ts` for framework injection;
-these files are leaf constants with no implementation imports. This exception
+Adapters may import capability-owned DI token files from `infra` for framework
+injection; these files are leaf constants with no implementation imports. This exception
 does not permit adapter imports of composition modules or concrete use cases.
 
-Use these directories within each backend capability module or actual service.
-Do not add a `presentation` directory inside or alongside `adapters/inbound`.
-Organize inbound adapters by entry point (`rest`, `grpc`, `graphql`, `nats`, `cli`)
-and outbound adapters by integration (`persistence`, `clients`, `nats`) as needed.
-A NATS consumer is inbound; a publisher is outbound. Create only directories
-with actual implementations. Repository-root `infra/` contains deployment and
-local environment definitions; application-local `src/infra/` wires that application.
+### Source organization and extension principles
+
+Organize each backend application by architectural layer first. Domain,
+application, ports, adapters and composition are sibling layers under the
+application source root. Within a layer, group code by its role and owning
+business capability. Add a new domain within these existing layers; do not
+introduce a capability root that duplicates the application's layers.
+Directory organization is a repository convention; inward dependencies and
+responsibility boundaries are the architectural requirements it must preserve.
+
+Order adapter grouping from the technical boundary toward business ownership:
+first direction, then entry point or integration responsibility, then concrete
+protocol, technology or provider where needed, and finally the capability.
+Inbound adapters are grouped by entry point before capability. Outbound
+persistence adapters are grouped by storage technology before capability;
+other outbound integrations follow the same principle. Avoid repeating a
+technology subtree inside each capability. Add only the grouping levels and
+implementations required by the current task, without placeholder directories.
+A consumer is inbound and a publisher is outbound, even when both use the same
+broker. Grouping adapters under one technology does not grant access to another
+capability's repositories, collections or implementation details.
+
+Extend the backend from business responsibilities and agreed scenarios. Domain
+entities and policies own invariants and state transitions. Application use
+cases own sequencing, cross-entity checks and outcomes, and call explicit ports
+for external capabilities. Adapters translate and execute technical operations;
+composition binds implementations and validated settings. Keep business logic
+in its owning layer when adding domains, entry points or integrations, and
+preserve capability ownership across the shared layer directories.
+
+Framework composition belongs in the composition layer; the source entry point
+bootstraps it. Keep deployment and local environment definitions outside
+application source composition. Do not add a separate presentation layer
+alongside or inside inbound adapters.
 
 Neither `domain`, `app` nor `ports` imports NestJS, Mongoose/MongoDB driver types,
 generated transport DTOs, HTTP/GraphQL decorators or broker SDKs. Convert external payloads
@@ -103,7 +130,9 @@ a ready-made implementation or a technology API. Changes to agreed contracts
 require agreement before implementation; unchanged contracts already approved
 in the current work do not need repeated approval.
 
-Each capability owns its domain, application, persistence, migrations and events.
+Each capability logically owns its domain, application, persistence, migrations
+and events across these layers; ownership does not require a capability root
+containing its own copies of the layers.
 Cross-capability access goes through explicit ports and contracts, not another
 capability's repositories or collections. Never import another application's `src`
 or access its database directly. Shared cross-service business contracts are
@@ -144,7 +173,7 @@ A service is not the default destination for workflows.
   `domain` or `app`. NestJS modules stay in `infra`.
 - Support files name their role, such as `.dto.ts`, `.error.ts`, `.policy.ts`,
   `.factory.ts` or `.tokens.ts`. Do not label data/contracts as services.
-- Shared DI symbols belong to feature-owned `infra` `.tokens.ts` files.
+- Shared DI symbols belong to capability-owned `.tokens.ts` files in `infra`.
   Controllers do not export shared tokens. Keep class tokens where appropriate;
   `domain`, `app` and `ports` must not import composition token modules.
 

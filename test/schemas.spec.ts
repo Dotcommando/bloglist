@@ -1,13 +1,22 @@
 import { model, Types } from 'mongoose';
 
-import { ClusterSchema } from '../src/clusters/adapters/outbound/persistence/mongodb/cluster.schema.js';
-import { ClusterBlogSchema } from '../src/clusters/adapters/outbound/persistence/mongodb/cluster-blog.schema.js';
-import { BlogSchema } from '../src/creators/adapters/outbound/persistence/mongodb/blog.schema.js';
-import { BloggerSchema } from '../src/creators/adapters/outbound/persistence/mongodb/blogger.schema.js';
-import { PageSchema } from '../src/pages/adapters/outbound/persistence/mongodb/page.schema.js';
-import { UrlSchema } from '../src/routing/adapters/outbound/persistence/mongodb/url.schema.js';
-import { UrlHistorySchema } from '../src/routing/adapters/outbound/persistence/mongodb/url-history.schema.js';
-import { SiteSchema } from '../src/sites/adapters/outbound/persistence/mongodb/site.schema.js';
+import { ClusterSchema } from '../src/adapters/outbound/persistence/mongodb/clusters/cluster.schema.js';
+import { ClusterBlogSchema } from '../src/adapters/outbound/persistence/mongodb/clusters/cluster-blog.schema.js';
+import { BlogSchema } from '../src/adapters/outbound/persistence/mongodb/creators/blog.schema.js';
+import { BloggerSchema } from '../src/adapters/outbound/persistence/mongodb/creators/blogger.schema.js';
+import { PageSchema } from '../src/adapters/outbound/persistence/mongodb/pages/page.schema.js';
+import { UrlSchema } from '../src/adapters/outbound/persistence/mongodb/routing/url.schema.js';
+import { UrlHistorySchema } from '../src/adapters/outbound/persistence/mongodb/routing/url-history.schema.js';
+import { SiteSchema } from '../src/adapters/outbound/persistence/mongodb/sites/site.schema.js';
+import {
+  bloggerState,
+  blogState,
+  clusterState,
+  pageState,
+  placementState,
+  siteState,
+  urlState,
+} from './domain.fixtures.js';
 
 const SiteModel = model('SchemaTestSite', SiteSchema);
 
@@ -26,6 +35,24 @@ const BlogModel = model('SchemaTestBlog', BlogSchema);
 const ClusterBlogModel = model('SchemaTestClusterBlog', ClusterBlogSchema);
 
 describe('MongoDB schemas without a database connection', () => {
+  it('maps every persistence field into domain state with an entity-specific opaque identifier', () => {
+    const mappings = [
+      { schema: SiteSchema, state: siteState(), identity: 'siteId' },
+      { schema: ClusterSchema, state: clusterState(), identity: 'clusterId' },
+      { schema: ClusterBlogSchema, state: placementState(), identity: 'clusterBlogPlacementId' },
+      { schema: PageSchema, state: pageState(), identity: 'pageId' },
+      { schema: UrlSchema, state: urlState(), identity: 'urlId' },
+      { schema: BloggerSchema, state: bloggerState(), identity: 'bloggerId' },
+      { schema: BlogSchema, state: blogState(), identity: 'blogId' },
+    ];
+
+    for (const { schema, state, identity } of mappings) {
+      const fields = Object.keys(schema.paths).map((field) => field === '_id' ? identity : field);
+
+      expect(Object.keys(state).sort()).toEqual(fields.sort());
+    }
+  });
+
   it('accepts the agreed minimal documents and applies defaults', async () => {
     const siteId = new Types.ObjectId();
     const clusterId = new Types.ObjectId();

@@ -1,0 +1,11 @@
+export enum BlogPlatform {
+  YOUTUBE = 'YOUTUBE',
+  INSTAGRAM = 'INSTAGRAM',
+  TIKTOK = 'TIKTOK',
+  X = 'X',
+  FACEBOOK = 'FACEBOOK',
+  LINKEDIN = 'LINKEDIN',
+  DISCORD = 'DISCORD',
+  WEBSITE = 'WEBSITE',
+  OTHER = 'OTHER',
+}
