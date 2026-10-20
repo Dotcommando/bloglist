@@ -1,6 +1,7 @@
 import type { Page } from '../../../domain/pages/page.js';
 
 export interface IPublishPageInput {
+  siteId: string;
   pageId: string;
 }
 

@@ -1,6 +1,7 @@
 import type { Page } from '../../../domain/pages/page.js';
 
 export interface IAssignPageToClusterInput {
+  siteId: string;
   pageId: string;
   clusterId: string | null;
 }

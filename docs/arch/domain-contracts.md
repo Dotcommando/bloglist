@@ -6,7 +6,7 @@ The shared backend uses top-level architectural layers, as recorded in
 [ADR 0002](../adr/0002-layer-first-source-layout.md):
 
 - Domain models: `src/domain/<capability>/`.
-- Use-case files: `src/app/use-cases/<capability>/` (sites and routing implemented; other capabilities remain empty).
+- Use-case files: `src/app/use-cases/<capability>/` (sites, routing and pages implemented).
 - Inbound and outbound contracts: `src/ports/<direction>/<capability>/`.
 - MongoDB schemas: `src/adapters/outbound/persistence/mongodb/<capability>/`.
 - Capability DI tokens: `src/infra/<capability>/`.
@@ -67,12 +67,12 @@ introduced. Mutating entity operations return the saved entity. Removing a
 cluster placement and reordering placements return `void`. URL history returns
 an array of readonly `IUrlHistoryEntry` snapshots.
 
-The five site and four routing operations are implemented as described below. Other application
+The five site, four routing and seven page operations are implemented as described below. Other application
 contracts remain declarations only. Implementations must reject failed
 preconditions rather than return partial success. Expected
 failure categories are missing referenced entities, uniqueness conflicts,
 invalid language/site/parent relationships, hierarchy cycles and stale writes.
-The agreed site and routing errors are described below. Other application error taxonomies
+The agreed site, routing and page errors are described below. Other application error taxonomies
 and REST error encoding require agreement before implementation.
 
 Site and user identities must come from trusted, authorized administrative
@@ -204,6 +204,92 @@ their inbound providers. `registerSites` remains supported. Plain `AppModule`
 still boots without persistence. See
 [ADR 0004](../adr/0004-routing-use-cases-and-site-scoping.md).
 
+### Implemented page operations
+
+All seven page operations are implemented and exported. Single-page operations
+require `siteId` alongside `pageId`, applying the agreed site-scoping rule to
+archive and get as well as update, assignment and publication. Creation and list
+already accept siteId. Only site equality is checked; users and roles are not
+modeled by these operations.
+
+- Create constructs a DRAFT with a generated opaque identity and one UTC instant
+  for initial creation/update timestamps. Defaults match the schema: STATIC,
+  no cluster, nullable heading/SEO fields, empty Markdown, robotsIndex=true and
+  publishedAt=null. Optional business values are preserved. Domain normalization
+  trims the title and normalizes the language before reference checks.
+  The site must exist and enable the language. A supplied cluster must exist,
+  belong to the same site and use the same language. Mark uniqueness is global
+  and case-insensitive, including across sites.
+- Update verifies ownership, edits a detached page using explicit domain
+  operations and saves it. Omitted fields remain unchanged; `null` clears a
+  nullable heading/SEO field. Updating one SEO field preserves the other.
+  Empty Markdown and robotsIndex=false are valid supplied values. Mark, site,
+  language, cluster and lifecycle values cannot be changed through this input.
+- Assignment verifies page ownership and changes its cluster on a detached
+  page. A non-null cluster must pass the same site/language checks as creation.
+  Passing `null` removes the assignment without requiring external site/cluster
+  lookups. Other page state remains unchanged.
+- Publish verifies page ownership, calls `Page.publish` with an explicit current
+  UTC instant, then saves the detached page. First publication sets publishedAt;
+  repeated publication and republication of archived pages preserve the original
+  instant. An archived page never previously published receives the current
+  instant. Content, robotsIndex and persistence timestamps remain unchanged by
+  the domain transition. This operation persists page publication state;
+  routing continues to own URL assignment, and output publication is a separate
+  workflow.
+- Archive checks page ownership, archives a detached page and saves it. An
+  already archived page remains archived. Content, cluster, robotsIndex and the
+  original publication/creation/update instants are preserved by the domain
+  transition. A never-published page retains publishedAt=null. Related URLs and
+  publication outputs continue to belong to their separate workflows.
+- Get reads a page by identity and verifies siteId before returning it. It
+  returns `null` when absent and `PageScopeError` for another site's page.
+  Draft, published and archived pages can all be returned in this administrative
+  operation.
+- List calls `findBySite` with the explicit siteId and only supported filter
+  fields: clusterId, language, type and status. Omitted values remain omitted;
+  clusterId=null is preserved. Filters are copied and extra fields are ignored,
+  so a filter cannot override siteId. The complete matching array is returned
+  without truncation or an implicit publication filter. An empty match returns
+  `[]`. Any out-of-site result causes `PageScopeError` for the entire operation,
+  rather than returning partial data. These read operations do not save pages.
+
+All page mutations return the repository's saved entity. Failed validation,
+lookup or saving cannot mutate the page instance returned by the repository.
+Persistence still owns final creation/update timestamps and durable writes.
+
+Agreed failures:
+
+| Condition | Outcome |
+| --- | --- |
+| Missing required mutation target, site or cluster | `PageNotFoundError` |
+| Missing page on get, or no matching pages on list | `null` or `[]`, respectively |
+| Occupied global mark | `PageConflictError` |
+| Page, site lookup result, cluster or list result belongs to another site | `PageScopeError` |
+| Disabled page language, cluster-language mismatch or invalid domain values/instants | `RangeError` / existing domain parser errors |
+| Repository or lookup failure | Original error propagated without retry |
+
+The errors live in domain, allowing persistence adapters to translate conflicts
+without importing application implementations. Mark prechecks do not replace
+atomic uniqueness during concurrent saves. The repository contract adds no
+version check or new stale-write guarantee.
+
+Two shared application services have separate responsibilities:
+`PageScopeService` loads and detaches the owned page for update, assignment,
+publication and archive; `PageRelationshipsService` validates site, enabled language and
+optional cluster references for creation and non-null assignment.
+`IPageLifecycleValues` supplies identities/instants for creation and instants for
+publication; its system adapter generates UUIDs and UTC instants.
+
+`PagesModule.register({ repository, siteLookup, clusterLookup, imports? })`
+requires providers under `PAGE_REPOSITORY`, `SITE_LOOKUP_PORT` and
+`CLUSTER_LOOKUP_PORT`. It exports all seven page inbound tokens.
+`AppModule.registerPages(options)` enables pages alone, while
+`AppModule.register({ sites, routing, pages })` supports joint composition.
+Concrete persistence and lookup adapters remain caller-supplied. See
+[ADR 0005](../adr/0005-first-four-page-use-cases.md) and
+[ADR 0006](../adr/0006-remaining-page-use-cases.md).
+
 ## Outbound obligations for future adapters
 
 Repository signatures follow the requested contracts. Mark lookups must preserve
@@ -226,8 +312,8 @@ saving. Cluster moves additionally require walking the ancestor chain to reject
 cycles, same-site and same-language parents. Blog creation must check blogger
 existence and mark, URL and optional platform/external-ID uniqueness; reassigning
 a blog must validate the new owner. These checks are not moved into domain models
-as a substitute for application orchestration; cluster, page and creator use
-cases remain empty.
+as a substitute for application orchestration; cluster and creator use cases
+remain empty.
 
 `IChangePageUrlPersistence` carries the expected previous URL state, new PAGE
 URL, redirect status and change instant. A future adapter must atomically:
@@ -247,4 +333,4 @@ transaction behavior.
 
 Persistence adapters for all seven entities, the atomic routing operation and
 all five lookup adapters remain future work. No database changes or adapter
-bindings for persistence are introduced by the site or routing use cases.
+bindings for persistence are introduced by these use cases.

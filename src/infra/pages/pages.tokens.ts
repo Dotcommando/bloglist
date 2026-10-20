@@ -4,6 +4,8 @@ export const SITE_LOOKUP_PORT = Symbol('pages.SiteLookupPort');
 
 export const CLUSTER_LOOKUP_PORT = Symbol('pages.ClusterLookupPort');
 
+export const PAGE_LIFECYCLE_VALUES = Symbol('pages.PageLifecycleValues');
+
 export const CREATE_PAGE = Symbol('pages.CreatePage');
 
 export const UPDATE_PAGE = Symbol('pages.UpdatePage');

@@ -90,8 +90,9 @@ describe('Capability boundaries', () => {
 
       for (const operation of operations) {
         const implementation = readFileSync(`src/app/use-cases/${module}/${operation}.use-case.ts`, 'utf8');
+        const implemented = ['sites', 'routing', 'pages'].includes(module);
 
-        if (module === 'sites' || module === 'routing') {
+        if (implemented) {
           expect(implementation).toContain('export class ');
           expect(implementation).toContain('implements I');
         } else {

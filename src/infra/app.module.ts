@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 
 import { AppController } from '../adapters/inbound/rest/app.controller.js';
 import { AppService } from '../adapters/inbound/rest/app.service.js';
+import type { IPagesModuleOptions } from './pages/pages.module.js';
+import { PagesModule } from './pages/pages.module.js';
 import type { IRoutingModuleOptions } from './routing/routing.module.js';
 import { RoutingModule } from './routing/routing.module.js';
 import type { ISitesModuleOptions } from './sites/sites.module.js';
@@ -11,6 +13,7 @@ import { SitesModule } from './sites/sites.module.js';
 export interface IAppModuleOptions {
   sites?: ISitesModuleOptions;
   routing?: IRoutingModuleOptions;
+  pages?: IPagesModuleOptions;
 }
 
 @Module({
@@ -27,6 +30,10 @@ export class AppModule {
     return this.register({ routing: options });
   }
 
+  static registerPages(options: IPagesModuleOptions): DynamicModule {
+    return this.register({ pages: options });
+  }
+
   static register(options: IAppModuleOptions): DynamicModule {
     const imports: DynamicModule[] = [];
 
@@ -35,6 +42,9 @@ export class AppModule {
     }
     if (options.routing) {
       imports.push(RoutingModule.register(options.routing));
+    }
+    if (options.pages) {
+      imports.push(PagesModule.register(options.pages));
     }
 
     return {

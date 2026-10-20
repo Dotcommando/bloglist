@@ -66,3 +66,24 @@ const rootModule = AppModule.register({
 Address changes use the atomic repository operation; transactional persistence
 and page lookup adapters remain to be supplied. See
 [routing contracts](docs/arch/domain-contracts.md#implemented-routing-operations).
+
+Pages provides `CREATE_PAGE`, `UPDATE_PAGE`, `ASSIGN_PAGE_TO_CLUSTER`,
+`PUBLISH_PAGE`, `ARCHIVE_PAGE`, `GET_PAGE` and `LIST_PAGES`.
+Register its repository and site/cluster lookups explicitly:
+
+```ts
+import { AppModule } from './src/infra/app.module.js';
+import { CLUSTER_LOOKUP_PORT, PAGE_REPOSITORY, SITE_LOOKUP_PORT } from './src/infra/pages/pages.tokens.js';
+
+const rootModule = AppModule.registerPages({
+  repository: { provide: PAGE_REPOSITORY, useValue: pageRepository },
+  siteLookup: { provide: SITE_LOOKUP_PORT, useValue: siteLookup },
+  clusterLookup: { provide: CLUSTER_LOOKUP_PORT, useValue: clusterLookup },
+});
+```
+
+The same options may be passed under `pages` in `AppModule.register` alongside
+sites and routing. Single-page operations require `siteId` and `pageId`.
+List accepts `siteId` and optional cluster/language/type/status filters and
+returns all matching pages. See
+[page contracts](docs/arch/domain-contracts.md#implemented-page-operations).
