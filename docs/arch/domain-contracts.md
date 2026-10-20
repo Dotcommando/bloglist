@@ -6,7 +6,7 @@ The shared backend uses top-level architectural layers, as recorded in
 [ADR 0002](../adr/0002-layer-first-source-layout.md):
 
 - Domain models: `src/domain/<capability>/`.
-- Use-case files: `src/app/use-cases/<capability>/` (sites, routing and pages implemented).
+- Use-case files: `src/app/use-cases/<capability>/` (sites, routing, pages and all ten cluster operations implemented).
 - Inbound and outbound contracts: `src/ports/<direction>/<capability>/`.
 - MongoDB schemas: `src/adapters/outbound/persistence/mongodb/<capability>/`.
 - Capability DI tokens: `src/infra/<capability>/`.
@@ -67,12 +67,13 @@ introduced. Mutating entity operations return the saved entity. Removing a
 cluster placement and reordering placements return `void`. URL history returns
 an array of readonly `IUrlHistoryEntry` snapshots.
 
-The five site, four routing and seven page operations are implemented as described below. Other application
+The five site, four routing, seven page and ten cluster operations are implemented
+as described below. Other application
 contracts remain declarations only. Implementations must reject failed
 preconditions rather than return partial success. Expected
 failure categories are missing referenced entities, uniqueness conflicts,
 invalid language/site/parent relationships, hierarchy cycles and stale writes.
-The agreed site, routing and page errors are described below. Other application error taxonomies
+The agreed site, routing, page and cluster errors are described below. Other application error taxonomies
 and REST error encoding require agreement before implementation.
 
 Site and user identities must come from trusted, authorized administrative
@@ -290,6 +291,136 @@ Concrete persistence and lookup adapters remain caller-supplied. See
 [ADR 0005](../adr/0005-first-four-page-use-cases.md) and
 [ADR 0006](../adr/0006-remaining-page-use-cases.md).
 
+### Implemented cluster operations
+
+The implemented operations are create, update, get, list, archive, move, add blog,
+update placement, remove blog and reorder blogs. Get/update/archive/move and all placement mutations
+require `siteId` alongside `clusterId`, as approved by the owner. The owning
+cluster determines placement site scope. Cluster creation uses the site lookup
+and `IClusterCreationValues` for an opaque identity and a UTC instant. The system
+adapter generates UUIDs and current instants.
+
+- Create builds an ACTIVE cluster with one instant for initial creation/update
+  timestamps. Parent, Markdown description, industry, geography and primaryQuery
+  default to null. Domain operations trim the name and optional metadata and
+  normalize the language, while preserving Markdown source. The site must
+  exist and enable the normalized language. A supplied parent must exist and
+  belong to the same site and language. Self-parenting fails domain validation.
+  The global case-insensitive mark must be unused. Creation saves only the new
+  identity and does not move existing clusters.
+- Update checks that the target exists and belongs to siteId, then edits a
+  detached copy through domain methods. Omitted fields remain unchanged; null
+  clears nullable fields. Empty nullable text is retained. Mark, identity,
+  site, language, parent, status and persistence timestamps cannot be changed
+  by this input. The repository's loaded instance remains unchanged on both
+  success and failure.
+- Get checks site ownership before returning an ACTIVE or ARCHIVED cluster;
+  an absent cluster returns null.
+- List calls `findBySite` with explicit siteId and a copy of supported filters:
+  language, status and parentClusterId. Null parent filters are preserved and
+  extra fields cannot override site scope. The complete matching array,
+  including archived clusters when matched, is returned without truncation or
+  an implicit status filter. No matches return `[]`. An out-of-site result
+  rejects the whole operation rather than returning partial data.
+- Archive loads and detaches the owned cluster, changes status to ARCHIVED and
+  saves it. Repeated archiving preserves that state. Content, parent, language,
+  timestamps, page references and blog placements are not altered by this
+  transition; no cascading changes are introduced.
+- Add blog checks the owning cluster's site before accessing the catalog or
+  placement repository. It requires the global blog to exist and the
+  `(clusterId, blogId)` pair to be unused. A new placement gets an opaque identity
+  and one UTC instant for initial timestamps, notesMd=null and visible=true
+  unless supplied. Finite fractional and negative positions remain supported.
+  Empty Markdown notes and visible=false are explicit supplied values.
+- Update placement checks the cluster's site before loading the exact pair and
+  editing a detached copy. It can change only position, notes and visibility;
+  omission means unchanged and null clears notes. Placement identity, pair and
+  timestamps remain unchanged by domain operations. A missing placement fails.
+- Remove blog checks the cluster's site and the existing exact placement, then
+  removes only that pair and returns void. A missing placement, including
+  repeated removal, raises ClusterNotFoundError. It does not delete the global
+  blog. Update/removal do not require the blog to still exist in the catalog.
+- Move loads the owned source as a detached entity and captures its expected
+  original state. It validates the proposed parent through `Cluster.moveTo`,
+  then walks the entire prospective ancestor chain, requiring every ancestor
+  to exist and use the same site/language. A visited-identity set rejects both
+  descendant moves and pre-existing ancestor cycles. Passing null moves the
+  cluster to root. Status, metadata and timestamps are unchanged by application
+  validation. One `IClusterRepository.move` call receives the expected source
+  state and new parent identity and returns the actual saved entity.
+- Reorder checks the cluster site first, then snapshots the supplied partial
+  position list. Domain policy rejects blank blog identities, duplicate blog
+  identities and non-finite/nonnumeric positions. Tied, fractional and negative
+  finite positions are allowed. An empty list succeeds after the site check
+  without placement reads or writes. For a nonempty list, every requested pair
+  must already belong to the cluster, including hidden placements. After all
+  checks, one `updatePositions` call updates the requested pairs and returns
+  void. Unlisted pairs, notes, visibility and placement identities are preserved;
+  catalog blog existence is not required.
+
+Saving mutations return the repository's saved entity; read operations do not save.
+Only site equality and the declared relationships are checked; users and roles
+are not introduced. Hierarchy changes use move rather than ordinary update.
+
+Agreed failures:
+
+| Condition | Outcome |
+| --- | --- |
+| Missing required site/ancestor/cluster, blog on addition, or requested existing placement | `ClusterNotFoundError` |
+| Occupied global mark, existing cluster/blog pair or stale expected move state | `ClusterConflictError` |
+| Target, site lookup result, parent or list result belongs to another site | `ClusterScopeError` |
+| Disabled language, ancestor-language mismatch, hierarchy cycle, duplicate reorder ID, invalid position/domain values or mismatched placement pair | `RangeError` / existing domain validation errors |
+| Missing cluster on get, or no matches on list | `null` or `[]`, respectively |
+| Repository or lookup failure | Original error propagated without retry |
+
+The business errors live in domain. Persistence must enforce global
+case-insensitive mark uniqueness atomically during save and translate technical
+conflicts into `ClusterConflictError`. Prechecks do not replace this guarantee.
+Ordinary saves introduce no version check; final persistence timestamps,
+identifier mapping and durable writes remain adapter obligations. Existing
+cluster saves must preserve the current persisted parent rather than overwrite
+it from an old edit/archive snapshot. Parent changes must use the move port.
+Placement persistence must enforce pair uniqueness atomically and translate
+duplicates into ClusterConflictError. Removal must target only the requested
+pair and report absence, including concurrent disappearance, as
+ClusterNotFoundError. Read-before-write checks do not introduce versioned
+updates or stronger concurrent-update guarantees than the current ports.
+
+The new move port must atomically verify the expected source state, re-read the
+current prospective ancestor chain, enforce same-site/same-language acyclic
+relationships and change the parent, or fail without writes. It must serialize
+competing hierarchy changes. Snapshot reads followed by independent writes to
+different clusters are insufficient: the adapter needs a shared hierarchy
+concurrency guard or equivalent serialization to prevent concurrent opposite
+moves from creating a cycle. A stale expected source raises ClusterConflictError;
+other current-state failures use the categories above. The use case does not
+retry or issue a separate save.
+
+Position persistence must atomically recheck all requested memberships and
+update all supplied positions together, or fail without any position writes.
+A pair removed after application prechecks raises ClusterNotFoundError for the
+whole batch. Use-case tests verify these single-call boundaries, snapshots and
+failure propagation; concrete hierarchy serialization and database rollback
+remain adapter obligations, not implemented persistence behavior.
+
+`ClusterScopeService` supports archive and all placement mutations by loading
+and detaching a cluster after checking its site. `ClusterBlogPlacementScopeService`
+supports update/removal by checking that scope first, validating the returned
+pair and detaching the placement. `IClusterBlogCreationValues` supplies new
+placement identities and UTC instants through its system adapter.
+
+`ClustersModule.register({ repository, siteLookup, placementRepository, blogLookup, imports? })`
+now requires all four providers under `CLUSTER_REPOSITORY`, the cluster-owned
+`SITE_LOOKUP_PORT`, `CLUSTER_BLOG_REPOSITORY` and `BLOG_LOOKUP_PORT`. Existing
+registration calls must supply the two new dependencies; no fallback is bound.
+It exports all ten cluster inbound tokens.
+`AppModule.registerClusters(options)` enables it alone; the combined
+`AppModule.register` accepts `clusters` alongside sites, pages and routing.
+Persistence and site lookup implementations remain caller-supplied.
+See [ADR 0007](../adr/0007-selected-cluster-use-cases.md) and
+[ADR 0008](../adr/0008-cluster-archive-and-blog-placements.md) and
+[ADR 0009](../adr/0009-cluster-moves-and-blog-reordering.md).
+
 ## Outbound obligations for future adapters
 
 Repository signatures follow the requested contracts. Mark lookups must preserve
@@ -312,8 +443,7 @@ saving. Cluster moves additionally require walking the ancestor chain to reject
 cycles, same-site and same-language parents. Blog creation must check blogger
 existence and mark, URL and optional platform/external-ID uniqueness; reassigning
 a blog must validate the new owner. These checks are not moved into domain models
-as a substitute for application orchestration; cluster and creator use cases
-remain empty.
+as a substitute for application orchestration; creator use cases remain empty.
 
 `IChangePageUrlPersistence` carries the expected previous URL state, new PAGE
 URL, redirect status and change instant. A future adapter must atomically:

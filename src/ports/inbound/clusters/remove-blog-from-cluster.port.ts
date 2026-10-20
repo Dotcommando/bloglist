@@ -1,4 +1,5 @@
 export interface IRemoveBlogFromClusterInput {
+  siteId: string;
   clusterId: string;
   blogId: string;
 }

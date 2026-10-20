@@ -1,6 +1,7 @@
 import type { Cluster } from '../../../domain/clusters/cluster.js';
 
 export interface IUpdateClusterInput {
+  siteId: string;
   clusterId: string;
   name?: string;
   descriptionMd?: string | null;

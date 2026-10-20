@@ -87,3 +87,32 @@ sites and routing. Single-page operations require `siteId` and `pageId`.
 List accepts `siteId` and optional cluster/language/type/status filters and
 returns all matching pages. See
 [page contracts](docs/arch/domain-contracts.md#implemented-page-operations).
+
+Clusters provides `CREATE_CLUSTER`, `UPDATE_CLUSTER`, `GET_CLUSTER`,
+`LIST_CLUSTERS`, `ARCHIVE_CLUSTER`, `ADD_BLOG_TO_CLUSTER`,
+`UPDATE_CLUSTER_BLOG_PLACEMENT`, `REMOVE_BLOG_FROM_CLUSTER`,
+`MOVE_CLUSTER` and `REORDER_CLUSTER_BLOGS`.
+Repositories and lookups are explicit providers:
+
+```ts
+import { AppModule } from './src/infra/app.module.js';
+import {
+  BLOG_LOOKUP_PORT, CLUSTER_BLOG_REPOSITORY, CLUSTER_REPOSITORY, SITE_LOOKUP_PORT,
+} from './src/infra/clusters/clusters.tokens.js';
+
+const rootModule = AppModule.registerClusters({
+  repository: { provide: CLUSTER_REPOSITORY, useValue: clusterRepository },
+  siteLookup: { provide: SITE_LOOKUP_PORT, useValue: siteLookup },
+  placementRepository: { provide: CLUSTER_BLOG_REPOSITORY, useValue: placementRepository },
+  blogLookup: { provide: BLOG_LOOKUP_PORT, useValue: blogLookup },
+});
+```
+
+The same options may be passed under `clusters` in combined registration.
+Single-cluster and placement operations require `siteId` and `clusterId`;
+placement operations also require `blogId`. List supports language, status and
+parentClusterId filters. Repeated removal of an absent placement fails.
+Move requires the repository's atomic `move` implementation. Reorder accepts
+a partial list of existing blogs and updates it through atomic `updatePositions`.
+See
+[cluster contracts](docs/arch/domain-contracts.md#implemented-cluster-operations).

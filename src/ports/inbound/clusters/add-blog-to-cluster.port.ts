@@ -1,6 +1,7 @@
 import type { ClusterBlogPlacement } from '../../../domain/clusters/cluster-blog-placement.js';
 
 export interface IAddBlogToClusterInput {
+  siteId: string;
   clusterId: string;
   blogId: string;
   position: number;

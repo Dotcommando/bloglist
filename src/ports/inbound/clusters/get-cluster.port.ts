@@ -1,6 +1,7 @@
 import type { Cluster } from '../../../domain/clusters/cluster.js';
 
 export interface IGetClusterInput {
+  siteId: string;
   clusterId: string;
 }
 

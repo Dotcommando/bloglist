@@ -4,6 +4,10 @@ export const CLUSTER_BLOG_REPOSITORY = Symbol('clusters.ClusterBlogRepository');
 
 export const SITE_LOOKUP_PORT = Symbol('clusters.SiteLookupPort');
 
+export const CLUSTER_CREATION_VALUES = Symbol('clusters.ClusterCreationValues');
+
+export const CLUSTER_BLOG_CREATION_VALUES = Symbol('clusters.ClusterBlogCreationValues');
+
 export const BLOG_LOOKUP_PORT = Symbol('clusters.BlogLookupPort');
 
 export const CREATE_CLUSTER = Symbol('clusters.CreateCluster');
