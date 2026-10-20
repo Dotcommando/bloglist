@@ -6,7 +6,7 @@ The shared backend uses top-level architectural layers, as recorded in
 [ADR 0002](../adr/0002-layer-first-source-layout.md):
 
 - Domain models: `src/domain/<capability>/`.
-- Use-case files: `src/app/use-cases/<capability>/` (sites implemented; other capabilities remain empty).
+- Use-case files: `src/app/use-cases/<capability>/` (sites and routing implemented; other capabilities remain empty).
 - Inbound and outbound contracts: `src/ports/<direction>/<capability>/`.
 - MongoDB schemas: `src/adapters/outbound/persistence/mongodb/<capability>/`.
 - Capability DI tokens: `src/infra/<capability>/`.
@@ -67,12 +67,12 @@ introduced. Mutating entity operations return the saved entity. Removing a
 cluster placement and reordering placements return `void`. URL history returns
 an array of readonly `IUrlHistoryEntry` snapshots.
 
-The five site operations are implemented as described below. Other application
+The five site and four routing operations are implemented as described below. Other application
 contracts remain declarations only. Implementations must reject failed
 preconditions rather than return partial success. Expected
 failure categories are missing referenced entities, uniqueness conflicts,
 invalid language/site/parent relationships, hierarchy cycles and stale writes.
-The agreed site errors are described below. Other application error taxonomies
+The agreed site and routing errors are described below. Other application error taxonomies
 and REST error encoding require agreement before implementation.
 
 Site and user identities must come from trusted, authorized administrative
@@ -134,6 +134,76 @@ bootstrap without a repository. Callers enable sites by supplying a repository
 to `AppModule.registerSites`; no fallback storage is selected. See
 [ADR 0003](../adr/0003-site-use-cases-and-composition.md).
 
+### Implemented routing operations
+
+The four routing use cases use `IUrlRepository`. Assignment and address changes
+share `PageUrlPreparationService`, which constructs a PAGE URL and validates
+page/parent ownership and mark/path availability through the existing ports.
+`IUrlCreationValues` supplies an opaque identity and one UTC instant for the
+new URL's `firstPublishedAt`, `createdAt` and `updatedAt`; the system adapter
+generates UUIDs and current instants. The input path is preserved exactly and
+checked by the existing domain invariants; no new normalization or derivation
+from parent/segment is introduced.
+
+- Assign initial URL requires a page from `siteId`, an existing parent from the
+  same site when supplied, an unused global case-insensitive mark, an unused
+  `(siteId, path)` and no current PAGE URL for the page. It returns the saved URL.
+- Change URL has the same page, parent, mark and path checks and requires the
+  current PAGE URL to reference that page and site. Reusing any existing path,
+  including the previous path, is a conflict. A detached copy validates the
+  redirect to the new identity with status 301 or 308. One `changePageUrl` call
+  receives the complete expected previous state, new PAGE URL, redirect status
+  and change instant. The loaded previous entity remains unchanged.
+- Change returns the submitted new URL only after the atomic persistence call
+  succeeds. That existing port returns `void`, so this operation does not perform
+  a separate save or a fallible read after commit. Its returned timestamps are
+  the submitted initial instants; unlike assignment, there is no returned
+  persistence timestamp refresh.
+- Find by path passes the exact `siteId` and path to the repository, returns PAGE
+  or REDIRECT behavior unchanged, and returns `null` when absent. It rejects an
+  out-of-site repository result rather than exposing it.
+- Get history now requires both `siteId` and `urlId`, as approved by the owner.
+  It loads the URL, verifies `siteId`, then reads the complete history and returns
+  detached snapshots, including copied dates. An existing URL without history
+  returns an empty array. A missing URL fails before reading history.
+
+Only site membership is checked in this increment; no users, roles or new
+authentication mechanism are added. The supplied `siteId` must be the intended
+site context. This equality check is not proof of a caller's authorization.
+URL hierarchy remains independent of page and cluster hierarchy; a parent need
+not serve a PAGE. No page publication status is inferred from the lookup port,
+which only exposes page and site identities. Static publication, cache
+invalidation and REST endpoints are not introduced by these operations.
+
+Agreed failures:
+
+| Condition | Outcome |
+| --- | --- |
+| Missing page, parent URL, current URL or history-owning URL | `RoutingNotFoundError` |
+| Occupied mark/path, or initial assignment to a page with a current URL | `RoutingConflictError` |
+| Page, parent, current URL or queried URL belongs to another site | `RoutingScopeError` |
+| Invalid domain values, unsupported redirect status or inconsistent current PAGE state | `RangeError` / existing parser `TypeError` |
+| Repository or lookup failure, including stale-write rejection | Original error propagated without retry or partial success |
+
+The business error classes live in domain so persistence adapters can translate
+technical conflicts without importing application implementations. Prechecks
+are advisory: supplied persistence must atomically enforce mark, site/path and
+single-current-PAGE uniqueness even for concurrent assignment. Atomic address
+changes must implement all obligations below, including stale-state detection,
+append-only history and rollback. Use-case tests verify validation, snapshots,
+the single atomic call and failure propagation; they do not claim a database
+transaction implementation. No concrete routing persistence or page lookup
+adapter is added.
+
+`RoutingModule.register({ repository, pageLookup, imports? })` requires providers
+under `URL_REPOSITORY` and `PAGE_LOOKUP_PORT`; optional imported modules may
+export their dependencies. It exports the four inbound operation tokens.
+`AppModule.registerRouting(options)` enables routing alone;
+`AppModule.register({ sites, routing })` composes both capabilities and re-exports
+their inbound providers. `registerSites` remains supported. Plain `AppModule`
+still boots without persistence. See
+[ADR 0004](../adr/0004-routing-use-cases-and-site-scoping.md).
+
 ## Outbound obligations for future adapters
 
 Repository signatures follow the requested contracts. Mark lookups must preserve
@@ -156,7 +226,8 @@ saving. Cluster moves additionally require walking the ancestor chain to reject
 cycles, same-site and same-language parents. Blog creation must check blogger
 existence and mark, URL and optional platform/external-ID uniqueness; reassigning
 a blog must validate the new owner. These checks are not moved into domain models
-as a substitute for the deliberately empty use cases.
+as a substitute for application orchestration; cluster, page and creator use
+cases remain empty.
 
 `IChangePageUrlPersistence` carries the expected previous URL state, new PAGE
 URL, redirect status and change instant. A future adapter must atomically:
@@ -176,4 +247,4 @@ transaction behavior.
 
 Persistence adapters for all seven entities, the atomic routing operation and
 all five lookup adapters remain future work. No database changes or adapter
-bindings for persistence are introduced by the site use cases.
+bindings for persistence are introduced by the site or routing use cases.

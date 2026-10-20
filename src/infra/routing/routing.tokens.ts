@@ -2,6 +2,8 @@ export const URL_REPOSITORY = Symbol('routing.UrlRepository');
 
 export const PAGE_LOOKUP_PORT = Symbol('routing.PageLookupPort');
 
+export const URL_CREATION_VALUES = Symbol('routing.UrlCreationValues');
+
 export const ASSIGN_INITIAL_PAGE_URL = Symbol('routing.AssignInitialPageUrl');
 
 export const CHANGE_PAGE_URL = Symbol('routing.ChangePageUrl');

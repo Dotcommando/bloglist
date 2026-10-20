@@ -64,7 +64,7 @@ describe('Capability boundaries', () => {
     }
   });
 
-  it('keeps one use-case file per inbound contract and implements only the authorized capability', () => {
+  it('keeps one use-case file per inbound contract and implements only the authorized capabilities', () => {
     const expected: Record<string, string[]> = {
       sites: ['create-site', 'update-site', 'archive-site', 'get-site', 'list-sites'],
       clusters: [
@@ -91,7 +91,7 @@ describe('Capability boundaries', () => {
       for (const operation of operations) {
         const implementation = readFileSync(`src/app/use-cases/${module}/${operation}.use-case.ts`, 'utf8');
 
-        if (module === 'sites') {
+        if (module === 'sites' || module === 'routing') {
           expect(implementation).toContain('export class ');
           expect(implementation).toContain('implements I');
         } else {
