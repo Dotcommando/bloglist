@@ -1,0 +1,3 @@
+# Existing behavior
+
+The [installation guide](../../../installation/en/INSTALLATION.md#private-github-add-on-repositories) currently requires a manual override. The production preparation script owns a resource override and preserves earlier CPU limits and credentials. The [defect index](../../../defects/installation/README.md) lists a different key-storage mechanism for administration address probes. Preserve deployment separation, independent resource limits and active key replacement from the [GitHub delivery contract](../../../arch/site-addons-contracts.md#repository-release-installation).

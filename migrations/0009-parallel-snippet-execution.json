@@ -1,0 +1,456 @@
+{
+  "id": "0009-parallel-snippet-execution",
+  "collections": [
+    {
+      "name": "rendering_elements",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "kind",
+            "key",
+            "version",
+            "html",
+            "css",
+            "browserTypeScript",
+            "parameters",
+            "createdAt",
+            "updatedAt",
+            "backupState",
+            "name"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Template",
+                "Chunk",
+                "Snippet"
+              ]
+            },
+            "key": {
+              "bsonType": "string",
+              "pattern": "^(?:[A-Za-z][A-Za-z0-9_]{0,127}|[1-9][0-9]{0,18})$"
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "html": {
+              "bsonType": "string"
+            },
+            "css": {
+              "bsonType": "string"
+            },
+            "browserTypeScript": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "parameters": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "required"
+                ],
+                "properties": {
+                  "name": {
+                    "bsonType": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "String",
+                      "Number",
+                      "Boolean",
+                      "Object",
+                      "Array",
+                      "Enum"
+                    ]
+                  },
+                  "required": {
+                    "bsonType": "bool"
+                  },
+                  "nullable": {
+                    "bsonType": "bool"
+                  },
+                  "defaultValue": {},
+                  "properties": {
+                    "bsonType": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "bsonType": "object"
+                    }
+                  },
+                  "items": {
+                    "bsonType": "object"
+                  },
+                  "values": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "backupState": {
+              "enum": [
+                "Pending",
+                "Ready"
+              ]
+            },
+            "backupGuard": {
+              "bsonType": "string"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "snippet": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "output",
+                "phases"
+              ],
+              "properties": {
+                "code": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 100000
+                },
+                "output": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "kind",
+                    "required"
+                  ],
+                  "properties": {
+                    "name": {
+                      "bsonType": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                    },
+                    "kind": {
+                      "enum": [
+                        "String",
+                        "Number",
+                        "Boolean",
+                        "Object",
+                        "Array",
+                        "Enum"
+                      ]
+                    },
+                    "required": {
+                      "bsonType": "bool"
+                    },
+                    "nullable": {
+                      "bsonType": "bool"
+                    },
+                    "defaultValue": {},
+                    "properties": {
+                      "bsonType": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "bsonType": "object"
+                      }
+                    },
+                    "items": {
+                      "bsonType": "object"
+                    },
+                    "values": {
+                      "bsonType": "array",
+                      "items": {
+                        "bsonType": "string"
+                      }
+                    }
+                  }
+                },
+                "phases": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "Build",
+                      "Request"
+                    ]
+                  }
+                },
+                "execution": {
+                  "enum": [
+                    "Sequential",
+                    "ParallelRead"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "key": 1
+          },
+          "name": "rendering_elements_site_kind_key_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "page_resolutions",
+      "dumpRole": "Runtime",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "path",
+            "startedAt",
+            "expiresAt",
+            "cmsVersion",
+            "durationMs",
+            "completionMs",
+            "method",
+            "representation",
+            "delivery",
+            "statusCode",
+            "outcome",
+            "stages",
+            "droppedStages"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "path": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^/[^?#]*$"
+            },
+            "startedAt": {
+              "bsonType": "date"
+            },
+            "expiresAt": {
+              "bsonType": "date"
+            },
+            "cmsVersion": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "durationMs": {
+              "bsonType": [
+                "double",
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "completionMs": {
+              "bsonType": [
+                "double",
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "method": {
+              "enum": [
+                "GET",
+                "HEAD"
+              ]
+            },
+            "representation": {
+              "enum": [
+                "Html",
+                "Markdown"
+              ]
+            },
+            "delivery": {
+              "enum": [
+                "Static",
+                "Dynamic",
+                "Redirect",
+                "Unresolved"
+              ]
+            },
+            "statusCode": {
+              "bsonType": [
+                "int",
+                "double"
+              ],
+              "minimum": 100,
+              "maximum": 599
+            },
+            "outcome": {
+              "enum": [
+                "Success",
+                "Redirect",
+                "NotFound",
+                "Invalid",
+                "Unavailable",
+                "Failure",
+                "Aborted"
+              ]
+            },
+            "droppedStages": {
+              "bsonType": [
+                "int",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "stages": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "parentId",
+                  "stage",
+                  "offsetMs",
+                  "durationMs",
+                  "outcome"
+                ],
+                "properties": {
+                  "id": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 1
+                  },
+                  "parentId": {
+                    "bsonType": [
+                      "int",
+                      "double",
+                      "null"
+                    ]
+                  },
+                  "stage": {
+                    "enum": [
+                      "site",
+                      "route",
+                      "activation",
+                      "plan",
+                      "request",
+                      "runtime",
+                      "tokenization",
+                      "parameters",
+                      "preparation",
+                      "snippet",
+                      "deduplication",
+                      "input",
+                      "output",
+                      "worker-queue",
+                      "worker-startup",
+                      "script",
+                      "bridge",
+                      "transfer",
+                      "cleanup",
+                      "composition",
+                      "validation",
+                      "assets",
+                      "json-ld",
+                      "style-hashes",
+                      "markdown",
+                      "artifact",
+                      "snippet-scheduling"
+                    ]
+                  },
+                  "offsetMs": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 0
+                  },
+                  "durationMs": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 0
+                  },
+                  "outcome": {
+                    "enum": [
+                      "Success",
+                      "Failure",
+                      "Aborted",
+                      "Timeout",
+                      "Fallback"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "page_resolution_site_time",
+          "key": {
+            "siteId": 1,
+            "startedAt": 1
+          }
+        },
+        {
+          "name": "page_resolution_site_version_time",
+          "key": {
+            "siteId": 1,
+            "cmsVersion": 1,
+            "startedAt": 1
+          }
+        },
+        {
+          "name": "page_resolution_retention",
+          "key": {
+            "expiresAt": 1
+          },
+          "expireAfterSeconds": 0
+        }
+      ]
+    }
+  ]
+}

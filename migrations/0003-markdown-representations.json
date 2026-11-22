@@ -1,0 +1,257 @@
+{
+  "id": "0003-markdown-representations",
+  "collections": [
+    {
+      "name": "publication_releases",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "state",
+            "manifest",
+            "failure",
+            "createdAt",
+            "completedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteKey": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+            },
+            "state": {
+              "enum": [
+                "Staged",
+                "Ready",
+                "Failed"
+              ]
+            },
+            "failure": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "completedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "manifest": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "routes",
+                "artifacts"
+              ],
+              "properties": {
+                "routes": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "urlId",
+                      "path"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "Static",
+                          "Request",
+                          "Redirect"
+                        ]
+                      },
+                      "urlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "path": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "pageId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "documentPath": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "markdownPath": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "renderPlanId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "targetUrlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "targetPath": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "status": {
+                        "enum": [
+                          301,
+                          308
+                        ]
+                      },
+                      "robotsIndex": {
+                        "bsonType": "bool"
+                      },
+                      "excludeFromSitemap": {
+                        "bsonType": "bool"
+                      },
+                      "systemDocument": {
+                        "enum": [
+                          null,
+                          "Sitemap",
+                          "Robots",
+                          "Llms"
+                        ]
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "maxLength": 255
+                      }
+                    }
+                  }
+                },
+                "artifacts": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "mimeType",
+                      "byteSize",
+                      "checksum",
+                      "public"
+                    ],
+                    "properties": {
+                      "path": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "byteSize": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double"
+                        ],
+                        "minimum": 0
+                      },
+                      "checksum": {
+                        "bsonType": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "public": {
+                        "bsonType": "bool"
+                      }
+                    }
+                  }
+                },
+                "publishedPages": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "siteId",
+                      "pageId",
+                      "urlId",
+                      "parentUrlId",
+                      "title",
+                      "language",
+                      "path"
+                    ],
+                    "properties": {
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "pageId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "urlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "parentUrlId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "title": {
+                        "bsonType": "string"
+                      },
+                      "language": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "path": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "pageNumber": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^[1-9][0-9]{0,18}$"
+                      },
+                      "tvValues": {
+                        "bsonType": "object"
+                      },
+                      "tv": {
+                        "bsonType": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "_id": 1
+          },
+          "name": "publication_releases_site_identity"
+        }
+      ]
+    }
+  ]
+}

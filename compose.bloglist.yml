@@ -1,0 +1,24 @@
+name: bloglist-trial
+services:
+  mongo:
+    image: mongo:9.0.8@sha256:1444adda2e4b8d6a0d7f242a625d834a78d6e3aa6e4ed1b0b4c2dab2318c5e3d
+    command: [mongod, --replSet, bloglist-rs, --bind_ip_all]
+    ports:
+      - '127.0.0.1:27042:27017'
+    volumes:
+      - bloglist-mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - >-
+          try { if (!db.hello().isWritablePrimary) { try { rs.status() } catch {
+          rs.initiate({_id:'bloglist-rs',members:[{_id:0,host:'localhost:27017'}]}) }
+          quit(1) } } catch { quit(1) }
+      interval: 3s
+      timeout: 5s
+      retries: 30
+volumes:
+  bloglist-mongo-data:

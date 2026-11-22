@@ -1,0 +1,51 @@
+{
+  "name": "${ZARYA_TEST_DOCKER_PROJECT:?Use a disposable zarya-calibration-qa-* project}",
+  "services": {
+    "app": {
+      "image": "${ZARYA_TEST_CMS_IMAGE:?Build the current Dockerfile build stage}",
+      "command": ["node", "-e", "setInterval(()=>{},1000)"],
+      "cpus": 5,
+      "environment": {
+        "ZARYA_TEST_MONGO_URI": "mongodb://mongo:27017/?directConnection=true&replicaSet=qa-rs",
+        "ZARYA_TEST_DOCKER_PROJECT": "${ZARYA_TEST_DOCKER_PROJECT}",
+        "ZARYA_TEST_DOCKER_HELPER_CONTAINER": "${ZARYA_TEST_DOCKER_PROJECT}-resource-control-1",
+        "ZARYA_RESOURCE_SOCKET": "/run/zarya/resources.sock",
+        "ZARYA_RESOURCE_SECRET_FILE": "/run/zarya/key",
+        "ZARYA_TEST_EVENTS_ADDON_DIRECTORY": "/runtimes/events",
+        "ZARYA_TEST_BLOGLIST_ADDON_DIRECTORY": "/runtimes/bloglist"
+      },
+      "volumes": [
+        "${ZARYA_TEST_CMS_ROOT:?Absolute checkout path}/test:/app/test:ro",
+        "${ZARYA_TEST_CMS_ROOT}/vitest.config.integration.ts:/app/vitest.config.integration.ts:ro",
+        "${ZARYA_TEST_CMS_ROOT}/migrations:/app/migrations:ro",
+        "${ZARYA_TEST_EVENTS_ADDON_DIRECTORY:?Explicit immutable Events runtime}:/runtimes/events:ro",
+        "${ZARYA_TEST_BLOGLIST_ADDON_DIRECTORY:?Explicit immutable Bloglist runtime}:/runtimes/bloglist:ro",
+        "${ZARYA_TEST_DOCKER_EVIDENCE_ROOT:?Private output directory}:/evidence",
+        "control:/run/zarya",
+        "/var/run/docker.sock:/var/run/docker.sock"
+      ]
+    },
+    "mongo": {
+      "image": "mongo:9.0.8@sha256:1444adda2e4b8d6a0d7f242a625d834a78d6e3aa6e4ed1b0b4c2dab2318c5e3d",
+      "cpus": 1,
+      "command": ["mongod", "--replSet", "qa-rs", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+    },
+    "resource-control": {
+      "image": "${ZARYA_TEST_CMS_IMAGE}",
+      "command": ["node", "dist/resource-helper.js"],
+      "network_mode": "service:app",
+      "environment": {
+        "ZARYA_RESOURCE_SOCKET": "/run/zarya/resources.sock",
+        "ZARYA_RESOURCE_SECRET_FILE": "/run/zarya/key",
+        "ZARYA_RESOURCE_OVERRIDE_FILE": "/run/zarya/compose.json",
+        "ZARYA_RESOURCE_COMPOSE_PROJECT": "${ZARYA_TEST_DOCKER_PROJECT}",
+        "ZARYA_INSTALLATION_CPU_BUDGET": "6",
+        "ZARYA_RESOURCE_UID": "0",
+        "ZARYA_RESOURCE_GID": "0",
+        "ZARYA_CALIBRATION_TARGET_ORIGIN": "http://127.0.0.1:3130"
+      },
+      "volumes": ["control:/run/zarya", "/var/run/docker.sock:/var/run/docker.sock"]
+    }
+  },
+  "volumes": { "control": {} }
+}

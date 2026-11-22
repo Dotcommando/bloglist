@@ -1,0 +1,12 @@
+services:
+  app:
+    environment:
+      ZARYA_GITHUB_APP_CLIENT_ID: ${ZARYA_GITHUB_APP_CLIENT_ID:?Set ZARYA_GITHUB_APP_CLIENT_ID}
+      ZARYA_GITHUB_APP_KEYS_DIR: /run/secrets/github-app
+    volumes:
+      - type: bind
+        source: ${ZARYA_GITHUB_APP_HOST_KEYS_DIR:-./.secrets/github-app}
+        target: /run/secrets/github-app
+        read_only: true
+        bind:
+          create_host_path: false

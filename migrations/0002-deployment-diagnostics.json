@@ -1,0 +1,360 @@
+{
+  "id": "0002-deployment-diagnostics",
+  "collections": [
+    {
+      "name": "deployment_targets",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "target",
+            "state",
+            "attempt",
+            "requested",
+            "attempts",
+            "retryAt",
+            "diagnostic",
+            "delivered"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "target": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "targetId",
+                "siteId",
+                "version",
+                "providerKey",
+                "destinationName",
+                "publicOrigin",
+                "backendOrigin",
+                "enabled",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "targetId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "providerKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "destinationName": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "publicOrigin": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "backendOrigin": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "enabled": {
+                  "bsonType": "bool"
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                }
+              }
+            },
+            "state": {
+              "enum": [
+                "Idle",
+                "Queued",
+                "Running",
+                "Succeeded",
+                "Failed",
+                "OutcomeUnknown"
+              ]
+            },
+            "attempt": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "attemptId",
+                "target",
+                "publication",
+                "startedAt",
+                "ownershipUntil"
+              ],
+              "properties": {
+                "attemptId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "target": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "targetId",
+                    "siteId",
+                    "version",
+                    "providerKey",
+                    "destinationName",
+                    "publicOrigin",
+                    "backendOrigin",
+                    "enabled",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "targetId": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "siteId": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "version": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "providerKey": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "destinationName": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "publicOrigin": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "backendOrigin": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "enabled": {
+                      "bsonType": "bool"
+                    },
+                    "createdAt": {
+                      "bsonType": "date"
+                    },
+                    "updatedAt": {
+                      "bsonType": "date"
+                    }
+                  }
+                },
+                "publication": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "releaseId",
+                    "generation"
+                  ],
+                  "properties": {
+                    "releaseId": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    },
+                    "generation": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "startedAt": {
+                  "bsonType": "date"
+                },
+                "ownershipUntil": {
+                  "bsonType": "date"
+                }
+              }
+            },
+            "requested": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "releaseId",
+                "generation"
+              ],
+              "properties": {
+                "releaseId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "attempts": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "retryAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "diagnostic": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "issue",
+                "retryable"
+              ],
+              "properties": {
+                "issue": {
+                  "enum": [
+                    "Configuration",
+                    "NoPublication",
+                    "Backend",
+                    "Storage",
+                    "Authorization",
+                    "DomainConflict",
+                    "ProviderUnavailable",
+                    "PublicationChanged",
+                    "Interrupted"
+                  ]
+                },
+                "retryable": {
+                  "bsonType": "bool"
+                },
+                "stage": {
+                  "enum": [
+                    "Upload",
+                    "ProviderVerification",
+                    "DomainVerification",
+                    "PublicVerification"
+                  ]
+                },
+                "reason": {
+                  "enum": [
+                    "UnconfirmedOutcome",
+                    "HttpStatus",
+                    "ReceiptMismatch",
+                    "ActiveVersionMismatch",
+                    "DomainMismatch",
+                    "Network",
+                    "Authorization"
+                  ]
+                },
+                "httpStatus": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double",
+                    "decimal"
+                  ],
+                  "minimum": 100,
+                  "maximum": 599,
+                  "multipleOf": 1
+                },
+                "recovery": {
+                  "enum": [
+                    "Reconcile",
+                    "CheckProviderAndReconcile",
+                    "CheckDomainAndReconcile",
+                    "CheckBackendAndReconcile",
+                    "CheckCredentialsAndReconcile"
+                  ]
+                }
+              }
+            },
+            "delivered": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "releaseId",
+                "generation",
+                "targetVersion",
+                "providerVersion",
+                "completedAt"
+              ],
+              "properties": {
+                "releaseId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "targetVersion": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "providerVersion": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "completedAt": {
+                  "bsonType": "date"
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "deployment_site_unique",
+          "key": {
+            "siteId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "deployment_destination_unique",
+          "key": {
+            "target.providerKey": 1,
+            "target.destinationName": 1
+          },
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

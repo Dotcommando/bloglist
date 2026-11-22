@@ -1,0 +1,299 @@
+{
+  "id": "0014-addon-calibration-scenarios",
+  "collections": [
+    {
+      "name": "calibration_profiles",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "version",
+            "name",
+            "scope",
+            "siteId",
+            "distributedCpu",
+            "createdAt",
+            "updatedAt",
+            "deletedAt",
+            "targets",
+            "criteria",
+            "search"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "version": {
+              "bsonType": "string"
+            },
+            "name": {
+              "bsonType": "string"
+            },
+            "scope": {
+              "enum": [
+                "Site",
+                "Installation"
+              ]
+            },
+            "siteId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "distributedCpu": {
+              "bsonType": [
+                "double",
+                "int",
+                "long",
+                "decimal"
+              ],
+              "minimum": 0.1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "deletedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "targets": {
+              "bsonType": "array",
+              "minItems": 1,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "siteId",
+                  "kind",
+                  "reference",
+                  "share"
+                ],
+                "properties": {
+                  "siteId": {
+                    "bsonType": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "RelativeUrl",
+                      "AbsoluteUrl",
+                      "PageNumber"
+                    ]
+                  },
+                  "reference": {
+                    "bsonType": "string"
+                  },
+                  "share": {
+                    "bsonType": [
+                      "double",
+                      "int",
+                      "long",
+                      "decimal"
+                    ],
+                    "minimum": 0,
+                    "maximum": 10000,
+                    "multipleOf": 1
+                  },
+                  "apiSteps": {
+                    "bsonType": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "bsonType": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "addonKey",
+                        "queryId"
+                      ],
+                      "properties": {
+                        "addonKey": {
+                          "bsonType": "string"
+                        },
+                        "queryId": {
+                          "bsonType": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "criteria": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "averageMs",
+                "medianMs",
+                "p95Ms",
+                "p99Ms"
+              ],
+              "properties": {
+                "averageMs": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal",
+                    "null"
+                  ]
+                },
+                "medianMs": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal",
+                    "null"
+                  ]
+                },
+                "p95Ms": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal",
+                    "null"
+                  ]
+                },
+                "p99Ms": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "search": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "processCounts",
+                "poolSizes",
+                "databaseCpuStep",
+                "warmupSeconds",
+                "probeSeconds",
+                "confirmationSeconds",
+                "maximumSeconds",
+                "concurrencyLevels"
+              ],
+              "properties": {
+                "processCounts": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "items": {
+                    "bsonType": [
+                      "double",
+                      "int",
+                      "long",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  }
+                },
+                "poolSizes": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "items": {
+                    "bsonType": [
+                      "double",
+                      "int",
+                      "long",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  }
+                },
+                "databaseCpuStep": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal"
+                  ],
+                  "minimum": 0.1
+                },
+                "warmupSeconds": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "probeSeconds": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "confirmationSeconds": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "maximumSeconds": {
+                  "bsonType": [
+                    "double",
+                    "int",
+                    "long",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "concurrencyLevels": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "items": {
+                    "bsonType": [
+                      "double",
+                      "int",
+                      "long",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "deletedAt": 1,
+            "_id": 1
+          },
+          "name": "calibration_profiles_site",
+          "unique": false
+        }
+      ]
+    }
+  ]
+}

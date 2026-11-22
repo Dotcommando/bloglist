@@ -1,0 +1,5 @@
+{
+  "id": "0018-addon-repository-update-action",
+  "transform": "AddonRepositoryUpdateActionV1",
+  "collections": []
+}

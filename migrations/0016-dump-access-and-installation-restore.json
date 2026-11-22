@@ -1,0 +1,22 @@
+{
+  "id": "0016-dump-access-and-installation-restore",
+  "transform": "DumpAccessV1",
+  "collections": [
+    {
+      "name": "installation_restore_commits",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["_id", "operationId"],
+          "additionalProperties": false,
+          "properties": {
+            "_id": { "enum": ["latest"] },
+            "operationId": { "bsonType": "string", "pattern": "^[a-f0-9-]{36}$" }
+          }
+        }
+      },
+      "indexes": []
+    }
+  ]
+}

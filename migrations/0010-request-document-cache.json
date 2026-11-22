@@ -1,0 +1,1181 @@
+{
+  "id": "0010-request-document-cache",
+  "collections": [
+    {
+      "name": "pages",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "mark",
+            "markKey",
+            "language",
+            "clusterId",
+            "type",
+            "status",
+            "title",
+            "h1",
+            "metaTitle",
+            "metaDescription",
+            "contentMd",
+            "robotsIndex",
+            "publishedAt",
+            "createdAt",
+            "updatedAt",
+            "pageNumber",
+            "parentPageId",
+            "sortOrder"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "language": {
+              "bsonType": "string",
+              "pattern": "^[a-z]{2}$"
+            },
+            "clusterId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "type": {
+              "enum": [
+                "STATIC",
+                "BLOG_LIST",
+                "MIXED"
+              ]
+            },
+            "status": {
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            },
+            "title": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "h1": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "contentMd": {
+              "bsonType": "string"
+            },
+            "robotsIndex": {
+              "bsonType": "bool"
+            },
+            "publishedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "rendering": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "templateId",
+                "delivery",
+                "interaction",
+                "parameters",
+                "loaders"
+              ],
+              "properties": {
+                "templateId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "delivery": {
+                  "enum": [
+                    "Static",
+                    "Request"
+                  ]
+                },
+                "interaction": {
+                  "enum": [
+                    "None",
+                    "Api"
+                  ]
+                },
+                "parameters": {
+                  "bsonType": "object"
+                },
+                "loaders": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "loaderId",
+                      "alias",
+                      "phase",
+                      "parameters",
+                      "dependsOn",
+                      "required"
+                    ],
+                    "properties": {
+                      "loaderId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "alias": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "phase": {
+                        "enum": [
+                          "Build",
+                          "Request"
+                        ]
+                      },
+                      "parameters": {
+                        "bsonType": "object"
+                      },
+                      "dependsOn": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "string"
+                        }
+                      },
+                      "required": {
+                        "bsonType": "bool"
+                      }
+                    }
+                  }
+                },
+                "requestCache": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "scope",
+                    "ttlMs"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "enum": [
+                        "SharedPublic"
+                      ]
+                    },
+                    "ttlMs": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double"
+                      ],
+                      "minimum": 1,
+                      "maximum": 3600000
+                    }
+                  }
+                }
+              }
+            },
+            "ogTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogImage": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogType": {
+              "enum": [
+                "website",
+                "article",
+                null
+              ]
+            },
+            "pageNumber": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[1-9][0-9]{0,18}$"
+            },
+            "parentPageId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "sortOrder": {
+              "bsonType": [
+                "int",
+                "long",
+                "double",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "tvValues": {
+              "bsonType": "object",
+              "maxProperties": 256,
+              "additionalProperties": {
+                "bsonType": [
+                  "string",
+                  "null",
+                  "object"
+                ]
+              }
+            },
+            "mimeType": {
+              "bsonType": "string",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+            },
+            "excludeFromSitemap": {
+              "bsonType": "bool"
+            },
+            "systemDocument": {
+              "enum": [
+                null,
+                "Sitemap",
+                "Robots",
+                "Llms"
+              ]
+            }
+          }
+        },
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$or": [
+                {
+                  "$ne": [
+                    "$status",
+                    "PUBLISHED"
+                  ]
+                },
+                {
+                  "$ne": [
+                    "$publishedAt",
+                    null
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "_id": 1
+          },
+          "name": "pages_site_identity"
+        },
+        {
+          "key": {
+            "clusterId": 1,
+            "_id": 1
+          },
+          "name": "pages_cluster_identity"
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "pageNumber": 1
+          },
+          "name": "pages_site_number_unique",
+          "unique": true,
+          "partialFilterExpression": {
+            "pageNumber": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "parentPageId": 1,
+            "sortOrder": 1
+          },
+          "name": "pages_site_parent_order"
+        },
+        {
+          "name": "pages_site_system_document_unique",
+          "key": {
+            "siteId": 1,
+            "systemDocument": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "systemDocument": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "markKey": 1
+          },
+          "name": "pages_site_mark_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "page_publications",
+      "validator": {
+        "$jsonSchema": {
+          "required": [
+            "_id",
+            "siteId",
+            "versions"
+          ],
+          "bsonType": "object",
+          "properties": {
+            "versions": {
+              "maxItems": 3,
+              "items": {
+                "required": [
+                  "publishedAt",
+                  "page"
+                ],
+                "bsonType": "object",
+                "properties": {
+                  "page": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "siteId",
+                      "mark",
+                      "language",
+                      "clusterId",
+                      "type",
+                      "status",
+                      "title",
+                      "h1",
+                      "metaTitle",
+                      "metaDescription",
+                      "contentMd",
+                      "robotsIndex",
+                      "publishedAt",
+                      "createdAt",
+                      "updatedAt",
+                      "pageId"
+                    ],
+                    "properties": {
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mark": {
+                        "bsonType": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+                      },
+                      "language": {
+                        "bsonType": "string",
+                        "pattern": "^[a-z]{2}$"
+                      },
+                      "clusterId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 1
+                      },
+                      "type": {
+                        "enum": [
+                          "STATIC",
+                          "BLOG_LIST",
+                          "MIXED"
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "DRAFT",
+                          "PUBLISHED",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "title": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "h1": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contentMd": {
+                        "bsonType": "string"
+                      },
+                      "robotsIndex": {
+                        "bsonType": "bool"
+                      },
+                      "publishedAt": {
+                        "bsonType": [
+                          "date",
+                          "null"
+                        ]
+                      },
+                      "createdAt": {
+                        "bsonType": "date"
+                      },
+                      "updatedAt": {
+                        "bsonType": "date"
+                      },
+                      "rendering": {
+                        "bsonType": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "templateId",
+                          "delivery",
+                          "interaction",
+                          "parameters",
+                          "loaders"
+                        ],
+                        "properties": {
+                          "templateId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          },
+                          "delivery": {
+                            "enum": [
+                              "Static",
+                              "Request"
+                            ]
+                          },
+                          "interaction": {
+                            "enum": [
+                              "None",
+                              "Api"
+                            ]
+                          },
+                          "parameters": {
+                            "bsonType": "object"
+                          },
+                          "loaders": {
+                            "bsonType": "array",
+                            "items": {
+                              "bsonType": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "loaderId",
+                                "alias",
+                                "phase",
+                                "parameters",
+                                "dependsOn",
+                                "required"
+                              ],
+                              "properties": {
+                                "loaderId": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "alias": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "phase": {
+                                  "enum": [
+                                    "Build",
+                                    "Request"
+                                  ]
+                                },
+                                "parameters": {
+                                  "bsonType": "object"
+                                },
+                                "dependsOn": {
+                                  "bsonType": "array",
+                                  "items": {
+                                    "bsonType": "string"
+                                  }
+                                },
+                                "required": {
+                                  "bsonType": "bool"
+                                }
+                              }
+                            }
+                          },
+                          "requestCache": {
+                            "bsonType": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "scope",
+                              "ttlMs"
+                            ],
+                            "properties": {
+                              "scope": {
+                                "enum": [
+                                  "SharedPublic"
+                                ]
+                              },
+                              "ttlMs": {
+                                "bsonType": [
+                                  "int",
+                                  "long",
+                                  "double"
+                                ],
+                                "minimum": 1,
+                                "maximum": 3600000
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "pageId": {
+                        "minLength": 1,
+                        "bsonType": "string"
+                      },
+                      "ogTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogImage": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogType": {
+                        "enum": [
+                          "website",
+                          "article",
+                          null
+                        ]
+                      },
+                      "pageNumber": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^[1-9][0-9]{0,18}$"
+                      },
+                      "parentPageId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "sortOrder": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "tvValues": {
+                        "bsonType": "object",
+                        "maxProperties": 256,
+                        "additionalProperties": {
+                          "bsonType": [
+                            "string",
+                            "null",
+                            "object"
+                          ]
+                        }
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "maxLength": 255,
+                        "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+                      },
+                      "excludeFromSitemap": {
+                        "bsonType": "bool"
+                      },
+                      "systemDocument": {
+                        "enum": [
+                          null,
+                          "Sitemap",
+                          "Robots",
+                          "Llms"
+                        ]
+                      }
+                    }
+                  },
+                  "publishedAt": {
+                    "bsonType": "date"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "bsonType": "array",
+              "minItems": 1
+            },
+            "siteId": {
+              "minLength": 1,
+              "bsonType": "string"
+            },
+            "_id": {
+              "minLength": 1,
+              "bsonType": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "_id": 1,
+            "siteId": 1
+          },
+          "name": "page_publications_site_identity"
+        }
+      ]
+    },
+    {
+      "name": "rendering_elements",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "kind",
+            "key",
+            "version",
+            "html",
+            "css",
+            "browserTypeScript",
+            "parameters",
+            "createdAt",
+            "updatedAt",
+            "backupState",
+            "name"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Template",
+                "Chunk",
+                "Snippet"
+              ]
+            },
+            "key": {
+              "bsonType": "string",
+              "pattern": "^(?:[A-Za-z][A-Za-z0-9_]{0,127}|[1-9][0-9]{0,18})$"
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "html": {
+              "bsonType": "string"
+            },
+            "css": {
+              "bsonType": "string"
+            },
+            "browserTypeScript": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "parameters": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "required"
+                ],
+                "properties": {
+                  "name": {
+                    "bsonType": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "String",
+                      "Number",
+                      "Boolean",
+                      "Object",
+                      "Array",
+                      "Enum"
+                    ]
+                  },
+                  "required": {
+                    "bsonType": "bool"
+                  },
+                  "nullable": {
+                    "bsonType": "bool"
+                  },
+                  "defaultValue": {},
+                  "properties": {
+                    "bsonType": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "bsonType": "object"
+                    }
+                  },
+                  "items": {
+                    "bsonType": "object"
+                  },
+                  "values": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "backupState": {
+              "enum": [
+                "Pending",
+                "Ready"
+              ]
+            },
+            "backupGuard": {
+              "bsonType": "string"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "snippet": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "output",
+                "phases"
+              ],
+              "properties": {
+                "code": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 100000
+                },
+                "output": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "kind",
+                    "required"
+                  ],
+                  "properties": {
+                    "name": {
+                      "bsonType": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                    },
+                    "kind": {
+                      "enum": [
+                        "String",
+                        "Number",
+                        "Boolean",
+                        "Object",
+                        "Array",
+                        "Enum"
+                      ]
+                    },
+                    "required": {
+                      "bsonType": "bool"
+                    },
+                    "nullable": {
+                      "bsonType": "bool"
+                    },
+                    "defaultValue": {},
+                    "properties": {
+                      "bsonType": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "bsonType": "object"
+                      }
+                    },
+                    "items": {
+                      "bsonType": "object"
+                    },
+                    "values": {
+                      "bsonType": "array",
+                      "items": {
+                        "bsonType": "string"
+                      }
+                    }
+                  }
+                },
+                "phases": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "Build",
+                      "Request"
+                    ]
+                  }
+                },
+                "execution": {
+                  "enum": [
+                    "Sequential",
+                    "ParallelRead"
+                  ]
+                },
+                "cache": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "scope",
+                    "maxAgeMs"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "enum": [
+                        "SharedPublic"
+                      ]
+                    },
+                    "maxAgeMs": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double"
+                      ],
+                      "minimum": 1,
+                      "maximum": 3600000
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "key": 1
+          },
+          "name": "rendering_elements_site_kind_key_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "page_resolutions",
+      "dumpRole": "Runtime",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "path",
+            "startedAt",
+            "expiresAt",
+            "cmsVersion",
+            "durationMs",
+            "completionMs",
+            "method",
+            "representation",
+            "delivery",
+            "statusCode",
+            "outcome",
+            "stages",
+            "droppedStages"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "path": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^/[^?#]*$"
+            },
+            "startedAt": {
+              "bsonType": "date"
+            },
+            "expiresAt": {
+              "bsonType": "date"
+            },
+            "cmsVersion": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "durationMs": {
+              "bsonType": [
+                "double",
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "completionMs": {
+              "bsonType": [
+                "double",
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "method": {
+              "enum": [
+                "GET",
+                "HEAD"
+              ]
+            },
+            "representation": {
+              "enum": [
+                "Html",
+                "Markdown"
+              ]
+            },
+            "delivery": {
+              "enum": [
+                "Static",
+                "Dynamic",
+                "Redirect",
+                "Unresolved"
+              ]
+            },
+            "statusCode": {
+              "bsonType": [
+                "int",
+                "double"
+              ],
+              "minimum": 100,
+              "maximum": 599
+            },
+            "outcome": {
+              "enum": [
+                "Success",
+                "Redirect",
+                "NotFound",
+                "Invalid",
+                "Unavailable",
+                "Failure",
+                "Aborted"
+              ]
+            },
+            "droppedStages": {
+              "bsonType": [
+                "int",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "stages": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "parentId",
+                  "stage",
+                  "offsetMs",
+                  "durationMs",
+                  "outcome"
+                ],
+                "properties": {
+                  "id": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 1
+                  },
+                  "parentId": {
+                    "bsonType": [
+                      "int",
+                      "double",
+                      "null"
+                    ]
+                  },
+                  "stage": {
+                    "enum": [
+                      "site",
+                      "route",
+                      "activation",
+                      "plan",
+                      "request",
+                      "runtime",
+                      "tokenization",
+                      "parameters",
+                      "preparation",
+                      "snippet",
+                      "deduplication",
+                      "input",
+                      "output",
+                      "worker-queue",
+                      "worker-startup",
+                      "script",
+                      "bridge",
+                      "transfer",
+                      "cleanup",
+                      "composition",
+                      "validation",
+                      "assets",
+                      "json-ld",
+                      "style-hashes",
+                      "markdown",
+                      "artifact",
+                      "snippet-scheduling",
+                      "request-cache"
+                    ]
+                  },
+                  "offsetMs": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 0
+                  },
+                  "durationMs": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ],
+                    "minimum": 0
+                  },
+                  "outcome": {
+                    "enum": [
+                      "Success",
+                      "Failure",
+                      "Aborted",
+                      "Timeout",
+                      "Fallback"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "page_resolution_site_time",
+          "key": {
+            "siteId": 1,
+            "startedAt": 1
+          }
+        },
+        {
+          "name": "page_resolution_site_version_time",
+          "key": {
+            "siteId": 1,
+            "cmsVersion": 1,
+            "startedAt": 1
+          }
+        },
+        {
+          "name": "page_resolution_retention",
+          "key": {
+            "expiresAt": 1
+          },
+          "expireAfterSeconds": 0
+        }
+      ]
+    }
+  ]
+}

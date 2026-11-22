@@ -1,0 +1,23 @@
+{
+  "id": "0017-addon-action-generations",
+  "transform": "AddonWorkspaceActionsV1",
+  "collections": [
+    {
+      "name": "addon_action_generations",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": ["_id", "digest", "guard"],
+          "properties": {
+            "_id": { "bsonType": "string", "pattern": "^(catalog|addon:[a-z][a-z0-9-]{0,63})$" },
+            "digest": { "bsonType": "string", "pattern": "^[a-f0-9]{64}$" },
+            "guard": { "bsonType": "string", "minLength": 1, "maxLength": 64 }
+          }
+        }
+      },
+      "indexes": []
+    }
+  ]
+}

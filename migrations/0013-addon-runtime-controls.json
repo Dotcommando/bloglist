@@ -1,0 +1,123 @@
+{
+  "id": "0013-addon-runtime-controls",
+  "collections": [
+    {
+      "name": "addon_runtime_controls",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "paused",
+            "guard",
+            "actorId",
+            "state"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "paused": {
+              "bsonType": "bool"
+            },
+            "guard": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "actorId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "updateId",
+                "addonKey",
+                "fromDigest",
+                "toDigest",
+                "fromVersion",
+                "toVersion",
+                "mode",
+                "phase",
+                "paused",
+                "forcedProcessCount",
+                "updatedAt"
+              ],
+              "properties": {
+                "updateId": {
+                  "bsonType": "string"
+                },
+                "addonKey": {
+                  "bsonType": "string"
+                },
+                "fromDigest": {
+                  "bsonType": "string"
+                },
+                "toDigest": {
+                  "bsonType": "string"
+                },
+                "fromVersion": {
+                  "bsonType": "string"
+                },
+                "toVersion": {
+                  "bsonType": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "Compatible",
+                    "Exclusive"
+                  ]
+                },
+                "phase": {
+                  "enum": [
+                    "Prepared",
+                    "Quiescing",
+                    "Migrating",
+                    "Activating",
+                    "Completed",
+                    "Failed"
+                  ]
+                },
+                "paused": {
+                  "bsonType": "bool"
+                },
+                "forcedProcessCount": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "state.updateId": 1
+          },
+          "name": "addon_runtime_update_identity",
+          "unique": false
+        }
+      ]
+    }
+  ]
+}

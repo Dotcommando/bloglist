@@ -1,0 +1,6 @@
+{
+  "siteId": "replace-with-site-id",
+  "workerName": "example-site",
+  "publicOrigin": "http://localhost:8787",
+  "backendOrigin": "http://localhost:3001"
+}

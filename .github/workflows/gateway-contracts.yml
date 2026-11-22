@@ -1,0 +1,49 @@
+name: Verify gateway contracts
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'packages/**'
+      - 'test/adapters/cloudflare-worker*.spec.ts'
+      - 'test/adapters/edge-proxy.spec.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/gateway-contracts.yml'
+      - '.github/workflows/release.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'packages/**'
+      - 'test/adapters/cloudflare-worker*.spec.ts'
+      - 'test/adapters/edge-proxy.spec.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/gateway-contracts.yml'
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  gateway:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.7.0'
+          package-manager-cache: false
+      - name: Set up pinned npm
+        run: npm install --global npm@11.19.0
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build host contracts
+        run: npm run build:contracts
+      - name: Verify public gateway contracts
+        run: npm run test:gateway

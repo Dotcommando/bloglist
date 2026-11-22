@@ -1,0 +1,5302 @@
+{
+  "id": "0000-schema-migrations",
+  "collections": [
+    {
+      "name": "schema_migrations",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "checksum",
+            "appliedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9]{4}-[a-z0-9-]+$"
+            },
+            "checksum": {
+              "bsonType": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "appliedAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "sites",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "mark",
+            "markKey",
+            "name",
+            "primaryDomain",
+            "languages",
+            "defaultLanguage",
+            "status",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "primaryDomain": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "languages": {
+              "bsonType": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "bsonType": "string",
+                "pattern": "^[a-z]{2}$"
+              }
+            },
+            "defaultLanguage": {
+              "bsonType": "string",
+              "pattern": "^[a-z]{2}$"
+            },
+            "status": {
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "addresses": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "publicOrigin",
+                "localOrigin"
+              ],
+              "properties": {
+                "publicOrigin": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2048
+                },
+                "localOrigin": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2048
+                },
+                "originMode": {
+                  "enum": [
+                    "Public",
+                    "Local"
+                  ]
+                }
+              }
+            },
+            "servingAuthority": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "timeZone": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z][A-Za-z0-9_+/-]*$"
+            },
+            "setupState": {
+              "enum": [
+                "Pending",
+                "Completed"
+              ]
+            },
+            "setupVersion": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "setupCompletedAt": {
+              "bsonType": "date"
+            },
+            "setupCompletedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$eq": [
+                "$primaryDomain",
+                {
+                  "$toLower": "$primaryDomain"
+                }
+              ]
+            },
+            {
+              "$in": [
+                "$defaultLanguage",
+                "$languages"
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "markKey": 1
+          },
+          "name": "sites_mark_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "primaryDomain": 1
+          },
+          "name": "sites_domain_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "servingAuthority": 1
+          },
+          "name": "sites_serving_authority_unique",
+          "unique": true,
+          "partialFilterExpression": {
+            "servingAuthority": {
+              "$type": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pages",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "mark",
+            "markKey",
+            "language",
+            "clusterId",
+            "type",
+            "status",
+            "title",
+            "h1",
+            "metaTitle",
+            "metaDescription",
+            "contentMd",
+            "robotsIndex",
+            "publishedAt",
+            "createdAt",
+            "updatedAt",
+            "pageNumber",
+            "parentPageId",
+            "sortOrder"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "language": {
+              "bsonType": "string",
+              "pattern": "^[a-z]{2}$"
+            },
+            "clusterId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "type": {
+              "enum": [
+                "STATIC",
+                "BLOG_LIST",
+                "MIXED"
+              ]
+            },
+            "status": {
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            },
+            "title": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "h1": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "contentMd": {
+              "bsonType": "string"
+            },
+            "robotsIndex": {
+              "bsonType": "bool"
+            },
+            "publishedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "rendering": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "templateId",
+                "delivery",
+                "interaction",
+                "parameters",
+                "loaders"
+              ],
+              "properties": {
+                "templateId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "delivery": {
+                  "enum": [
+                    "Static",
+                    "Request"
+                  ]
+                },
+                "interaction": {
+                  "enum": [
+                    "None",
+                    "Api"
+                  ]
+                },
+                "parameters": {
+                  "bsonType": "object"
+                },
+                "loaders": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "loaderId",
+                      "alias",
+                      "phase",
+                      "parameters",
+                      "dependsOn",
+                      "required"
+                    ],
+                    "properties": {
+                      "loaderId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "alias": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "phase": {
+                        "enum": [
+                          "Build",
+                          "Request"
+                        ]
+                      },
+                      "parameters": {
+                        "bsonType": "object"
+                      },
+                      "dependsOn": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "string"
+                        }
+                      },
+                      "required": {
+                        "bsonType": "bool"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "ogTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogImage": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogType": {
+              "enum": [
+                "website",
+                "article",
+                null
+              ]
+            },
+            "pageNumber": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[1-9][0-9]{0,18}$"
+            },
+            "parentPageId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "sortOrder": {
+              "bsonType": [
+                "int",
+                "long",
+                "double",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "tvValues": {
+              "bsonType": "object",
+              "maxProperties": 256,
+              "additionalProperties": {
+                "bsonType": [
+                  "string",
+                  "null",
+                  "object"
+                ]
+              }
+            },
+            "mimeType": {
+              "bsonType": "string",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+            },
+            "excludeFromSitemap": {
+              "bsonType": "bool"
+            },
+            "systemDocument": {
+              "enum": [
+                null,
+                "Sitemap",
+                "Robots",
+                "Llms"
+              ]
+            }
+          }
+        },
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$or": [
+                {
+                  "$ne": [
+                    "$status",
+                    "PUBLISHED"
+                  ]
+                },
+                {
+                  "$ne": [
+                    "$publishedAt",
+                    null
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "_id": 1
+          },
+          "name": "pages_site_identity"
+        },
+        {
+          "key": {
+            "clusterId": 1,
+            "_id": 1
+          },
+          "name": "pages_cluster_identity"
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "pageNumber": 1
+          },
+          "name": "pages_site_number_unique",
+          "unique": true,
+          "partialFilterExpression": {
+            "pageNumber": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "parentPageId": 1,
+            "sortOrder": 1
+          },
+          "name": "pages_site_parent_order"
+        },
+        {
+          "name": "pages_site_system_document_unique",
+          "key": {
+            "siteId": 1,
+            "systemDocument": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "systemDocument": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "markKey": 1
+          },
+          "name": "pages_site_mark_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "urls",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "mark",
+            "markKey",
+            "parentUrlId",
+            "segment",
+            "path",
+            "kind",
+            "pageId",
+            "redirectTargetUrlId",
+            "redirectStatus",
+            "firstPublishedAt",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "parentUrlId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "segment": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "path": {
+              "bsonType": "string",
+              "pattern": "^/(?!/)[^?#\\\\]*$"
+            },
+            "kind": {
+              "enum": [
+                "PAGE",
+                "REDIRECT"
+              ]
+            },
+            "pageId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "redirectTargetUrlId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "redirectStatus": {
+              "enum": [
+                null,
+                301,
+                308
+              ]
+            },
+            "firstPublishedAt": {
+              "bsonType": "date"
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "$or": [
+          {
+            "kind": "PAGE",
+            "pageId": {
+              "$type": "string"
+            },
+            "redirectTargetUrlId": null,
+            "redirectStatus": null
+          },
+          {
+            "kind": "REDIRECT",
+            "pageId": null,
+            "redirectTargetUrlId": {
+              "$type": "string"
+            },
+            "redirectStatus": {
+              "$in": [
+                301,
+                308
+              ]
+            }
+          }
+        ],
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$ne": [
+                "$_id",
+                "$parentUrlId"
+              ]
+            },
+            {
+              "$ne": [
+                "$_id",
+                "$redirectTargetUrlId"
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "markKey": 1
+          },
+          "name": "urls_mark_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "path": 1
+          },
+          "name": "urls_site_path_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "pageId": 1
+          },
+          "name": "urls_current_page_unique",
+          "unique": true,
+          "partialFilterExpression": {
+            "kind": "PAGE"
+          }
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "parentUrlId": 1,
+            "_id": 1
+          },
+          "name": "urls_parent_identity"
+        },
+        {
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "path": 1
+          },
+          "name": "urls_site_kind_path"
+        }
+      ]
+    },
+    {
+      "name": "url_history",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "urlId",
+            "kind",
+            "pageId",
+            "redirectTargetUrlId",
+            "redirectStatus",
+            "createdAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "urlId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "PAGE",
+                "REDIRECT"
+              ]
+            },
+            "pageId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "redirectTargetUrlId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "redirectStatus": {
+              "enum": [
+                null,
+                301,
+                308
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            }
+          }
+        },
+        "$or": [
+          {
+            "kind": "PAGE",
+            "pageId": {
+              "$type": "string"
+            },
+            "redirectTargetUrlId": null,
+            "redirectStatus": null
+          },
+          {
+            "kind": "REDIRECT",
+            "pageId": null,
+            "redirectTargetUrlId": {
+              "$type": "string"
+            },
+            "redirectStatus": {
+              "$in": [
+                301,
+                308
+              ]
+            }
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "urlId": 1,
+            "createdAt": 1,
+            "_id": 1
+          },
+          "name": "url_history_order"
+        }
+      ]
+    },
+    {
+      "name": "routing_versions",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "revision",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "multipleOf": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            }
+          }
+        },
+        "$expr": {
+          "$eq": [
+            "$_id",
+            "$siteId"
+          ]
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "page_publications",
+      "validator": {
+        "$jsonSchema": {
+          "required": [
+            "_id",
+            "siteId",
+            "versions"
+          ],
+          "bsonType": "object",
+          "properties": {
+            "versions": {
+              "maxItems": 3,
+              "items": {
+                "required": [
+                  "publishedAt",
+                  "page"
+                ],
+                "bsonType": "object",
+                "properties": {
+                  "page": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "siteId",
+                      "mark",
+                      "language",
+                      "clusterId",
+                      "type",
+                      "status",
+                      "title",
+                      "h1",
+                      "metaTitle",
+                      "metaDescription",
+                      "contentMd",
+                      "robotsIndex",
+                      "publishedAt",
+                      "createdAt",
+                      "updatedAt",
+                      "pageId"
+                    ],
+                    "properties": {
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mark": {
+                        "bsonType": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+                      },
+                      "language": {
+                        "bsonType": "string",
+                        "pattern": "^[a-z]{2}$"
+                      },
+                      "clusterId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 1
+                      },
+                      "type": {
+                        "enum": [
+                          "STATIC",
+                          "BLOG_LIST",
+                          "MIXED"
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "DRAFT",
+                          "PUBLISHED",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "title": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "h1": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contentMd": {
+                        "bsonType": "string"
+                      },
+                      "robotsIndex": {
+                        "bsonType": "bool"
+                      },
+                      "publishedAt": {
+                        "bsonType": [
+                          "date",
+                          "null"
+                        ]
+                      },
+                      "createdAt": {
+                        "bsonType": "date"
+                      },
+                      "updatedAt": {
+                        "bsonType": "date"
+                      },
+                      "rendering": {
+                        "bsonType": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "templateId",
+                          "delivery",
+                          "interaction",
+                          "parameters",
+                          "loaders"
+                        ],
+                        "properties": {
+                          "templateId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          },
+                          "delivery": {
+                            "enum": [
+                              "Static",
+                              "Request"
+                            ]
+                          },
+                          "interaction": {
+                            "enum": [
+                              "None",
+                              "Api"
+                            ]
+                          },
+                          "parameters": {
+                            "bsonType": "object"
+                          },
+                          "loaders": {
+                            "bsonType": "array",
+                            "items": {
+                              "bsonType": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "loaderId",
+                                "alias",
+                                "phase",
+                                "parameters",
+                                "dependsOn",
+                                "required"
+                              ],
+                              "properties": {
+                                "loaderId": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "alias": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "phase": {
+                                  "enum": [
+                                    "Build",
+                                    "Request"
+                                  ]
+                                },
+                                "parameters": {
+                                  "bsonType": "object"
+                                },
+                                "dependsOn": {
+                                  "bsonType": "array",
+                                  "items": {
+                                    "bsonType": "string"
+                                  }
+                                },
+                                "required": {
+                                  "bsonType": "bool"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "pageId": {
+                        "minLength": 1,
+                        "bsonType": "string"
+                      },
+                      "ogTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogImage": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogType": {
+                        "enum": [
+                          "website",
+                          "article",
+                          null
+                        ]
+                      },
+                      "pageNumber": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^[1-9][0-9]{0,18}$"
+                      },
+                      "parentPageId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "sortOrder": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "tvValues": {
+                        "bsonType": "object",
+                        "maxProperties": 256,
+                        "additionalProperties": {
+                          "bsonType": [
+                            "string",
+                            "null",
+                            "object"
+                          ]
+                        }
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "maxLength": 255,
+                        "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+                      },
+                      "excludeFromSitemap": {
+                        "bsonType": "bool"
+                      },
+                      "systemDocument": {
+                        "enum": [
+                          null,
+                          "Sitemap",
+                          "Robots",
+                          "Llms"
+                        ]
+                      }
+                    }
+                  },
+                  "publishedAt": {
+                    "bsonType": "date"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "bsonType": "array",
+              "minItems": 1
+            },
+            "siteId": {
+              "minLength": 1,
+              "bsonType": "string"
+            },
+            "_id": {
+              "minLength": 1,
+              "bsonType": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "_id": 1,
+            "siteId": 1
+          },
+          "name": "page_publications_site_identity"
+        }
+      ]
+    },
+    {
+      "name": "publication_releases",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "state",
+            "manifest",
+            "failure",
+            "createdAt",
+            "completedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteKey": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+            },
+            "state": {
+              "enum": [
+                "Staged",
+                "Ready",
+                "Failed"
+              ]
+            },
+            "failure": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "completedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "manifest": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "routes",
+                "artifacts"
+              ],
+              "properties": {
+                "routes": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "urlId",
+                      "path"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "Static",
+                          "Request",
+                          "Redirect"
+                        ]
+                      },
+                      "urlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "path": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "pageId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "documentPath": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "renderPlanId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "targetUrlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "targetPath": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "status": {
+                        "enum": [
+                          301,
+                          308
+                        ]
+                      },
+                      "robotsIndex": {
+                        "bsonType": "bool"
+                      },
+                      "excludeFromSitemap": {
+                        "bsonType": "bool"
+                      },
+                      "systemDocument": {
+                        "enum": [
+                          null,
+                          "Sitemap",
+                          "Robots",
+                          "Llms"
+                        ]
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "maxLength": 255
+                      }
+                    }
+                  }
+                },
+                "artifacts": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "mimeType",
+                      "byteSize",
+                      "checksum",
+                      "public"
+                    ],
+                    "properties": {
+                      "path": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "byteSize": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double"
+                        ],
+                        "minimum": 0
+                      },
+                      "checksum": {
+                        "bsonType": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "public": {
+                        "bsonType": "bool"
+                      }
+                    }
+                  }
+                },
+                "publishedPages": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "siteId",
+                      "pageId",
+                      "urlId",
+                      "parentUrlId",
+                      "title",
+                      "language",
+                      "path"
+                    ],
+                    "properties": {
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "pageId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "urlId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "parentUrlId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "title": {
+                        "bsonType": "string"
+                      },
+                      "language": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "path": {
+                        "bsonType": "string",
+                        "pattern": "^/"
+                      },
+                      "pageNumber": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^[1-9][0-9]{0,18}$"
+                      },
+                      "tvValues": {
+                        "bsonType": "object"
+                      },
+                      "tv": {
+                        "bsonType": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "_id": 1
+          },
+          "name": "publication_releases_site_identity"
+        }
+      ]
+    },
+    {
+      "name": "active_publications",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "releaseId",
+            "activatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "releaseId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "activatedAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "publication_activations",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "activatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "activatedAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "_id": 1
+          },
+          "name": "publication_activations_site_identity"
+        }
+      ]
+    },
+    {
+      "name": "assets",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "assetId",
+            "siteId",
+            "filename",
+            "mimeType",
+            "byteSize",
+            "checksum",
+            "original",
+            "visibility",
+            "state",
+            "failure",
+            "version",
+            "createdAt",
+            "updatedAt",
+            "originalDimensions",
+            "profileVersion",
+            "variants",
+            "profileMappings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "assetId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "filename": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "byteSize": {
+              "bsonType": [
+                "int",
+                "long",
+                "double",
+                "decimal"
+              ],
+              "minimum": 1,
+              "multipleOf": 1
+            },
+            "checksum": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "original": {
+              "bsonType": "object",
+              "required": [
+                "contentId"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "contentId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "visibility": {
+              "enum": [
+                "Private",
+                "Public"
+              ]
+            },
+            "state": {
+              "enum": [
+                "Processing",
+                "Ready",
+                "Failed"
+              ]
+            },
+            "failure": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "originalDimensions": {
+              "bsonType": [
+                "object",
+                "null"
+              ],
+              "required": [
+                "width",
+                "height",
+                "aspectRatio"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "width": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "height": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "aspectRatio": {
+                  "bsonType": [
+                    "double",
+                    "int"
+                  ],
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                }
+              }
+            },
+            "profileVersion": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "variants": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "variantId",
+                  "content",
+                  "mimeType",
+                  "byteSize",
+                  "checksum",
+                  "dimensions"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "variantId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "content": {
+                    "bsonType": "object",
+                    "required": [
+                      "contentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "contentId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "mimeType": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "byteSize": {
+                    "bsonType": [
+                      "int",
+                      "long",
+                      "double",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  },
+                  "checksum": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "dimensions": {
+                    "bsonType": "object",
+                    "required": [
+                      "width",
+                      "height",
+                      "aspectRatio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "width": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "height": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "aspectRatio": {
+                        "bsonType": [
+                          "double",
+                          "int"
+                        ],
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "profileMappings": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "profileId",
+                  "variantIds"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "profileId": {
+                    "enum": [
+                      "w320",
+                      "w576",
+                      "w768",
+                      "w992",
+                      "w1200",
+                      "w1440"
+                    ]
+                  },
+                  "variantIds": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            },
+            "file": {
+              "bsonType": "object",
+              "required": [
+                "contentId"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "contentId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "mode": {
+              "enum": [
+                "Original",
+                "Responsive"
+              ]
+            }
+          }
+        },
+        "$or": [
+          {
+            "state": {
+              "$ne": "Ready"
+            }
+          },
+          {
+            "originalDimensions": {
+              "$type": "object"
+            },
+            "profileVersion": "2",
+            "variants.0": {
+              "$exists": true
+            },
+            "profileMappings.5": {
+              "$exists": true
+            }
+          },
+          {
+            "file.contentId": {
+              "$type": "string"
+            },
+            "variants": {
+              "$size": 0
+            },
+            "profileMappings": {
+              "$size": 0
+            },
+            "profileVersion": null
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "assetId": 1,
+            "_id": 1
+          },
+          "name": "assets_owned_version_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "admin_users",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "email",
+            "allowedSiteIds",
+            "blocked",
+            "passwordDigest",
+            "deletedAt",
+            "version",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "email": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 254
+            },
+            "allowedSiteIds": {
+              "bsonType": "array",
+              "maxItems": 0,
+              "items": {
+                "bsonType": "string",
+                "minLength": 1
+              }
+            },
+            "blocked": {
+              "bsonType": "bool"
+            },
+            "passwordDigest": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "deletedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "admin_users_live_email_unique",
+          "key": {
+            "email": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "deletedAt": null
+          },
+          "collation": {
+            "locale": "en",
+            "strength": 2
+          }
+        },
+        {
+          "name": "admin_users_live_created",
+          "key": {
+            "deletedAt": 1,
+            "createdAt": 1,
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "admin_users_active",
+          "key": {
+            "deletedAt": 1,
+            "blocked": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "admin_user_locks",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "nonce"
+          ],
+          "properties": {
+            "_id": {
+              "enum": [
+                "global"
+              ]
+            },
+            "nonce": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "admin_auth_sessions",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "adminUserId",
+            "accountVersion",
+            "tokenDigest",
+            "createdAt",
+            "lastSeenAt",
+            "expiresAt",
+            "revokedAt",
+            "clientAddress",
+            "userAgent"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "adminUserId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "accountVersion": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "tokenDigest": {
+              "bsonType": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "lastSeenAt": {
+              "bsonType": "date"
+            },
+            "expiresAt": {
+              "bsonType": "date"
+            },
+            "revokedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "clientAddress": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "maxLength": 128
+            },
+            "userAgent": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1024
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "admin_auth_token_unique",
+          "key": {
+            "tokenDigest": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "admin_auth_owner_created",
+          "key": {
+            "adminUserId": 1,
+            "accountVersion": 1,
+            "revokedAt": 1,
+            "createdAt": 1,
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "admin_auth_expiry",
+          "key": {
+            "expiresAt": 1
+          },
+          "unique": false,
+          "expireAfterSeconds": 0
+        }
+      ]
+    },
+    {
+      "name": "admin_login_attempts",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "failures",
+            "windowStartedAt",
+            "blockedUntil",
+            "expiresAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "failures": {
+              "bsonType": "int",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "windowStartedAt": {
+              "bsonType": "date"
+            },
+            "blockedUntil": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "expiresAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "admin_login_attempt_expiry",
+          "key": {
+            "expiresAt": 1
+          },
+          "unique": false,
+          "expireAfterSeconds": 0
+        }
+      ]
+    },
+    {
+      "name": "site_content_guards",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "revision"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "multipleOf": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "site_content_guard_site_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "rendering_elements",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "kind",
+            "key",
+            "version",
+            "html",
+            "css",
+            "browserTypeScript",
+            "parameters",
+            "createdAt",
+            "updatedAt",
+            "backupState",
+            "name"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Template",
+                "Chunk",
+                "Snippet"
+              ]
+            },
+            "key": {
+              "bsonType": "string",
+              "pattern": "^(?:[A-Za-z][A-Za-z0-9_]{0,127}|[1-9][0-9]{0,18})$"
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "html": {
+              "bsonType": "string"
+            },
+            "css": {
+              "bsonType": "string"
+            },
+            "browserTypeScript": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "parameters": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "required"
+                ],
+                "properties": {
+                  "name": {
+                    "bsonType": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "String",
+                      "Number",
+                      "Boolean",
+                      "Object",
+                      "Array",
+                      "Enum"
+                    ]
+                  },
+                  "required": {
+                    "bsonType": "bool"
+                  },
+                  "nullable": {
+                    "bsonType": "bool"
+                  },
+                  "defaultValue": {},
+                  "properties": {
+                    "bsonType": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "bsonType": "object"
+                    }
+                  },
+                  "items": {
+                    "bsonType": "object"
+                  },
+                  "values": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "backupState": {
+              "enum": [
+                "Pending",
+                "Ready"
+              ]
+            },
+            "backupGuard": {
+              "bsonType": "string"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "snippet": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "output",
+                "phases"
+              ],
+              "properties": {
+                "code": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 100000
+                },
+                "output": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "kind",
+                    "required"
+                  ],
+                  "properties": {
+                    "name": {
+                      "bsonType": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                    },
+                    "kind": {
+                      "enum": [
+                        "String",
+                        "Number",
+                        "Boolean",
+                        "Object",
+                        "Array",
+                        "Enum"
+                      ]
+                    },
+                    "required": {
+                      "bsonType": "bool"
+                    },
+                    "nullable": {
+                      "bsonType": "bool"
+                    },
+                    "defaultValue": {},
+                    "properties": {
+                      "bsonType": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "bsonType": "object"
+                      }
+                    },
+                    "items": {
+                      "bsonType": "object"
+                    },
+                    "values": {
+                      "bsonType": "array",
+                      "items": {
+                        "bsonType": "string"
+                      }
+                    }
+                  }
+                },
+                "phases": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "Build",
+                      "Request"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "key": 1
+          },
+          "name": "rendering_elements_site_kind_key_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "rendering_element_sequences",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "kind",
+            "lastOrdinal"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Template",
+                "Chunk",
+                "Snippet"
+              ]
+            },
+            "lastOrdinal": {
+              "bsonType": "long",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1,
+            "kind": 1
+          },
+          "name": "rendering_element_sequences_site_kind_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "page_sequences",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "lastOrdinal"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "siteId": {
+              "bsonType": "string"
+            },
+            "lastOrdinal": {
+              "bsonType": "long",
+              "minimum": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "page_sequences_site_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "media_libraries",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "pending",
+            "folders",
+            "files",
+            "garbage"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "pending": {
+              "bsonType": "bool"
+            },
+            "folders": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "folderId",
+                  "parentId",
+                  "name"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "folderId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "parentId": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "root": {
+                    "enum": [
+                      "images",
+                      "files"
+                    ]
+                  }
+                }
+              }
+            },
+            "files": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "fileId",
+                  "folderId",
+                  "name",
+                  "mode",
+                  "image",
+                  "outputs",
+                  "previousPaths"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "fileId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "folderId": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "mode": {
+                    "enum": [
+                      "Original",
+                      "Responsive"
+                    ]
+                  },
+                  "image": {
+                    "bsonType": "object",
+                    "required": [
+                      "assetId",
+                      "siteId",
+                      "filename",
+                      "mimeType",
+                      "byteSize",
+                      "checksum",
+                      "original",
+                      "visibility",
+                      "state",
+                      "failure",
+                      "version",
+                      "createdAt",
+                      "updatedAt",
+                      "originalDimensions",
+                      "profileVersion",
+                      "variants",
+                      "profileMappings",
+                      "assetVersion"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "assetId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "filename": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "byteSize": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "checksum": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "original": {
+                        "bsonType": "object",
+                        "required": [
+                          "contentId"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "contentId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "visibility": {
+                        "enum": [
+                          "Private",
+                          "Public"
+                        ]
+                      },
+                      "state": {
+                        "enum": [
+                          "Processing",
+                          "Ready",
+                          "Failed"
+                        ]
+                      },
+                      "failure": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "version": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "createdAt": {
+                        "bsonType": "date"
+                      },
+                      "updatedAt": {
+                        "bsonType": "date"
+                      },
+                      "originalDimensions": {
+                        "bsonType": [
+                          "object",
+                          "null"
+                        ],
+                        "required": [
+                          "width",
+                          "height",
+                          "aspectRatio"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "width": {
+                            "bsonType": [
+                              "int",
+                              "long",
+                              "double",
+                              "decimal"
+                            ],
+                            "minimum": 1,
+                            "multipleOf": 1
+                          },
+                          "height": {
+                            "bsonType": [
+                              "int",
+                              "long",
+                              "double",
+                              "decimal"
+                            ],
+                            "minimum": 1,
+                            "multipleOf": 1
+                          },
+                          "aspectRatio": {
+                            "bsonType": [
+                              "double",
+                              "int"
+                            ],
+                            "exclusiveMinimum": true,
+                            "minimum": 0
+                          }
+                        }
+                      },
+                      "profileVersion": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "variants": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "object",
+                          "required": [
+                            "variantId",
+                            "content",
+                            "mimeType",
+                            "byteSize",
+                            "checksum",
+                            "dimensions"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "variantId": {
+                              "bsonType": "string",
+                              "minLength": 1
+                            },
+                            "content": {
+                              "bsonType": "object",
+                              "required": [
+                                "contentId"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "contentId": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                }
+                              }
+                            },
+                            "mimeType": {
+                              "bsonType": "string",
+                              "minLength": 1
+                            },
+                            "byteSize": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "checksum": {
+                              "bsonType": "string",
+                              "minLength": 1
+                            },
+                            "dimensions": {
+                              "bsonType": "object",
+                              "required": [
+                                "width",
+                                "height",
+                                "aspectRatio"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "width": {
+                                  "bsonType": [
+                                    "int",
+                                    "long",
+                                    "double",
+                                    "decimal"
+                                  ],
+                                  "minimum": 1,
+                                  "multipleOf": 1
+                                },
+                                "height": {
+                                  "bsonType": [
+                                    "int",
+                                    "long",
+                                    "double",
+                                    "decimal"
+                                  ],
+                                  "minimum": 1,
+                                  "multipleOf": 1
+                                },
+                                "aspectRatio": {
+                                  "bsonType": [
+                                    "double",
+                                    "int"
+                                  ],
+                                  "exclusiveMinimum": true,
+                                  "minimum": 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "profileMappings": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "object",
+                          "required": [
+                            "profileId",
+                            "variantIds"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "profileId": {
+                              "enum": [
+                                "w320",
+                                "w576",
+                                "w768",
+                                "w992",
+                                "w1200",
+                                "w1440"
+                              ]
+                            },
+                            "variantIds": {
+                              "bsonType": "array",
+                              "items": {
+                                "bsonType": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "file": {
+                        "bsonType": "object",
+                        "required": [
+                          "contentId"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "contentId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "mode": {
+                        "enum": [
+                          "Original",
+                          "Responsive"
+                        ]
+                      },
+                      "assetVersion": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "outputs": {
+                    "bsonType": "array",
+                    "minItems": 1,
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "key",
+                        "suffix",
+                        "mimeType",
+                        "dimensions",
+                        "contentId"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "suffix": {
+                          "bsonType": "string"
+                        },
+                        "mimeType": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "dimensions": {
+                          "bsonType": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "width",
+                            "height",
+                            "aspectRatio"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "width": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "height": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "aspectRatio": {
+                              "bsonType": [
+                                "double",
+                                "int"
+                              ],
+                              "exclusiveMinimum": true,
+                              "minimum": 0
+                            }
+                          }
+                        },
+                        "contentId": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "previousPaths": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            },
+            "garbage": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "assetId",
+                  "siteId",
+                  "filename",
+                  "mimeType",
+                  "byteSize",
+                  "checksum",
+                  "original",
+                  "visibility",
+                  "state",
+                  "failure",
+                  "version",
+                  "createdAt",
+                  "updatedAt",
+                  "originalDimensions",
+                  "profileVersion",
+                  "variants",
+                  "profileMappings",
+                  "assetVersion"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "assetId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "siteId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "filename": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "mimeType": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "byteSize": {
+                    "bsonType": [
+                      "int",
+                      "long",
+                      "double",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  },
+                  "checksum": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "original": {
+                    "bsonType": "object",
+                    "required": [
+                      "contentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "contentId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "visibility": {
+                    "enum": [
+                      "Private",
+                      "Public"
+                    ]
+                  },
+                  "state": {
+                    "enum": [
+                      "Processing",
+                      "Ready",
+                      "Failed"
+                    ]
+                  },
+                  "failure": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "version": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "createdAt": {
+                    "bsonType": "date"
+                  },
+                  "updatedAt": {
+                    "bsonType": "date"
+                  },
+                  "originalDimensions": {
+                    "bsonType": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "width",
+                      "height",
+                      "aspectRatio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "width": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "height": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "aspectRatio": {
+                        "bsonType": [
+                          "double",
+                          "int"
+                        ],
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "profileVersion": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "variants": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "variantId",
+                        "content",
+                        "mimeType",
+                        "byteSize",
+                        "checksum",
+                        "dimensions"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "variantId": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "content": {
+                          "bsonType": "object",
+                          "required": [
+                            "contentId"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentId": {
+                              "bsonType": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "mimeType": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "byteSize": {
+                          "bsonType": [
+                            "int",
+                            "long",
+                            "double",
+                            "decimal"
+                          ],
+                          "minimum": 1,
+                          "multipleOf": 1
+                        },
+                        "checksum": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "dimensions": {
+                          "bsonType": "object",
+                          "required": [
+                            "width",
+                            "height",
+                            "aspectRatio"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "width": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "height": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "aspectRatio": {
+                              "bsonType": [
+                                "double",
+                                "int"
+                              ],
+                              "exclusiveMinimum": true,
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "profileMappings": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "profileId",
+                        "variantIds"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "profileId": {
+                          "enum": [
+                            "w320",
+                            "w576",
+                            "w768",
+                            "w992",
+                            "w1200",
+                            "w1440"
+                          ]
+                        },
+                        "variantIds": {
+                          "bsonType": "array",
+                          "items": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "file": {
+                    "bsonType": "object",
+                    "required": [
+                      "contentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "contentId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "mode": {
+                    "enum": [
+                      "Original",
+                      "Responsive"
+                    ]
+                  },
+                  "assetVersion": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "tvFence": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ]
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "media_libraries_site_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "site_addons",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "addonKey",
+            "status",
+            "configuration",
+            "version",
+            "operationGuard",
+            "createdAt",
+            "updatedAt",
+            "createdBy",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "addonKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            },
+            "status": {
+              "enum": [
+                "Enabled",
+                "Disabled"
+              ]
+            },
+            "configuration": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "schemaVersion",
+                "values"
+              ],
+              "properties": {
+                "schemaVersion": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 1
+                },
+                "values": {
+                  "bsonType": "object"
+                }
+              }
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "operationGuard": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "updatedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "site_addons_enabled",
+          "key": {
+            "status": 1,
+            "siteId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "site_addons_site_key_unique",
+          "key": {
+            "siteId": 1,
+            "addonKey": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "cms_installations",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "singletonKey",
+            "setupState",
+            "version",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "singletonKey": {
+              "enum": [
+                "Local"
+              ]
+            },
+            "setupState": {
+              "enum": [
+                "Pending",
+                "Completed"
+              ]
+            },
+            "setupContractVersion": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "setupCompletedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "setupCompletedBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "installation_singleton",
+          "key": {
+            "singletonKey": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Global"
+    },
+    {
+      "name": "hook_registrations",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "hookKey",
+            "schemaVersion",
+            "kind",
+            "provider",
+            "registeredAt",
+            "available",
+            "definition",
+            "definitionDigest"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "hookKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "schemaVersion": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "kind": {
+              "enum": [
+                "Check",
+                "Event"
+              ]
+            },
+            "provider": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "definitionDigest": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "registeredAt": {
+              "bsonType": "date"
+            },
+            "available": {
+              "bsonType": "bool"
+            },
+            "definition": {
+              "bsonType": "object"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "hook_registration_identity",
+          "key": {
+            "hookKey": 1,
+            "schemaVersion": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Global"
+    },
+    {
+      "name": "hook_handlers",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "title",
+            "kind",
+            "draft",
+            "activeVersionId",
+            "enabled",
+            "version",
+            "createdAt",
+            "updatedAt",
+            "createdBy",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "title": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Check",
+                "Event"
+              ]
+            },
+            "draft": {
+              "bsonType": "object"
+            },
+            "activeVersionId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "enabled": {
+              "bsonType": "bool"
+            },
+            "createdBy": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "updatedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "hook_handlers_site_created",
+          "key": {
+            "siteId": 1,
+            "createdAt": 1,
+            "_id": 1
+          },
+          "unique": false
+        }
+      ],
+      "dumpRole": "SiteContent"
+    },
+    {
+      "name": "hook_handler_versions",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "handlerId",
+            "sourceDraftVersion",
+            "source",
+            "compiledJavaScript",
+            "digest",
+            "kind",
+            "capabilities",
+            "appliedAt",
+            "appliedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "handlerId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "sourceDraftVersion": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "source": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "compiledJavaScript": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "digest": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Check",
+                "Event"
+              ]
+            },
+            "capabilities": {
+              "bsonType": "array"
+            },
+            "appliedAt": {
+              "bsonType": "date"
+            },
+            "appliedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "hook_handler_draft_unique",
+          "key": {
+            "siteId": 1,
+            "handlerId": 1,
+            "sourceDraftVersion": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_handler_version_history",
+          "key": {
+            "siteId": 1,
+            "handlerId": 1,
+            "appliedAt": 1,
+            "_id": 1
+          },
+          "unique": false
+        }
+      ],
+      "dumpRole": "SiteContent"
+    },
+    {
+      "name": "hook_subscriptions",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "hookKey",
+            "schemaVersion",
+            "kind",
+            "title",
+            "handlerId",
+            "configuration",
+            "filters",
+            "enabled",
+            "priority",
+            "ownerKind",
+            "deliveryMode",
+            "retrySafe",
+            "version",
+            "createdAt",
+            "updatedAt",
+            "createdBy",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "hookKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "schemaVersion": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "kind": {
+              "enum": [
+                "Check",
+                "Event"
+              ]
+            },
+            "title": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "handlerId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "addonKey": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "handlerKey": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ownerKind": {
+              "enum": [
+                "User",
+                "Addon"
+              ]
+            },
+            "configuration": {
+              "bsonType": "object"
+            },
+            "filters": {
+              "bsonType": "object"
+            },
+            "enabled": {
+              "bsonType": "bool"
+            },
+            "priority": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ],
+              "minimum": 0
+            },
+            "deliveryMode": {
+              "enum": [
+                "Event",
+                "Detail"
+              ]
+            },
+            "retrySafe": {
+              "bsonType": "bool"
+            },
+            "manifestKey": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "createdBy": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "updatedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "hook_subscription_matching",
+          "key": {
+            "siteId": 1,
+            "hookKey": 1,
+            "schemaVersion": 1,
+            "enabled": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "hook_subscription_handler",
+          "key": {
+            "siteId": 1,
+            "handlerId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "hook_subscription_manifest",
+          "key": {
+            "siteId": 1,
+            "addonKey": 1,
+            "manifestKey": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "ownerKind": "Addon"
+          }
+        }
+      ],
+      "dumpRole": "SiteContent"
+    },
+    {
+      "name": "hook_scope_states",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "registryVersion",
+                "lastSequence",
+                "dispatchedSequence",
+                "mode",
+                "guard"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "registryVersion": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "lastSequence": {
+                  "bsonType": "long"
+                },
+                "dispatchedSequence": {
+                  "bsonType": "long"
+                },
+                "mode": {
+                  "enum": [
+                    "Active",
+                    "Maintenance",
+                    "RecoveryRequired"
+                  ]
+                },
+                "guard": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_scope_identity",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_events",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "hookKey",
+                "schemaVersion",
+                "operationId",
+                "factKey",
+                "subject",
+                "producer",
+                "actorId",
+                "occurredAt",
+                "payload",
+                "recipients",
+                "sequence",
+                "dispatchState",
+                "detailCount",
+                "chainId",
+                "causalDepth"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "hookKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "schemaVersion": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "operationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "factKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "subject": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "producer": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "actorId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "occurredAt": {
+                  "bsonType": "date"
+                },
+                "payload": {
+                  "bsonType": "object"
+                },
+                "recipients": {
+                  "bsonType": "array"
+                },
+                "sequence": {
+                  "bsonType": "long"
+                },
+                "dispatchState": {
+                  "enum": [
+                    "Pending",
+                    "Complete"
+                  ]
+                },
+                "detailCount": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "chainId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "causalDepth": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "causationId": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_event_sequence",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "sequence": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_event_fact",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "operationId": 1,
+            "factKey": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_event_dispatch",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "dispatchState": 1,
+            "sequence": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "hook_event_history",
+          "key": {
+            "siteId": 1,
+            "occurredAt": -1,
+            "_id": -1
+          },
+          "unique": false
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_event_details",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "eventId",
+                "ordinal",
+                "value",
+                "digest"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "eventId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "ordinal": {
+                  "bsonType": "long"
+                },
+                "value": {
+                  "bsonType": "object"
+                },
+                "digest": {
+                  "bsonType": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_event_detail_order",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "eventId": 1,
+            "ordinal": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_execution_chains",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "rootOperationId",
+                "reservedCommands",
+                "maximumDepth",
+                "version",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "rootOperationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "reservedCommands": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "maximumDepth": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_chain_root",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "rootOperationId": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_delivery_lanes",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "consumerId",
+                "subject",
+                "assigned",
+                "settled",
+                "guard"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "consumerId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "subject": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "assigned": {
+                  "bsonType": "long"
+                },
+                "settled": {
+                  "bsonType": "long"
+                },
+                "guard": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_lane_identity",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "consumerId": 1,
+            "subject": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_deliveries",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "eventId",
+                "subscriberId",
+                "consumerId",
+                "unitKey",
+                "laneId",
+                "laneSequence",
+                "eventPosition",
+                "recipient",
+                "payload",
+                "hookKey",
+                "chainId",
+                "causalDepth",
+                "state",
+                "attemptCount",
+                "nextAttemptAt",
+                "version",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "eventId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "subscriberId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "consumerId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "unitKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "laneId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "laneSequence": {
+                  "bsonType": "long"
+                },
+                "eventPosition": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "recipient": {
+                  "bsonType": "object"
+                },
+                "payload": {
+                  "bsonType": "object"
+                },
+                "hookKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "chainId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "causalDepth": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "state": {
+                  "enum": [
+                    "Pending",
+                    "Running",
+                    "RetryScheduled",
+                    "Paused",
+                    "Succeeded",
+                    "Failed",
+                    "OutcomeUnknown",
+                    "Skipped",
+                    "Superseded"
+                  ]
+                },
+                "attemptCount": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "nextAttemptAt": {
+                  "bsonType": "date"
+                },
+                "ownerToken": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "leaseUntil": {
+                  "bsonType": [
+                    "date",
+                    "null"
+                  ]
+                },
+                "resumeState": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "error": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "plan": {
+                  "bsonType": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "completedAt": {
+                  "bsonType": [
+                    "date",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_delivery_unique",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "generation": 1,
+            "eventId": 1,
+            "subscriberId": 1,
+            "unitKey": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_delivery_lane_position",
+          "key": {
+            "laneId": 1,
+            "laneSequence": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_delivery_due",
+          "key": {
+            "state": 1,
+            "nextAttemptAt": 1,
+            "_id": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "hook_delivery_history",
+          "key": {
+            "siteId": 1,
+            "createdAt": -1,
+            "_id": -1
+          },
+          "unique": false
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_executions",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "kind",
+                "operationId",
+                "subscriptionId",
+                "attemptNumber",
+                "implementation",
+                "startedAt",
+                "outcome"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "enum": [
+                    "Check",
+                    "Event"
+                  ]
+                },
+                "operationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "subscriptionId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "deliveryId": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "attemptNumber": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double"
+                  ],
+                  "minimum": 0
+                },
+                "implementation": {
+                  "bsonType": "object"
+                },
+                "startedAt": {
+                  "bsonType": "date"
+                },
+                "finishedAt": {
+                  "bsonType": [
+                    "date",
+                    "null"
+                  ]
+                },
+                "outcome": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "error": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "result": {
+                  "bsonType": "object"
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_execution_attempt",
+          "key": {
+            "deliveryId": 1,
+            "attemptNumber": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "kind": "Event"
+          }
+        },
+        {
+          "name": "hook_execution_history",
+          "key": {
+            "siteId": 1,
+            "startedAt": -1,
+            "_id": -1
+          },
+          "unique": false
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "hook_command_executions",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "installationId",
+                "scopeKey",
+                "scopeKind",
+                "generation",
+                "deliveryId",
+                "commandKey",
+                "commandName",
+                "arguments",
+                "digest",
+                "idempotencyKey",
+                "state",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "installationId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "scopeKind": {
+                  "enum": [
+                    "Site",
+                    "Installation"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "generation": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "deliveryId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "commandKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "commandName": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "arguments": {
+                  "bsonType": "object"
+                },
+                "digest": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "idempotencyKey": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "state": {
+                  "enum": [
+                    "Prepared",
+                    "Running",
+                    "Succeeded",
+                    "Failed",
+                    "OutcomeUnknown"
+                  ]
+                },
+                "result": {
+                  "bsonType": "object"
+                },
+                "error": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "scopeKind": "Site",
+                "siteId": {
+                  "$type": "string"
+                }
+              },
+              {
+                "scopeKind": "Installation",
+                "siteId": {
+                  "$exists": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "hook_command_plan_key",
+          "key": {
+            "deliveryId": 1,
+            "commandKey": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "hook_command_idempotency",
+          "key": {
+            "installationId": 1,
+            "scopeKey": 1,
+            "idempotencyKey": 1
+          },
+          "unique": true
+        }
+      ],
+      "dumpRole": "Runtime"
+    },
+    {
+      "name": "template_variables",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "fields"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "siteId": {
+              "bsonType": "string"
+            },
+            "version": {
+              "bsonType": "string"
+            },
+            "editFence": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ]
+            },
+            "fields": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "caption",
+                  "description",
+                  "kind",
+                  "templateIds",
+                  "required",
+                  "sortOrder"
+                ],
+                "properties": {
+                  "name": {
+                    "bsonType": "string"
+                  },
+                  "caption": {
+                    "bsonType": "string"
+                  },
+                  "description": {
+                    "bsonType": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "Text",
+                      "Markdown",
+                      "Image",
+                      "File"
+                    ]
+                  },
+                  "templateIds": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  },
+                  "required": {
+                    "bsonType": "bool"
+                  },
+                  "sortOrder": {
+                    "bsonType": [
+                      "int",
+                      "long",
+                      "double"
+                    ]
+                  },
+                  "defaultValue": {
+                    "bsonType": [
+                      "string",
+                      "null",
+                      "object"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "template_variables_site_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "addon_installations",
+      "dumpRole": "Global",
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "_id",
+                "repositoryUrl",
+                "releaseTag",
+                "sourceCommit",
+                "artifactChecksum",
+                "runtimeDigest",
+                "addonKey",
+                "implementationVersion",
+                "cmsVersion",
+                "status",
+                "createdAt",
+                "installedAt",
+                "installedBy"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "repositoryUrl": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 2048,
+                  "pattern": "^https://github\\.com/[a-z0-9-]+/[a-z0-9_.-]+$"
+                },
+                "releaseTag": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "sourceCommit": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+                },
+                "artifactChecksum": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "runtimeDigest": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "addonKey": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                },
+                "implementationVersion": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?$"
+                },
+                "cmsVersion": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                },
+                "status": {
+                  "enum": [
+                    "Pending",
+                    "Installed"
+                  ]
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "installedAt": {
+                  "bsonType": [
+                    "date",
+                    "null"
+                  ]
+                },
+                "installedBy": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              }
+            }
+          },
+          {
+            "$or": [
+              {
+                "status": "Pending",
+                "installedAt": null
+              },
+              {
+                "status": "Installed",
+                "installedAt": {
+                  "$type": "date"
+                },
+                "$expr": {
+                  "$gte": [
+                    "$installedAt",
+                    "$createdAt"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "indexes": [
+        {
+          "name": "addon_installations_repository_unique",
+          "key": {
+            "repositoryUrl": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "addon_installations_key_unique",
+          "key": {
+            "addonKey": 1
+          },
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

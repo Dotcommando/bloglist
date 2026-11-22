@@ -1,0 +1,5 @@
+{$ZARYA_BACKEND_HOST} {
+  reverse_proxy app:3000 {
+    header_up Host {$ZARYA_UPSTREAM_HOST}
+  }
+}

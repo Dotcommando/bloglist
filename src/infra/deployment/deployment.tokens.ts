@@ -1,0 +1,29 @@
+export const PREPARE_SITE_DEPLOYMENT = Symbol('PrepareSiteDeployment');
+
+export const SITE_DEPLOYMENT_OUTPUT = Symbol('SiteDeploymentOutput');
+
+export const DEPLOYMENT_MEDIA_READS = Symbol('DeploymentMediaReads');
+
+export const DEPLOYMENT_WORKER_SOURCE = Symbol('DeploymentWorkerSource');
+
+export const DEPLOYMENT_STORE = Symbol('DEPLOYMENT_STORE');
+
+export const DEPLOYMENT_ACCESS = Symbol('DEPLOYMENT_ACCESS');
+
+export const DEPLOYMENT_PUBLICATIONS = Symbol('DEPLOYMENT_PUBLICATIONS');
+
+export const DEPLOYMENT_PROVIDER_RESOLVER = Symbol('DEPLOYMENT_PROVIDER_RESOLVER');
+
+export const DEPLOYMENT_PROVIDERS = Symbol('DEPLOYMENT_PROVIDERS');
+
+export const GET_DEPLOYMENT_STATUS = Symbol('GET_DEPLOYMENT_STATUS');
+
+export const CONFIGURE_DEPLOYMENT_TARGET = Symbol('CONFIGURE_DEPLOYMENT_TARGET');
+
+export const RETRY_DEPLOYMENT = Symbol('RETRY_DEPLOYMENT');
+
+export const DEPLOYMENT_INSPECTION = Symbol('DEPLOYMENT_INSPECTION');
+
+export const CHECK_DEPLOYMENT_TARGET = Symbol('CHECK_DEPLOYMENT_TARGET');
+
+export const PROCESS_DEPLOYMENT_TARGETS = Symbol('PROCESS_DEPLOYMENT_TARGETS');

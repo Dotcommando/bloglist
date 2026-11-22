@@ -1,0 +1,62 @@
+name: cms-zarya-core
+
+services:
+  app:
+    image: ${ZARYA_APP_IMAGE:-cms-zarya-app}:${ZARYA_CMS_VERSION:?Run node scripts/prepare-compose.mjs}
+    profiles: [application]
+    build: .
+    environment:
+      ZARYA_MONGO_URI: mongodb://mongo:27017/?replicaSet=zarya-rs
+      ZARYA_MONGO_DATABASE: ${ZARYA_MONGO_DATABASE:?Set ZARYA_MONGO_DATABASE}
+      ZARYA_LOCAL_OPERATOR_ID: ${ZARYA_LOCAL_OPERATOR_ID:?Set ZARYA_LOCAL_OPERATOR_ID}
+      ZARYA_LOCAL_ADMINISTRATOR: ${ZARYA_LOCAL_ADMINISTRATOR:?Set ZARYA_LOCAL_ADMINISTRATOR}
+      ZARYA_SITES_ROOT: /app/sites
+      ZARYA_ARTIFACTS_ROOT: /app/artifacts
+      ZARYA_DUMPS_ROOT: /app/dumps
+      ZARYA_MEDIA_ROOT: /app/data
+      ZARYA_MEDIA_PUBLIC_PATH: /assets
+      ZARYA_HTTP_HOST: 0.0.0.0
+      ZARYA_HTTP_PORT: 3000
+      ZARYA_EDGE_PROXY_SECRET: ${ZARYA_EDGE_PROXY_SECRET:-}
+      ZARYA_ADMIN_AUTH_ORIGIN: ${ZARYA_ADMIN_AUTH_ORIGIN:-}
+      ZARYA_ADMIN_ROOT: /app/admin/dist
+      ZARYA_DATABASE_PLACEMENT: ManagedLocal
+      ZARYA_MONGO_MAX_POOL_SIZE: ${ZARYA_MONGO_MAX_POOL_SIZE:-5}
+    ports:
+      - '127.0.0.1:3001:3000'
+    volumes:
+      - publication-artifacts:/app/artifacts
+      - site-media:/app/data
+      - site-sources:/app/sites
+      - site-dumps:/app/dumps
+    depends_on:
+      mongo:
+        condition: service_healthy
+  mongo:
+    image: mongo:9.0.8@sha256:1444adda2e4b8d6a0d7f242a625d834a78d6e3aa6e4ed1b0b4c2dab2318c5e3d
+    command: [mongod, --replSet, zarya-rs, --bind_ip_all]
+    ports:
+      - '127.0.0.1:27040:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - >-
+          try { if (!db.hello().isWritablePrimary) { try { rs.status() } catch {
+          rs.initiate({_id:'zarya-rs',members:[{_id:0,host:'mongo:27017'}]}) }
+          quit(1) } } catch { quit(1) }
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  mongo-data:
+  publication-artifacts:
+  site-media:
+  site-sources:
+  site-dumps:

@@ -1,0 +1,1743 @@
+{
+  "id": "0015-rbac-and-transliteration",
+  "transform": "AuthorizationV1",
+  "collections": [
+    {
+      "name": "action_domains",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "domainId",
+            "ownerKey",
+            "name",
+            "description",
+            "status"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "domainId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+            },
+            "ownerKey": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "description": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "status": {
+              "enum": [
+                "active",
+                "retired"
+              ]
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "action_domains_identity",
+          "key": {
+            "domainId": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "actions",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "actionId",
+            "method",
+            "route",
+            "routeKey",
+            "scope",
+            "admission",
+            "shortDescription",
+            "description",
+            "domains",
+            "allowedObjectScopes",
+            "status",
+            "create",
+            "read",
+            "update",
+            "delete",
+            "execute"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "actionId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+            },
+            "method": {
+              "enum": [
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+              ]
+            },
+            "route": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "routeKey": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "scope": {
+              "enum": [
+                "installation",
+                "site"
+              ]
+            },
+            "admission": {
+              "enum": [
+                "admin",
+                "installationAdmin",
+                "selfService",
+                "public",
+                "infrastructure",
+                "internal"
+              ]
+            },
+            "shortDescription": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "description": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "domains": {
+              "bsonType": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "bsonType": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+              }
+            },
+            "allowedObjectScopes": {
+              "bsonType": "array",
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "own",
+                  "groups",
+                  "all"
+                ]
+              }
+            },
+            "status": {
+              "enum": [
+                "active",
+                "retired"
+              ]
+            },
+            "create": {
+              "bsonType": "bool"
+            },
+            "read": {
+              "bsonType": "bool"
+            },
+            "update": {
+              "bsonType": "bool"
+            },
+            "delete": {
+              "bsonType": "bool"
+            },
+            "execute": {
+              "bsonType": "bool"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "actions_identity",
+          "key": {
+            "actionId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "actions_active_route",
+          "key": {
+            "method": 1,
+            "routeKey": 1
+          },
+          "unique": true,
+          "partialFilterExpression": {
+            "status": "active"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "roleId",
+            "scope",
+            "siteId",
+            "key",
+            "name",
+            "description",
+            "version",
+            "createdAt",
+            "createdBy",
+            "updatedAt",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "roleId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "scope": {
+              "enum": [
+                "installation",
+                "site"
+              ]
+            },
+            "siteId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "key": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "description": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "updatedBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "oneOf": [
+            {
+              "properties": {
+                "scope": {
+                  "enum": [
+                    "installation"
+                  ]
+                },
+                "siteId": {
+                  "enum": [
+                    null
+                  ]
+                },
+                "roleId": {
+                  "enum": [
+                    "cms.system.admin"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "enum": [
+                    "site"
+                  ]
+                },
+                "siteId": {
+                  "enum": [
+                    null
+                  ]
+                },
+                "roleId": {
+                  "enum": [
+                    "cms.system.site-admin",
+                    "cms.system.manager"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "enum": [
+                    "site"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string"
+                },
+                "roleId": {
+                  "not": {
+                    "enum": [
+                      "cms.system.admin",
+                      "cms.system.site-admin",
+                      "cms.system.manager"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "name": "roles_identity",
+          "key": {
+            "roleId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "roles_scope_key",
+          "key": {
+            "scope": 1,
+            "siteId": 1,
+            "key": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "role_permissions",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "roleId",
+            "actionId",
+            "objectScopes",
+            "createdAt",
+            "createdBy",
+            "updatedAt",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "siteId": {
+              "bsonType": ["string", "null"],
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "roleId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "actionId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+            },
+            "objectScopes": {
+              "bsonType": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "own",
+                  "groups",
+                  "all"
+                ]
+              }
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "updatedBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "oneOf": [
+            {
+              "properties": {
+                "objectScopes": {
+                  "enum": [
+                    [
+                      "all"
+                    ]
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "objectScopes": {
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "enum": [
+                      "own",
+                      "groups"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "name": "role_permissions_identity",
+          "key": {
+            "siteId": 1,
+            "roleId": 1,
+            "actionId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "role_permissions_action",
+          "key": {
+            "actionId": 1,
+            "siteId": 1,
+            "roleId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "role_assignments",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "scope",
+            "siteId",
+            "actorId",
+            "roleId",
+            "createdAt",
+            "createdBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "scope": {
+              "enum": [
+                "installation",
+                "site"
+              ]
+            },
+            "siteId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "actorId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "roleId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "oneOf": [
+            {
+              "properties": {
+                "scope": {
+                  "enum": [
+                    "installation"
+                  ]
+                },
+                "siteId": {
+                  "enum": [
+                    null
+                  ]
+                },
+                "roleId": {
+                  "enum": [
+                    "cms.system.admin"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "enum": [
+                    "site"
+                  ]
+                },
+                "siteId": {
+                  "bsonType": "string"
+                },
+                "roleId": {
+                  "not": {
+                    "enum": [
+                      "cms.system.admin"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "name": "role_assignments_identity",
+          "key": {
+            "scope": 1,
+            "siteId": 1,
+            "actorId": 1,
+            "roleId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "role_assignments_role",
+          "key": {
+            "scope": 1,
+            "siteId": 1,
+            "roleId": 1,
+            "actorId": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "role_assignments_actor",
+          "key": {
+            "actorId": 1,
+            "scope": 1,
+            "siteId": 1,
+            "roleId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "access_groups",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "groupId",
+            "key",
+            "name",
+            "description",
+            "status",
+            "version",
+            "createdAt",
+            "createdBy",
+            "updatedAt",
+            "updatedBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "siteId": {
+              "bsonType": ["string", "null"],
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "roleId": {
+              "enum": ["cms.system.admin", "cms.system.site-admin"]
+            },
+            "groupId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "key": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "description": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "status": {
+              "enum": [
+                "active",
+                "archived"
+              ]
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "updatedBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "oneOf": [
+            {
+              "properties": { "siteId": { "bsonType": "string" } },
+              "not": { "required": ["roleId"] }
+            },
+            {
+              "required": ["roleId"],
+              "properties": { "siteId": { "bsonType": "null" }, "status": { "enum": ["active"] } }
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "name": "access_groups_identity",
+          "key": {
+            "siteId": 1,
+            "groupId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "access_groups_site_key",
+          "key": {
+            "siteId": 1,
+            "key": 1
+          },
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "access_group_memberships",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "groupId",
+            "actorId",
+            "createdAt",
+            "createdBy"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "groupId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "actorId": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "access_group_memberships_identity",
+          "key": {
+            "siteId": 1,
+            "groupId": 1,
+            "actorId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "access_group_memberships_actor",
+          "key": {
+            "siteId": 1,
+            "actorId": 1,
+            "groupId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "authorization_guards",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "revision",
+            "writeGuard"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "pattern": "^(site|actor):.+$"
+            },
+            "revision": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "writeGuard": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "pages",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "mark",
+            "markKey",
+            "language",
+            "clusterId",
+            "type",
+            "status",
+            "title",
+            "h1",
+            "metaTitle",
+            "metaDescription",
+            "contentMd",
+            "robotsIndex",
+            "publishedAt",
+            "createdAt",
+            "updatedAt",
+            "pageNumber",
+            "parentPageId",
+            "sortOrder"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "language": {
+              "bsonType": "string",
+              "pattern": "^[a-z]{2}$"
+            },
+            "clusterId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "type": {
+              "enum": [
+                "STATIC",
+                "BLOG_LIST",
+                "MIXED"
+              ]
+            },
+            "status": {
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            },
+            "title": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "h1": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "metaDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "contentMd": {
+              "bsonType": "string"
+            },
+            "robotsIndex": {
+              "bsonType": "bool"
+            },
+            "publishedAt": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "rendering": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "templateId",
+                "delivery",
+                "interaction",
+                "parameters",
+                "loaders"
+              ],
+              "properties": {
+                "templateId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "delivery": {
+                  "enum": [
+                    "Static",
+                    "Request"
+                  ]
+                },
+                "interaction": {
+                  "enum": [
+                    "None",
+                    "Api"
+                  ]
+                },
+                "parameters": {
+                  "bsonType": "object"
+                },
+                "loaders": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "loaderId",
+                      "alias",
+                      "phase",
+                      "parameters",
+                      "dependsOn",
+                      "required"
+                    ],
+                    "properties": {
+                      "loaderId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "alias": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "phase": {
+                        "enum": [
+                          "Build",
+                          "Request"
+                        ]
+                      },
+                      "parameters": {
+                        "bsonType": "object"
+                      },
+                      "dependsOn": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "string"
+                        }
+                      },
+                      "required": {
+                        "bsonType": "bool"
+                      }
+                    }
+                  }
+                },
+                "requestCache": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "scope",
+                    "ttlMs"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "enum": [
+                        "SharedPublic"
+                      ]
+                    },
+                    "ttlMs": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double"
+                      ],
+                      "minimum": 1,
+                      "maximum": 3600000
+                    }
+                  }
+                }
+              }
+            },
+            "ogTitle": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogDescription": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogImage": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "ogType": {
+              "enum": [
+                "website",
+                "article",
+                null
+              ]
+            },
+            "pageNumber": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[1-9][0-9]{0,18}$"
+            },
+            "parentPageId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "sortOrder": {
+              "bsonType": [
+                "int",
+                "long",
+                "double",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "tvValues": {
+              "bsonType": "object",
+              "maxProperties": 256,
+              "additionalProperties": {
+                "bsonType": [
+                  "string",
+                  "null",
+                  "object"
+                ]
+              }
+            },
+            "mimeType": {
+              "bsonType": "string",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+            },
+            "excludeFromSitemap": {
+              "bsonType": "bool"
+            },
+            "systemDocument": {
+              "enum": [
+                null,
+                "Sitemap",
+                "Robots",
+                "Llms"
+              ]
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "accessGroupId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$or": [
+                {
+                  "$ne": [
+                    "$status",
+                    "PUBLISHED"
+                  ]
+                },
+                {
+                  "$ne": [
+                    "$publishedAt",
+                    null
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "name": "pages_by_creator",
+          "key": {
+            "siteId": 1,
+            "createdBy": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "pages_by_access_group",
+          "key": {
+            "siteId": 1,
+            "accessGroupId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "rendering_elements",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "kind",
+            "key",
+            "version",
+            "html",
+            "css",
+            "browserTypeScript",
+            "parameters",
+            "createdAt",
+            "updatedAt",
+            "backupState",
+            "name"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "enum": [
+                "Template",
+                "Chunk",
+                "Snippet"
+              ]
+            },
+            "key": {
+              "bsonType": "string",
+              "pattern": "^(?:[A-Za-z][A-Za-z0-9_]{0,127}|[1-9][0-9]{0,18})$"
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "html": {
+              "bsonType": "string"
+            },
+            "css": {
+              "bsonType": "string"
+            },
+            "browserTypeScript": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "parameters": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "required"
+                ],
+                "properties": {
+                  "name": {
+                    "bsonType": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "String",
+                      "Number",
+                      "Boolean",
+                      "Object",
+                      "Array",
+                      "Enum"
+                    ]
+                  },
+                  "required": {
+                    "bsonType": "bool"
+                  },
+                  "nullable": {
+                    "bsonType": "bool"
+                  },
+                  "defaultValue": {},
+                  "properties": {
+                    "bsonType": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "bsonType": "object"
+                    }
+                  },
+                  "items": {
+                    "bsonType": "object"
+                  },
+                  "values": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "backupState": {
+              "enum": [
+                "Pending",
+                "Ready"
+              ]
+            },
+            "backupGuard": {
+              "bsonType": "string"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "snippet": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "output",
+                "phases"
+              ],
+              "properties": {
+                "code": {
+                  "bsonType": "string",
+                  "minLength": 1,
+                  "maxLength": 100000
+                },
+                "output": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "kind",
+                    "required"
+                  ],
+                  "properties": {
+                    "name": {
+                      "bsonType": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+                    },
+                    "kind": {
+                      "enum": [
+                        "String",
+                        "Number",
+                        "Boolean",
+                        "Object",
+                        "Array",
+                        "Enum"
+                      ]
+                    },
+                    "required": {
+                      "bsonType": "bool"
+                    },
+                    "nullable": {
+                      "bsonType": "bool"
+                    },
+                    "defaultValue": {},
+                    "properties": {
+                      "bsonType": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "bsonType": "object"
+                      }
+                    },
+                    "items": {
+                      "bsonType": "object"
+                    },
+                    "values": {
+                      "bsonType": "array",
+                      "items": {
+                        "bsonType": "string"
+                      }
+                    }
+                  }
+                },
+                "phases": {
+                  "bsonType": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "Build",
+                      "Request"
+                    ]
+                  }
+                },
+                "execution": {
+                  "enum": [
+                    "Sequential",
+                    "ParallelRead"
+                  ]
+                },
+                "cache": {
+                  "bsonType": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "scope",
+                    "maxAgeMs"
+                  ],
+                  "properties": {
+                    "scope": {
+                      "enum": [
+                        "SharedPublic"
+                      ]
+                    },
+                    "maxAgeMs": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double"
+                      ],
+                      "minimum": 1,
+                      "maximum": 3600000
+                    }
+                  }
+                }
+              }
+            },
+            "createdBy": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "accessGroupId": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "rendering_elements_by_creator",
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "createdBy": 1
+          },
+          "unique": false
+        },
+        {
+          "name": "rendering_elements_by_access_group",
+          "key": {
+            "siteId": 1,
+            "kind": 1,
+            "accessGroupId": 1
+          },
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "manager_permission_overrides",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        }
+      },
+      "indexes": []
+    },
+    {
+      "name": "sites",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "mark",
+            "markKey",
+            "name",
+            "primaryDomain",
+            "languages",
+            "defaultLanguage",
+            "status",
+            "createdAt",
+            "updatedAt"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mark": {
+              "bsonType": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+            },
+            "markKey": {
+              "bsonType": "string",
+              "pattern": "^[a-z][a-z0-9]*$"
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "primaryDomain": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "languages": {
+              "bsonType": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "bsonType": "string",
+                "pattern": "^[a-z]{2}$"
+              }
+            },
+            "defaultLanguage": {
+              "bsonType": "string",
+              "pattern": "^[a-z]{2}$"
+            },
+            "status": {
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            },
+            "addresses": {
+              "bsonType": "object",
+              "additionalProperties": false,
+              "required": [
+                "publicOrigin",
+                "localOrigin"
+              ],
+              "properties": {
+                "publicOrigin": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2048
+                },
+                "localOrigin": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2048
+                },
+                "originMode": {
+                  "enum": [
+                    "Public",
+                    "Local"
+                  ]
+                }
+              }
+            },
+            "servingAuthority": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "timeZone": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z][A-Za-z0-9_+/-]*$"
+            },
+            "setupState": {
+              "enum": [
+                "Pending",
+                "Completed"
+              ]
+            },
+            "setupVersion": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "setupCompletedAt": {
+              "bsonType": "date"
+            },
+            "setupCompletedBy": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "transliteration": {
+              "bsonType": "array",
+              "maxItems": 800,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "language",
+                  "symbol",
+                  "replacement"
+                ],
+                "properties": {
+                  "language": {
+                    "enum": [
+                      "ru",
+                      "en",
+                      "fr",
+                      "el",
+                      "de",
+                      "es",
+                      "it",
+                      "pl",
+                      "cs",
+                      "pt"
+                    ]
+                  },
+                  "symbol": {
+                    "bsonType": "string",
+                    "minLength": 1,
+                    "maxLength": 3
+                  },
+                  "replacement": {
+                    "bsonType": "string",
+                    "maxLength": 16,
+                    "pattern": "^[a-zA-Z0-9-]*$"
+                  }
+                }
+              }
+            },
+            "collapseTransliterationHyphens": {
+              "bsonType": "bool"
+            }
+          }
+        },
+        "$expr": {
+          "$and": [
+            {
+              "$eq": [
+                "$markKey",
+                {
+                  "$toLower": "$mark"
+                }
+              ]
+            },
+            {
+              "$eq": [
+                "$primaryDomain",
+                {
+                  "$toLower": "$primaryDomain"
+                }
+              ]
+            },
+            {
+              "$in": [
+                "$defaultLanguage",
+                "$languages"
+              ]
+            }
+          ]
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "markKey": 1
+          },
+          "name": "sites_mark_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "primaryDomain": 1
+          },
+          "name": "sites_domain_unique",
+          "unique": true
+        },
+        {
+          "key": {
+            "servingAuthority": 1
+          },
+          "name": "sites_serving_authority_unique",
+          "unique": true,
+          "partialFilterExpression": {
+            "servingAuthority": {
+              "$type": "string"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

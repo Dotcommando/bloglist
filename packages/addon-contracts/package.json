@@ -1,0 +1,22 @@
+{
+  "name": "@zarya/addon-contracts",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "engines": {
+    "node": "26.7.0",
+    "npm": "11.19.0"
+  }
+}

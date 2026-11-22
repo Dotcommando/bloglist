@@ -1,0 +1,15 @@
+{
+  "elementId": "45352222-e2ef-4e33-9d78-74e95ce5c1c2",
+  "siteId": "52379623-feb2-40b3-a822-0fbc0338c5e3",
+  "key": "1",
+  "name": "TrialHome",
+  "kind": "Template",
+  "version": "76da83b1-8b83-43c7-954f-23549224c2c4",
+  "html": "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Bloglist</title></head><body><main><h1>Bloglist — тестовый каталог</h1></main></body></html>",
+  "css": "",
+  "browserTypeScript": null,
+  "parameters": [],
+  "backupState": "Ready",
+  "createdAt": "2026-11-22T07:18:01.222Z",
+  "updatedAt": "2026-11-22T07:18:01.222Z"
+}

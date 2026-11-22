@@ -1,0 +1,24 @@
+{
+  "id": "0005-installation-settings",
+  "collections": [
+    {
+      "name": "installation_settings",
+      "dumpRole": "Global",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": ["_id", "adminOrigin", "previousOrigin", "version", "probeKey"],
+          "properties": {
+            "_id": { "enum": ["installation"] },
+            "adminOrigin": { "bsonType": "string", "minLength": 1 },
+            "previousOrigin": { "bsonType": ["string", "null"] },
+            "version": { "bsonType": "string", "minLength": 1 },
+            "probeKey": { "bsonType": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      },
+      "indexes": []
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+name: Publish CMS release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing stable tag to publish, for example v0.10.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cms-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Validate stable tag name
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a stable tag such as v0.10.0"
+            exit 1
+          fi
+
+      - name: Check out the tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.7.0'
+          package-manager-cache: false
+
+      - name: Set up pinned npm
+        run: npm install --global npm@11.19.0
+
+      - name: Validate release metadata
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          const metadata = async (file) => JSON.parse(await readFile(file, 'utf8'));
+          const version = process.env.RELEASE_TAG.slice(1);
+          const pkg = await metadata('package.json');
+          const lock = await metadata('package-lock.json');
+          const admin = await metadata('admin/package.json');
+          assert.equal(pkg.version, version, 'Tag and package.json versions differ');
+          assert.equal(lock.version, version, 'Lockfile version differs');
+          assert.equal(lock.packages[''].version, version, 'Root lock metadata differs');
+          assert.equal(admin.version, version, 'Administration version differs');
+          assert.equal(lock.packages.admin.version, version, 'Administration lock metadata differs');
+          NODE
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "${RELEASE_TAG}^{commit}")"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify release image references
+        run: node scripts/release-consistency.mjs
+
+      - name: Check types, lint and build
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run build
+
+      - name: Verify public gateway contracts
+        run: npm run test:gateway
+
+      - name: Test release artifact contracts
+        run: npm test -- test/tooling/workspace-typecheck.spec.ts test/tooling/release-artifact.spec.ts test/tooling/release-consistency.spec.ts
+
+      - name: Verify Docker image imports as the service user
+        run: npm run test:integration -- test/integration/docker-image-imports.integration.spec.ts
+
+      - name: Package and verify the tagged source
+        id: package
+        shell: bash
+        run: |
+          npm run release:pack
+          commit="$(git rev-parse HEAD)"
+          archive=".tmp/releases/cms-zarya-${RELEASE_TAG#v}-${commit:0:12}.tar.gz"
+          test -f "$archive"
+          test -f "$archive.sha256"
+          (cd .tmp/releases && sha256sum -c "$(basename "$archive").sha256")
+          staging="$RUNNER_TEMP/cms-release-verification"
+          mkdir "$staging"
+          tar -xzf "$archive" -C "$staging"
+          node "$staging/scripts/release-artifact.mjs" verify --root "$staging"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release and verified source assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+        run: |
+          gh release create "$RELEASE_TAG" "$ARCHIVE" "$ARCHIVE.sha256" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "CMS Zarya ${RELEASE_TAG#v}" --generate-notes

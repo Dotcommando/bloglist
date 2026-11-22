@@ -1,0 +1,334 @@
+{
+  "id": "0011-page-editorial-tv-choices",
+  "collections": [
+    {
+      "name": "page_publications",
+      "validator": {
+        "$jsonSchema": {
+          "required": [
+            "_id",
+            "siteId",
+            "versions"
+          ],
+          "bsonType": "object",
+          "properties": {
+            "versions": {
+              "maxItems": 3,
+              "items": {
+                "required": [
+                  "publishedAt",
+                  "page"
+                ],
+                "bsonType": "object",
+                "properties": {
+                  "page": {
+                    "bsonType": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "siteId",
+                      "mark",
+                      "language",
+                      "clusterId",
+                      "type",
+                      "status",
+                      "title",
+                      "h1",
+                      "metaTitle",
+                      "metaDescription",
+                      "contentMd",
+                      "robotsIndex",
+                      "publishedAt",
+                      "createdAt",
+                      "updatedAt",
+                      "pageId"
+                    ],
+                    "properties": {
+                      "siteId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "mark": {
+                        "bsonType": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+                      },
+                      "language": {
+                        "bsonType": "string",
+                        "pattern": "^[a-z]{2}$"
+                      },
+                      "clusterId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 1
+                      },
+                      "type": {
+                        "enum": [
+                          "STATIC",
+                          "BLOG_LIST",
+                          "MIXED"
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "DRAFT",
+                          "PUBLISHED",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "title": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "h1": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "metaDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "contentMd": {
+                        "bsonType": "string"
+                      },
+                      "robotsIndex": {
+                        "bsonType": "bool"
+                      },
+                      "publishedAt": {
+                        "bsonType": [
+                          "date",
+                          "null"
+                        ]
+                      },
+                      "createdAt": {
+                        "bsonType": "date"
+                      },
+                      "updatedAt": {
+                        "bsonType": "date"
+                      },
+                      "rendering": {
+                        "bsonType": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "templateId",
+                          "delivery",
+                          "interaction",
+                          "parameters",
+                          "loaders"
+                        ],
+                        "properties": {
+                          "templateId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          },
+                          "delivery": {
+                            "enum": [
+                              "Static",
+                              "Request"
+                            ]
+                          },
+                          "interaction": {
+                            "enum": [
+                              "None",
+                              "Api"
+                            ]
+                          },
+                          "parameters": {
+                            "bsonType": "object"
+                          },
+                          "loaders": {
+                            "bsonType": "array",
+                            "items": {
+                              "bsonType": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "loaderId",
+                                "alias",
+                                "phase",
+                                "parameters",
+                                "dependsOn",
+                                "required"
+                              ],
+                              "properties": {
+                                "loaderId": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "alias": {
+                                  "bsonType": "string",
+                                  "minLength": 1
+                                },
+                                "phase": {
+                                  "enum": [
+                                    "Build",
+                                    "Request"
+                                  ]
+                                },
+                                "parameters": {
+                                  "bsonType": "object"
+                                },
+                                "dependsOn": {
+                                  "bsonType": "array",
+                                  "items": {
+                                    "bsonType": "string"
+                                  }
+                                },
+                                "required": {
+                                  "bsonType": "bool"
+                                }
+                              }
+                            }
+                          },
+                          "requestCache": {
+                            "bsonType": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "scope",
+                              "ttlMs"
+                            ],
+                            "properties": {
+                              "scope": {
+                                "enum": [
+                                  "SharedPublic"
+                                ]
+                              },
+                              "ttlMs": {
+                                "bsonType": [
+                                  "int",
+                                  "long",
+                                  "double"
+                                ],
+                                "minimum": 1,
+                                "maximum": 3600000
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "pageId": {
+                        "minLength": 1,
+                        "bsonType": "string"
+                      },
+                      "ogTitle": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogDescription": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogImage": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ogType": {
+                        "enum": [
+                          "website",
+                          "article",
+                          null
+                        ]
+                      },
+                      "pageNumber": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ],
+                        "pattern": "^[1-9][0-9]{0,18}$"
+                      },
+                      "parentPageId": {
+                        "bsonType": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "sortOrder": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "tvValues": {
+                        "bsonType": "object",
+                        "maxProperties": 256,
+                        "additionalProperties": {
+                          "bsonType": [
+                            "string",
+                            "null",
+                            "object"
+                          ]
+                        }
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "maxLength": 255,
+                        "pattern": "^[a-zA-Z0-9!#$&^_.+\\-]+/[a-zA-Z0-9!#$&^_.+\\-]+$"
+                      },
+                      "excludeFromSitemap": {
+                        "bsonType": "bool"
+                      },
+                      "systemDocument": {
+                        "enum": [
+                          null,
+                          "Sitemap",
+                          "Robots",
+                          "Llms"
+                        ]
+                      },
+                      "authoredTvValues": {
+                        "bsonType": "object"
+                      }
+                    }
+                  },
+                  "publishedAt": {
+                    "bsonType": "date"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "bsonType": "array",
+              "minItems": 1
+            },
+            "siteId": {
+              "minLength": 1,
+              "bsonType": "string"
+            },
+            "_id": {
+              "minLength": 1,
+              "bsonType": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "_id": 1,
+            "siteId": 1
+          },
+          "name": "page_publications_site_identity"
+        }
+      ]
+    }
+  ]
+}

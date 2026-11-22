@@ -1,0 +1,203 @@
+{
+  "id": "0006-json-ld-node-settings",
+  "collections": [
+    {
+      "name": "json_ld_catalogs",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "additionalProperties": false,
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "profiles",
+            "objects"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "siteId": {
+              "bsonType": "string"
+            },
+            "version": {
+              "bsonType": "string"
+            },
+            "profiles": {
+              "bsonType": "array",
+              "maxItems": 256,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "name",
+                  "templateIds",
+                  "nodes"
+                ],
+                "properties": {
+                  "profileId": {
+                    "bsonType": "string"
+                  },
+                  "name": {
+                    "bsonType": "string"
+                  },
+                  "templateIds": {
+                    "bsonType": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  },
+                  "nodes": {
+                    "bsonType": "array",
+                    "minItems": 1,
+                    "maxItems": 64,
+                    "items": {
+                      "bsonType": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "role",
+                        "type",
+                        "mappings"
+                      ],
+                      "properties": {
+                        "role": {
+                          "bsonType": "string"
+                        },
+                        "type": {
+                          "bsonType": "string"
+                        },
+                        "mappings": {
+                          "bsonType": "array",
+                          "maxItems": 128,
+                          "items": {
+                            "bsonType": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "property",
+                              "required",
+                              "source"
+                            ],
+                            "properties": {
+                              "property": {
+                                "bsonType": "string"
+                              },
+                              "required": {
+                                "bsonType": "bool"
+                              },
+                              "source": {
+                                "bsonType": "object"
+                              }
+                            }
+                          }
+                        },
+                        "keySource": {
+                          "bsonType": "object",
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "constant",
+                                "pageField",
+                                "templateVariable",
+                                "snippet"
+                              ]
+                            },
+                            "value": {},
+                            "name": {
+                              "bsonType": "string"
+                            },
+                            "path": {
+                              "bsonType": "array",
+                              "maxItems": 8,
+                              "items": {
+                                "bsonType": "string"
+                              }
+                            }
+                          }
+                        },
+                        "presenceSource": {
+                          "bsonType": "object",
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "constant",
+                                "pageField",
+                                "templateVariable",
+                                "snippet"
+                              ]
+                            },
+                            "value": {},
+                            "name": {
+                              "bsonType": "string"
+                            },
+                            "path": {
+                              "bsonType": "array",
+                              "maxItems": 8,
+                              "items": {
+                                "bsonType": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "objects": {
+              "bsonType": "array",
+              "maxItems": 1024,
+              "items": {
+                "bsonType": "object",
+                "additionalProperties": false,
+                "required": [
+                  "objectId",
+                  "name",
+                  "type",
+                  "properties"
+                ],
+                "properties": {
+                  "objectId": {
+                    "bsonType": "string"
+                  },
+                  "name": {
+                    "bsonType": "string"
+                  },
+                  "type": {
+                    "enum": [
+                      "Organization",
+                      "Person"
+                    ]
+                  },
+                  "properties": {
+                    "bsonType": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "json_ld_catalogs_site_unique",
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

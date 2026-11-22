@@ -1,0 +1,3 @@
+# Existing behavior
+
+The file panel restores a single browser-stored update ID even when the returned operation is Completed. Its old transition appears under the new-update form while the card shows the active version. The repository button appears without an Installed repository claim, then returns NoRepository. The archive and live-update [contract](../../../arch/live-addon-updates.md) already gives immutable proposal identities and status reconciliation. The [repository installer](../../../arch/site-addons-contracts.md#repository-release-installation) already validates private delivery and archives. Preserve prior [staging-error ownership](../../../defects/addons/installation-primary-failure-masked.md).

@@ -1,0 +1,45 @@
+{
+  "id": "0007-page-resolutions",
+  "collections": [{
+    "name": "page_resolutions",
+    "dumpRole": "Runtime",
+    "validator": { "$jsonSchema": {
+      "bsonType": "object",
+      "additionalProperties": false,
+      "required": ["_id", "siteId", "path", "startedAt", "expiresAt", "cmsVersion", "durationMs", "completionMs", "method", "representation", "delivery", "statusCode", "outcome", "stages", "droppedStages"],
+      "properties": {
+        "_id": { "bsonType": "string" },
+        "siteId": { "bsonType": "string", "minLength": 1, "maxLength": 128 },
+        "path": { "bsonType": "string", "minLength": 1, "maxLength": 4096, "pattern": "^/[^?#]*$" },
+        "startedAt": { "bsonType": "date" },
+        "expiresAt": { "bsonType": "date" },
+        "cmsVersion": { "bsonType": "string", "minLength": 1, "maxLength": 80 },
+        "durationMs": { "bsonType": ["double", "int", "long"], "minimum": 0 },
+        "completionMs": { "bsonType": ["double", "int", "long"], "minimum": 0 },
+        "method": { "enum": ["GET", "HEAD"] },
+        "representation": { "enum": ["Html", "Markdown"] },
+        "delivery": { "enum": ["Static", "Dynamic", "Redirect", "Unresolved"] },
+        "statusCode": { "bsonType": ["int", "double"], "minimum": 100, "maximum": 599 },
+        "outcome": { "enum": ["Success", "Redirect", "NotFound", "Invalid", "Unavailable", "Failure", "Aborted"] },
+        "droppedStages": { "bsonType": ["int", "double"], "minimum": 0 },
+        "stages": { "bsonType": "array", "maxItems": 256, "items": {
+          "bsonType": "object", "additionalProperties": false,
+          "required": ["id", "parentId", "stage", "offsetMs", "durationMs", "outcome"],
+          "properties": {
+            "id": { "bsonType": ["int", "double"], "minimum": 1 },
+            "parentId": { "bsonType": ["int", "double", "null"] },
+            "stage": { "enum": ["site", "route", "activation", "plan", "request", "runtime", "tokenization", "parameters", "preparation", "snippet", "deduplication", "input", "output", "worker-startup", "script", "bridge", "transfer", "cleanup", "composition", "validation", "assets", "json-ld", "style-hashes", "markdown", "artifact"] },
+            "offsetMs": { "bsonType": ["int", "double"], "minimum": 0 },
+            "durationMs": { "bsonType": ["int", "double"], "minimum": 0 },
+            "outcome": { "enum": ["Success", "Failure", "Aborted", "Timeout", "Fallback"] }
+          }
+        } }
+      }
+    } },
+    "indexes": [
+      { "name": "page_resolution_site_time", "key": { "siteId": 1, "startedAt": 1 } },
+      { "name": "page_resolution_site_version_time", "key": { "siteId": 1, "cmsVersion": 1, "startedAt": 1 } },
+      { "name": "page_resolution_retention", "key": { "expiresAt": 1 }, "expireAfterSeconds": 0 }
+    ]
+  }]
+}
