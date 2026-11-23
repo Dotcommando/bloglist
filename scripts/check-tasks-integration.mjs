@@ -497,10 +497,30 @@ try {
     assert.ok(row && row.height < height.height, 'Action rows should be denser than group headings');
     await firstHeading.press('Space');
     assert.equal(await group.evaluate(details => details.open), false);
+    const language = adminUi.page.locator('.admin-language select');
+
+    await language.selectOption('ru');
+    await adminUi.page.getByRole('heading', { name: 'Создать шаблон', exact: true }).waitFor();
+    const search = adminUi.page.locator('.runtime-addon input[type="search"]');
+
+    await search.fill('Проверить email блогера');
+    await adminUi.page.getByRole('checkbox', { name: /Проверить email блогера/ }).waitFor({ timeout: 3000 });
+    await language.selectOption('en');
+    await adminUi.page.getByRole('heading', { name: 'Create template', exact: true }).waitFor();
+    await adminUi.page.getByRole('checkbox', { name: /Check blogger email/ }).waitFor();
+    assert.equal(await search.inputValue(), 'Проверить email блогера');
+    await search.fill('');
     await parent.click();
     console.log('CMS breadcrumb navigation and Actions fieldset styles passed');
     await adminUi.page.getByRole('link', { name: 'Fixture template' }).click();
     await adminUi.page.getByRole('textbox', { name: 'Name', exact: true }).fill('Unsaved fixture');
+    await language.selectOption('ru');
+    const russianName = adminUi.page.getByRole('textbox', { name: 'Название', exact: true });
+
+    await russianName.waitFor();
+    await adminUi.page.locator('.runtime-addon section.workspace[aria-busy="false"]').waitFor();
+    assert.equal(await russianName.inputValue(), 'Unsaved fixture');
+    await language.selectOption('en');
     await tabs(adminUi.page).getByRole('button', { name: 'Tasks', exact: true }).click();
     await adminUi.page.getByText('Save or cancel your changes first.').waitFor();
 
