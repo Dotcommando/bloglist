@@ -1,5 +1,7 @@
 # CMS Zarya
 
+[Tasks in the local Bloglist installation](docs/tasks-local.md)
+
 [Русская версия](README.ru.md)
 
 Portable CMS with a NestJS backend, MongoDB persistence and a

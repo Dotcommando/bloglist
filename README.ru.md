@@ -1,5 +1,7 @@
 # CMS Zarya
 
+[Аддон «Задачи» в локальном Bloglist](docs/tasks-local.ru.md)
+
 [English version](README.md)
 
 Переносимая CMS с бэкендом на NestJS, хранением данных в MongoDB и админкой
