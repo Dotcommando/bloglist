@@ -93,7 +93,7 @@ error, the next scheduled invocation can reconcile the saved request.
 ## Isolated verification
 
 ```powershell
-node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0 --upgrade
+node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0 --upgrade ../zarya-addon-tasks/artifacts/tasks-1.0.1
 ```
 
 The check creates a fresh `bloglist_trial_qa_*` database and private runtime

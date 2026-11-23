@@ -44,7 +44,7 @@ Bloglist и режимом «Не запускать новый экземпля
 ## Изолированная проверка
 
 ```powershell
-node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0 --upgrade
+node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0 --upgrade ../zarya-addon-tasks/artifacts/tasks-1.0.1
 ```
 
 Скрипт проверяет установку и обновление, права через HTTP, браузер и запись

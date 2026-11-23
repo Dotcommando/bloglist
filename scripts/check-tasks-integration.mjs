@@ -25,11 +25,17 @@ import { installAddon } from './install-tasks.mjs';
 import { runTasksClient } from './run-tasks-client.mjs';
 import { CmsSession } from './tasks-cms-client.mjs';
 
-const runtime = process.argv[2];
+const [runtime, mode, updateRuntime] = process.argv.slice(2);
+
+const upgrade = mode === '--upgrade';
 
 if (!runtime || !process.env.ZARYA_MONGO_URI || process.env.ZARYA_MONGO_DATABASE !== 'bloglist_trial') {
   throw new Error('Use the Bloglist trial .env and pass the built Tasks runtime directory');
 }
+
+const initial = JSON.parse(await readFile(path.join(runtime, 'addon.runtime.json'), 'utf8'));
+
+const initialVersion = initial.definition.implementationVersion;
 
 const active = path.resolve(process.env.ZARYA_DUMPS_ROOT ?? 'dumps', '.installed-addons');
 
@@ -131,8 +137,6 @@ try {
   await setup.close();
 }
 
-const upgrade = process.argv.includes('--upgrade');
-
 const publicSettings = { ...readPublicHttpSettings(environment), backgroundWork: false };
 
 const host = upgrade ? await createProcessSupervisor(publicSettings, {
@@ -142,13 +146,18 @@ const host = upgrade ? await createProcessSupervisor(publicSettings, {
 async function verifyUpgrade(session) {
   const candidate = path.join(root, 'upgrade-candidate');
 
-  await cp(path.resolve(runtime), candidate, { recursive: true, errorOnExist: true, force: false });
+  await cp(path.resolve(updateRuntime ?? runtime), candidate, { recursive: true, errorOnExist: true, force: false });
   const filename = path.join(candidate, 'addon.runtime.json');
   const manifest = JSON.parse(await readFile(filename, 'utf8'));
 
-  manifest.definition.implementationVersion = '1.0.1';
-  manifest.update = { fromVersion: '1.0.0', mode: 'Compatible' };
-  await writeFile(filename, JSON.stringify(manifest, null, 2) + '\n');
+  if (!updateRuntime) {
+    const [major, minor, patch] = initialVersion.split('.').map(Number);
+
+    manifest.definition.implementationVersion = [major, minor, patch + 1].join('.');
+    manifest.update = { fromVersion: initialVersion, mode: 'Compatible' };
+    await writeFile(filename, JSON.stringify(manifest, null, 2) + '\n');
+  }
+
   const archive = path.join(root, 'upgrade-archive.runtime.gz');
 
   await packAddonArchive(candidate, archive);
@@ -165,14 +174,16 @@ async function verifyUpgrade(session) {
   assert.equal(proposal.status, 200, await proposal.clone().text());
   const { updateId, fromVersion, toVersion } = await proposal.json();
 
-  assert.equal(fromVersion, '1.0.0');
-  assert.equal(toVersion, '1.0.1');
+  assert.equal(fromVersion, initialVersion);
+  assert.equal(toVersion, manifest.definition.implementationVersion);
   const apply = await fetch(url + '/' + updateId + '/apply', {
     method: 'POST', headers, signal: AbortSignal.timeout(90_000),
   });
 
   assert.equal(apply.status, 200, await apply.clone().text());
   assert.equal((await apply.json()).phase, 'Completed');
+
+  return toVersion;
 }
 
 try {
@@ -380,6 +391,15 @@ try {
     { keys: [ignoredIdentity] }))[0].status, 'unknown');
   console.log('HTTP, competing claims, scoped permissions, schema and real Bloglist catalog writes passed');
 
+  let verifiedVersion = initialVersion;
+
+  if (upgrade) {
+    verifiedVersion = await verifyUpgrade(admin);
+    assert.equal((await executor.request(execution)).definitionVersionSnapshot.version, 1);
+    assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
+    console.log('Compatible update preserved the runtime connection, existing Actions and persisted data');
+  }
+
   const browser = await chromium.launch({
     executablePath: process.env.BLOGLIST_CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe',
     headless: true,
@@ -406,6 +426,29 @@ try {
 
     await tabs(adminUi.page).getByRole('button', { name: 'Settings', exact: true }).waitFor();
     assert.equal(await tabs(adminUi.page).getByRole('button').count(), 4);
+
+    if (verifiedVersion !== '1.0.0') {
+      const available = adminUi.page.getByRole('checkbox', { name: 'Available to claim', exact: true });
+      const checkbox = await available.boundingBox();
+
+      assert.equal(checkbox?.width, 20);
+      assert.equal(checkbox?.height, 20);
+      await available.focus();
+      await available.press('Space');
+      assert.equal(await available.isChecked(), true);
+      await adminUi.page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+      await adminUi.page.waitForURL(url => url.searchParams.get('available') === 'true');
+      assert.equal(await available.isChecked(), true);
+
+      const add = adminUi.page.getByRole('button', { name: 'Add task', exact: true });
+      const refresh = adminUi.page.getByRole('button', { name: 'Refresh', exact: true });
+
+      assert.equal(await add.locator('svg.cms-icon path').getAttribute('d', { timeout: 3000 }), 'M12 5v14M5 12h14');
+      const refreshPath = refresh.locator('svg.cms-icon path').nth(1);
+
+      assert.equal(await refreshPath.getAttribute('d', { timeout: 3000 }), 'M21 3v5h-5');
+      console.log('CMS checkbox size, keyboard filtering and button SVGs passed');
+    }
     await tabs(adminUi.page).getByRole('button', { name: 'Templates' }).click();
     await adminUi.page.getByRole('link', { name: 'Fixture template' }).click();
     await adminUi.page.getByRole('textbox', { name: 'Name', exact: true }).fill('Unsaved fixture');
@@ -434,13 +477,6 @@ try {
     console.log('Browser navigation, dirty guard, worker submit/finish and reviewer permissions passed');
   } finally {
     await browser.close();
-  }
-
-  if (upgrade) {
-    await verifyUpgrade(admin);
-    assert.equal((await executor.request(execution)).definitionVersionSnapshot.version, 1);
-    assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
-    console.log('Compatible update preserved the runtime connection, existing Actions and persisted data');
   }
 
   const interruptedTask = await admin.request(tasks + '/tasks', {
