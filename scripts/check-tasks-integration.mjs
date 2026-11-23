@@ -450,6 +450,27 @@ try {
       console.log('CMS checkbox size, keyboard filtering and button SVGs passed');
     }
     await tabs(adminUi.page).getByRole('button', { name: 'Templates' }).click();
+
+    if (Number(verifiedVersion.split('.')[2]) >= 2) {
+      await adminUi.page.getByRole('button', { name: 'Add template', exact: true }).click();
+      const breadcrumbs = adminUi.page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
+      const parent = breadcrumbs.getByRole('link', { name: 'Templates', exact: true });
+      const underline = await parent.evaluate(link => {
+        return link.ownerDocument.defaultView.getComputedStyle(link).textUnderlineOffset;
+      });
+
+      assert.equal(underline, '3px');
+      const actions = adminUi.page.getByRole('group', { name: 'Allowed Actions', exact: true });
+
+      assert.equal(await actions.evaluate(group => group.classList.contains('cms-fieldset')), true);
+      const radius = await actions.evaluate(group => {
+        return group.ownerDocument.defaultView.getComputedStyle(group).borderRadius;
+      });
+
+      assert.equal(radius, '12px');
+      await parent.click();
+      console.log('CMS breadcrumb navigation and Actions fieldset styles passed');
+    }
     await adminUi.page.getByRole('link', { name: 'Fixture template' }).click();
     await adminUi.page.getByRole('textbox', { name: 'Name', exact: true }).fill('Unsaved fixture');
     await tabs(adminUi.page).getByRole('button', { name: 'Tasks', exact: true }).click();
