@@ -90,12 +90,13 @@ When `allowCatalogCreate` is enabled, it confirms the Bloglist catalog writes
 before saving an approved review with the catalog IDs. If a run exits with an
 error, the next scheduled invocation can reconcile the saved request.
 
-## Reinstall a local UI candidate
+## Reinstall a local candidate
 
-After building the UI candidate, run the reinstall command with a private CMS
+After building the candidate, run the reinstall command with a private CMS
 installation administrator credential file. The command keeps version 1.0.0 and
 stores the new runtime under its checksum. CMS applies the selection while retaining
-the existing connection, permissions, server files and migrations.
+the existing connection, permissions and migration history. Candidate builds must
+declare the same routes, Actions, collections and migrations.
 
 ```powershell
 node --env-file=.env scripts/reinstall-tasks.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0 .tmp/bloglist_trial/credentials.json

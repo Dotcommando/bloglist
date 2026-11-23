@@ -24,7 +24,8 @@ function fixedContract(manifest) {
   const fixed = {
     ...manifest,
     definition: { ...manifest.definition },
-    files: Object.fromEntries(Object.entries(manifest.files).filter(([name]) => !name.startsWith('admin/'))),
+    files: Object.fromEntries(Object.entries(manifest.files).filter(([name]) =>
+      !name.startsWith('admin/') && name !== manifest.serverEntry)),
   };
 
   delete fixed.adminEntry;
@@ -107,7 +108,7 @@ async function stageReinstall(settings, artifact) {
       || !/^1\.0\.\d+$/.test(previous.definition.implementationVersion)
       || !isDeepStrictEqual(fixedContract(previous), fixedContract(candidate))
     ) {
-      throw new Error('Tasks reinstall requires a 1.0.0 build with identical server, migrations and Actions');
+      throw new Error('Tasks 1.0.0 reinstall requires identical routes, Actions, collections and migrations');
     }
     if (fromDigest === toDigest) {
       return { digest: toDigest };

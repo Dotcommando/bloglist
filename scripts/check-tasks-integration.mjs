@@ -206,6 +206,7 @@ try {
       'state.read': ['groups'],
       'state.update': ['groups'],
     }),
+    'bloglist.clusters.list': ['all'],
   };
   const reviewerGrants = {
     ...common,
@@ -263,7 +264,7 @@ try {
     name: 'Fixture template',
     introductionMd: 'Initial **test** instructions',
     completionMd: 'Review is independent.',
-    allowedActionIds: ['tasks.known.check'],
+    allowedActionIds: ['tasks.known.check', 'bloglist.clusters.list'],
     artifactFormat: 'json',
     artifactSchema: { type: 'object', required: ['title'], properties: { title: { type: 'string' } } },
   };
@@ -293,6 +294,24 @@ try {
   await expectStatus(outsider.client.request(taskPath), 404);
   await expectStatus(hermes.client.request(tasks + '/definitions'), 403);
   await expectStatus(hermes.client.request('/api/admin/sites/' + secondSite + '/tasks/tasks'), 403, 404);
+
+  async function checkWorkerActions() {
+    const { actions } = await hermes.client.request(taskPath);
+    const identity = actions.find(action => action.actionId === 'tasks.known.check');
+    const clusters = actions.find(action => action.actionId === 'bloglist.clusters.list');
+
+    assert.equal(identity?.method, 'POST');
+    assert.equal(identity?.route, '/api/admin/sites/:siteId/tasks/tasks/:taskId/known/check');
+    assert.deepEqual(Object.keys(identity.request.body), ['keys']);
+    assert.equal(clusters?.method, 'GET');
+    assert.equal(clusters?.route, '/api/admin/sites/:siteId/bloglist/clusters');
+    assert.equal(clusters.request.query.page, 1);
+    assert.ok(Array.isArray((await hermes.client.request(api + '/bloglist/clusters?page=1&limit=25')).items));
+  }
+
+  if (!reinstall && !upgrade) {
+    await checkWorkerActions();
+  }
 
   const claimResults = await Promise.allSettled([
     hermes.client.request(taskPath + '/claim', {}, 'claim-hermes'),
@@ -396,6 +415,7 @@ try {
     assert.equal(replaced.version, '1.0.0');
     assert.equal(replaced.reinstalled, true);
     assert.equal((await reinstallTasks(settings, updateRuntime, admin)).reinstalled, false);
+    await checkWorkerActions();
     assert.equal((await executor.request(execution)).definitionVersionSnapshot.version, 1);
     assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
     console.log('Candidate reinstall retained data, permissions and version 1.0.0');
@@ -529,6 +549,25 @@ try {
     await workerUi.page.getByRole('link', { name: 'Fictional discovery' }).click();
     await workerUi.page.getByRole('heading', { name: 'Fictional discovery' }).waitFor();
     assert.equal(await tabs(workerUi.page).getByRole('button').count(), 1);
+
+    if (!upgrade) {
+      const toolbar = workerUi.page.locator('.runtime-addon .toolbar');
+      const buttons = toolbar.locator('.buttons');
+      const alignment = await buttons.evaluate(row =>
+        row.parentElement.getBoundingClientRect().right - row.getBoundingClientRect().right);
+
+      assert.ok(Math.abs(alignment) <= 1, 'Task toolbar buttons align with its right edge');
+      const disclosure = workerUi.page.getByText('Available Actions', { exact: true });
+
+      await disclosure.click();
+      const knownRoute = 'POST ' + taskPath + '/known/check';
+      const knownAction = workerUi.page.getByRole('listitem').filter({ hasText: knownRoute });
+
+      await knownAction.getByText(knownRoute, { exact: true }).waitFor();
+      await knownAction.getByText('Example request', { exact: true }).click();
+      assert.ok((await knownAction.locator('pre').textContent()).includes('"keys"'));
+      await workerUi.page.getByText('GET ' + api + '/bloglist/clusters?page=1&limit=25', { exact: true }).waitFor();
+    }
     await workerUi.page.getByRole('button', { name: 'Resume', exact: true }).click();
     await workerUi.page.getByRole('heading', { name: 'Execution №2' }).waitFor();
     const result = workerUi.page.getByRole('textbox', { name: 'Result', exact: true });
