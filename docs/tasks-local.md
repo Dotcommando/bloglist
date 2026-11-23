@@ -92,15 +92,18 @@ error, the next scheduled invocation can reconcile the saved request.
 
 ## Isolated verification
 
+Use a fresh QA installation for each build of the Tasks 1.0.0 candidate.
+The CMS live update mechanism requires a higher version than the selected package.
+
 ```powershell
-node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.1 --upgrade ../zarya-addon-tasks/artifacts/tasks-1.0.2
+node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0
 ```
 
 The check creates a fresh `bloglist_trial_qa_*` database and private runtime
 root, uses temporary loopback HTTP listeners and Chrome, and exercises
-installation, scoped permissions, lease contention, review feedback, catalog
-writes, browser navigation, restart after response loss and compatible
-upgrade. Point `BLOGLIST_CHROME_PATH` at the Chrome executable as needed.
+installation, Zarya form styles, scoped permissions, lease contention, review feedback,
+catalog writes, browser navigation and restart after response loss. Point
+`BLOGLIST_CHROME_PATH` at the Chrome executable as needed.
 Set `TASKS_QA_HERMES_EXE` and `TASKS_QA_CODEX_ENTRY` to test local models against
 a fictional artifact. With one variable set, the other role uses fixture output.
 The check stops its own listeners and browser when it exits.

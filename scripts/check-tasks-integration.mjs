@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { openAsBlob } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, stat } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 
@@ -28,6 +28,10 @@ import { CmsSession } from './tasks-cms-client.mjs';
 const [runtime, mode, updateRuntime] = process.argv.slice(2);
 
 const upgrade = mode === '--upgrade';
+
+if (upgrade && !updateRuntime) {
+  throw new Error('Pass an explicit newer runtime for --upgrade');
+}
 
 if (!runtime || !process.env.ZARYA_MONGO_URI || process.env.ZARYA_MONGO_DATABASE !== 'bloglist_trial') {
   throw new Error('Use the Bloglist trial .env and pass the built Tasks runtime directory');
@@ -144,20 +148,8 @@ const host = upgrade ? await createProcessSupervisor(publicSettings, {
 }) : await createPublicHttpApplication(publicSettings);
 
 async function verifyUpgrade(session) {
-  const candidate = path.join(root, 'upgrade-candidate');
-
-  await cp(path.resolve(updateRuntime ?? runtime), candidate, { recursive: true, errorOnExist: true, force: false });
-  const filename = path.join(candidate, 'addon.runtime.json');
-  const manifest = JSON.parse(await readFile(filename, 'utf8'));
-
-  if (!updateRuntime) {
-    const [major, minor, patch] = initialVersion.split('.').map(Number);
-
-    manifest.definition.implementationVersion = [major, minor, patch + 1].join('.');
-    manifest.update = { fromVersion: initialVersion, mode: 'Compatible' };
-    await writeFile(filename, JSON.stringify(manifest, null, 2) + '\n');
-  }
-
+  const candidate = path.resolve(updateRuntime);
+  const manifest = JSON.parse(await readFile(path.join(candidate, 'addon.runtime.json'), 'utf8'));
   const archive = path.join(root, 'upgrade-archive.runtime.gz');
 
   await packAddonArchive(candidate, archive);
@@ -182,8 +174,6 @@ async function verifyUpgrade(session) {
 
   assert.equal(apply.status, 200, await apply.clone().text());
   assert.equal((await apply.json()).phase, 'Completed');
-
-  return toVersion;
 }
 
 try {
@@ -391,10 +381,8 @@ try {
     { keys: [ignoredIdentity] }))[0].status, 'unknown');
   console.log('HTTP, competing claims, scoped permissions, schema and real Bloglist catalog writes passed');
 
-  let verifiedVersion = initialVersion;
-
   if (upgrade) {
-    verifiedVersion = await verifyUpgrade(admin);
+    await verifyUpgrade(admin);
     assert.equal((await executor.request(execution)).definitionVersionSnapshot.version, 1);
     assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
     console.log('Compatible update preserved the runtime connection, existing Actions and persisted data');
@@ -427,50 +415,61 @@ try {
     await tabs(adminUi.page).getByRole('button', { name: 'Settings', exact: true }).waitFor();
     assert.equal(await tabs(adminUi.page).getByRole('button').count(), 4);
 
-    if (verifiedVersion !== '1.0.0') {
-      const available = adminUi.page.getByRole('checkbox', { name: 'Available to claim', exact: true });
-      const checkbox = await available.boundingBox();
+    const available = adminUi.page.getByRole('checkbox', { name: 'Available to claim', exact: true });
+    const checkbox = await available.boundingBox();
 
-      assert.equal(checkbox?.width, 20);
-      assert.equal(checkbox?.height, 20);
-      await available.focus();
-      await available.press('Space');
-      assert.equal(await available.isChecked(), true);
-      await adminUi.page.getByRole('button', { name: 'Apply filters', exact: true }).click();
-      await adminUi.page.waitForURL(url => url.searchParams.get('available') === 'true');
-      assert.equal(await available.isChecked(), true);
+    assert.equal(checkbox?.width, 20);
+    assert.equal(checkbox?.height, 20);
+    await available.focus();
+    await available.press('Space');
+    assert.equal(await available.isChecked(), true);
+    await adminUi.page.getByRole('button', { name: 'Apply filters', exact: true }).click();
+    await adminUi.page.waitForURL(url => url.searchParams.get('available') === 'true');
+    assert.equal(await available.isChecked(), true);
 
-      const add = adminUi.page.getByRole('button', { name: 'Add task', exact: true });
-      const refresh = adminUi.page.getByRole('button', { name: 'Refresh', exact: true });
+    const add = adminUi.page.getByRole('button', { name: 'Add task', exact: true });
+    const refresh = adminUi.page.getByRole('button', { name: 'Refresh', exact: true });
 
-      assert.equal(await add.locator('svg.cms-icon path').getAttribute('d', { timeout: 3000 }), 'M12 5v14M5 12h14');
-      const refreshPath = refresh.locator('svg.cms-icon path').nth(1);
+    assert.equal(await add.locator('svg.cms-icon path').getAttribute('d', { timeout: 3000 }), 'M12 5v14M5 12h14');
+    const refreshPath = refresh.locator('svg.cms-icon path').nth(1);
 
-      assert.equal(await refreshPath.getAttribute('d', { timeout: 3000 }), 'M21 3v5h-5');
-      console.log('CMS checkbox size, keyboard filtering and button SVGs passed');
-    }
+    assert.equal(await refreshPath.getAttribute('d', { timeout: 3000 }), 'M21 3v5h-5');
+    console.log('CMS checkbox size, keyboard filtering and button SVGs passed');
     await tabs(adminUi.page).getByRole('button', { name: 'Templates' }).click();
 
-    if (Number(verifiedVersion.split('.')[2]) >= 2) {
-      await adminUi.page.getByRole('button', { name: 'Add template', exact: true }).click();
-      const breadcrumbs = adminUi.page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
-      const parent = breadcrumbs.getByRole('link', { name: 'Templates', exact: true });
-      const underline = await parent.evaluate(link => {
-        return link.ownerDocument.defaultView.getComputedStyle(link).textUnderlineOffset;
-      });
+    await adminUi.page.getByRole('button', { name: 'Add template', exact: true }).click();
+    const breadcrumbs = adminUi.page.getByRole('navigation', { name: 'Breadcrumb', exact: true });
+    const parent = breadcrumbs.getByRole('link', { name: 'Templates', exact: true });
+    const underline = await parent.evaluate(link => {
+      return link.ownerDocument.defaultView.getComputedStyle(link).textUnderlineOffset;
+    });
 
-      assert.equal(underline, '3px');
-      const actions = adminUi.page.getByRole('group', { name: 'Allowed Actions', exact: true });
+    assert.equal(underline, '3px');
+    const actions = adminUi.page.getByRole('group', { name: 'Allowed Actions', exact: true });
 
-      assert.equal(await actions.evaluate(group => group.classList.contains('cms-fieldset')), true);
-      const radius = await actions.evaluate(group => {
-        return group.ownerDocument.defaultView.getComputedStyle(group).borderRadius;
-      });
+    assert.equal(await actions.evaluate(group => group.classList.contains('cms-fieldset')), true);
+    const radius = await actions.evaluate(group => {
+      return group.ownerDocument.defaultView.getComputedStyle(group).borderRadius;
+    });
 
-      assert.equal(radius, '12px');
-      await parent.click();
-      console.log('CMS breadcrumb navigation and Actions fieldset styles passed');
+    assert.equal(radius, '12px');
+    const textareas = await adminUi.page.locator('textarea').evaluateAll(fields => fields.map(field => {
+      const style = field.ownerDocument.defaultView.getComputedStyle(field);
+
+      return {
+        radius: style.borderRadius,
+        padding: style.paddingInlineStart,
+        resize: style.resize,
+      };
+    }));
+
+    assert.equal(textareas.length, 4);
+
+    for (const field of textareas) {
+      assert.deepEqual(field, { radius: '7px', padding: '14px', resize: 'vertical' });
     }
+    await parent.click();
+    console.log('CMS breadcrumb navigation and Actions fieldset styles passed');
     await adminUi.page.getByRole('link', { name: 'Fixture template' }).click();
     await adminUi.page.getByRole('textbox', { name: 'Name', exact: true }).fill('Unsaved fixture');
     await tabs(adminUi.page).getByRole('button', { name: 'Tasks', exact: true }).click();
@@ -483,7 +482,13 @@ try {
     assert.equal(await tabs(workerUi.page).getByRole('button').count(), 1);
     await workerUi.page.getByRole('button', { name: 'Resume', exact: true }).click();
     await workerUi.page.getByRole('heading', { name: 'Execution №2' }).waitFor();
-    await workerUi.page.getByRole('textbox', { name: 'Result', exact: true }).fill('{"title":"Browser artifact"}');
+    const result = workerUi.page.getByRole('textbox', { name: 'Result', exact: true });
+    const resultRadius = await result.evaluate(field => {
+      return field.ownerDocument.defaultView.getComputedStyle(field).borderRadius;
+    });
+
+    assert.equal(resultRadius, '7px');
+    await result.fill('{"title":"Browser artifact"}');
     await workerUi.page.getByRole('button', { name: 'Submit artifact', exact: true }).click();
     await workerUi.page.locator('tbody tr').waitFor();
     await workerUi.page.getByRole('button', { name: 'Finish execution', exact: true }).click();

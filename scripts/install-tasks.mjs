@@ -17,7 +17,7 @@ export async function installAddon(application, settings, siteId, artifact, key)
     manifest.cmsVersion !== '0.16.1'
     || manifest.definition?.addonKey !== key
     || key === 'tasks'
-    && !/^1\.0\.\d+$/.test(manifest.definition.implementationVersion)
+    && manifest.definition.implementationVersion !== '1.0.0'
   ) {
     throw new Error('Unexpected add-on artifact identity');
   }

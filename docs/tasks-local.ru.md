@@ -43,11 +43,14 @@ Bloglist и режимом «Не запускать новый экземпля
 
 ## Изолированная проверка
 
+Для каждой сборки кандидата Tasks 1.0.0 используется отдельная QA-установка.
+Штатное обновление CMS принимает только версию выше выбранной.
+
 ```powershell
-node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.1 --upgrade ../zarya-addon-tasks/artifacts/tasks-1.0.2
+node --env-file=.env scripts/check-tasks-integration.mjs ../zarya-addon-tasks/artifacts/tasks-1.0.0
 ```
 
-Скрипт проверяет установку и обновление, права через HTTP, браузер и запись
+Скрипт проверяет установку, стили форм Zarya, права через HTTP, браузер и запись
 в каталог в новой базе `bloglist_trial_qa_*`. Для прогона локальных моделей
 укажите `TASKS_QA_HERMES_EXE` и `TASKS_QA_CODEX_ENTRY`. Если задана одна
 переменная, вторая роль получает синтетический ответ. Для проверки используются
