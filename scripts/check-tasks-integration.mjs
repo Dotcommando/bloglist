@@ -22,6 +22,7 @@ import { readPublicHttpSettings } from '../dist/infra/public-http.settings.js';
 import { createProcessSupervisor } from '../dist/infra/resources/process-supervisor.js';
 import { CREATE_SITE } from '../dist/infra/sites/sites.tokens.js';
 import { installAddon } from './install-tasks.mjs';
+import { reinstallTasks } from './reinstall-tasks.mjs';
 import { runTasksClient } from './run-tasks-client.mjs';
 import { CmsSession } from './tasks-cms-client.mjs';
 
@@ -29,8 +30,10 @@ const [runtime, mode, updateRuntime] = process.argv.slice(2);
 
 const upgrade = mode === '--upgrade';
 
-if (upgrade && !updateRuntime) {
-  throw new Error('Pass an explicit newer runtime for --upgrade');
+const reinstall = mode === '--reinstall';
+
+if ((upgrade || reinstall) && !updateRuntime) {
+  throw new Error('Pass the candidate runtime directory');
 }
 
 if (!runtime || !process.env.ZARYA_MONGO_URI || process.env.ZARYA_MONGO_DATABASE !== 'bloglist_trial') {
@@ -143,7 +146,7 @@ try {
 
 const publicSettings = { ...readPublicHttpSettings(environment), backgroundWork: false };
 
-const host = upgrade ? await createProcessSupervisor(publicSettings, {
+const host = upgrade || reinstall ? await createProcessSupervisor(publicSettings, {
   capacity: 4, infrastructureCpu: 0, cmsCpuBudget: 4, databasePlacement: DatabasePlacement.UnmanagedLocal,
 }) : await createPublicHttpApplication(publicSettings);
 
@@ -387,6 +390,16 @@ try {
     assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
     console.log('Compatible update preserved the runtime connection, existing Actions and persisted data');
   }
+  if (reinstall) {
+    const replaced = await reinstallTasks(settings, updateRuntime, admin);
+
+    assert.equal(replaced.version, '1.0.0');
+    assert.equal(replaced.reinstalled, true);
+    assert.equal((await reinstallTasks(settings, updateRuntime, admin)).reinstalled, false);
+    assert.equal((await executor.request(execution)).definitionVersionSnapshot.version, 1);
+    assert.equal((await codex.client.request(artifactReview(submitted.artifactId)))[0].externalRefs.length, 2);
+    console.log('Candidate reinstall retained data, permissions and version 1.0.0');
+  }
 
   const browser = await chromium.launch({
     executablePath: process.env.BLOGLIST_CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -468,6 +481,22 @@ try {
     for (const field of textareas) {
       assert.deepEqual(field, { radius: '7px', padding: '14px', resize: 'vertical' });
     }
+    const headings = actions.locator('details > summary');
+    const firstHeading = headings.filter({ hasText: /bloglist\.bloggers/ });
+    const height = await firstHeading.boundingBox();
+
+    assert.ok(height && height.height >= 36, 'Action groups need a comfortable click target');
+    assert.equal(await firstHeading.locator('svg.cms-icon').count(), 1);
+    await firstHeading.press('Enter');
+    const group = firstHeading.locator('..');
+
+    assert.equal(await group.evaluate(details => details.open), true);
+    const checkboxRow = group.locator('label').first();
+    const row = await checkboxRow.boundingBox();
+
+    assert.ok(row && row.height < height.height, 'Action rows should be denser than group headings');
+    await firstHeading.press('Space');
+    assert.equal(await group.evaluate(details => details.open), false);
     await parent.click();
     console.log('CMS breadcrumb navigation and Actions fieldset styles passed');
     await adminUi.page.getByRole('link', { name: 'Fixture template' }).click();
