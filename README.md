@@ -1,20 +1,19 @@
-# CMS Zarya
+# Bloglist trial site
 
-[Tasks in the local Bloglist installation](docs/tasks-local.md)
+[Bloglist trial installation and runtime release](docs/bloglist-trial-catalog.md)
 
 [Русская версия](README.ru.md)
 
-Portable CMS with a NestJS backend, MongoDB persistence and a
-Svelte/Vite/Bits UI administration application. This checkout is the clean CMS
-distribution. Site installations, their content and installed business add-ons
-belong in separate projects under [ADR 0037](docs/adr/0037-clean-cms-and-site-installations.md).
+This checkout runs the local Bloglist site on CMS Zarya. The site consumes the
+published Bloglist add-on through the CMS runtime registry. The CMS source and
+the add-on source live in separate repositories under
+[ADR 0037](docs/adr/0037-clean-cms-and-site-installations.md).
 
 The core provides sites, pages, independent URLs, editable templates/chunks/
 Snippets, media, draft previews, immutable publication releases, public delivery,
 administrator accounts/authentication and generic site add-on connections.
-It ships no site data or installed business add-ons. Both trusted add-on
-registries are empty; the administration's Add-ons section shows an empty state.
-The versioned extension SDK remains in packages/addon-contracts.
+Local site data and installed runtime files are managed by the CMS. The versioned
+extension SDK remains in `packages/addon-contracts`.
 
 The server cms object API is available to trusted Snippets and add-ons.
 Developer guides: [English](docs/guide/en/README.md) and [Русский](docs/guide/ru/README.md).

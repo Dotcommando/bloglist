@@ -1,8 +1,25 @@
 # Bloglist trial catalog
 
-This consuming installation runs CMS Zarya 0.15.1 and the selected Bloglist
-0.4.1 runtime. The add-on source lives in the separate zarya-addon-bloglist
-project; the immutable installed artifact is selected through the CMS registry.
+The local trial uses CMS Zarya 0.16.1 and the published Bloglist 1.1.0 runtime.
+Use `addon.runtime.gz` from [Bloglist v1.1.0](https://github.com/Dotcommando/zarya-addon-bloglist/releases/tag/v1.1.0).
+
+- Archive SHA-256 `18c5a9a478787c1c5fb53114343a694e6ca83eddc014be0dbe54d3cea98cfd0d`
+- Runtime manifest SHA-256 `ce815328fd3fa4481379da2ea8d0536ed52a8961ad0220f6bc4a21d97149bd8a`
+- Migration `0000-runtime.json`
+
+Download the asset from the private release with a GitHub account that has
+repository access. Check its SHA-256 before handing it to the CMS runtime
+registry. The [repository release contract](arch/site-addons-contracts.md#repository-release-installation)
+describes installation from GitHub on hosts with a configured GitHub App.
+The trial uses the downloaded archive directly. Reinstallation uses a fresh
+add-on schema and an explicit catalog transfer.
+
+Start the trial from the IDE with `npm run start:http`. The site and its admin
+interface are served locally on port 3003.
+
+## Historical catalog prototype on 0.4.1
+
+The following notes describe the earlier CMS Zarya 0.15.1 prototype.
 
 - Public home: http://localhost:3003/
 - Administration: http://localhost:3002/admin/
@@ -38,6 +55,3 @@ pagination, live description edits without publication, selection add/remove and
 ordering, and blogger child pagination. Chrome layouts were checked from 320 to
 1440 CSS px, including breakpoint edges; no horizontal overflow or browser errors
 were observed. Physical iPhone Safari and production load were not tested.
-
-Start the installation from the IDE with npm run start:http. Existing private
-.env, database and users are retained. Do not rerun the old setup/reset tools.
