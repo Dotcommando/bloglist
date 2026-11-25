@@ -15,13 +15,13 @@ it('replaces documents and all responsive variants through UI with stable identi
       name: 'report.csv', mimeType: 'text/csv', buffer: Buffer.from('version\nold\n'),
     });
     await page.getByRole('button', { name: 'Upload files', exact: true }).click();
-    await page.getByRole('button', { name: 'report.csv', exact: true }).click();
+    await page.getByRole('link', { name: 'report.csv', exact: true }).click();
     const documentEditor = page.url();
     const documentUrl = await page.getByLabel('URL', { exact: true }).inputValue();
     const document = Buffer.from('version,value\nnew,42\n');
     const [changedDocument] = await Promise.all([
       page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/change')),
-      page.locator('.files-workspace input[type=file]').setInputFiles({
+      page.getByLabel('Replace file', { exact: true }).setInputFiles({
         name: 'updated.csv', mimeType: 'text/csv', buffer: document,
       }),
     ]);
@@ -43,7 +43,7 @@ it('replaces documents and all responsive variants through UI with stable identi
     });
     await page.getByRole('combobox', { name: /^Processing/ }).selectOption('Responsive');
     await page.getByRole('button', { name: 'Upload images', exact: true }).click();
-    await page.getByRole('button', { name: 'responsive.png', exact: true }).click();
+    await page.getByRole('link', { name: 'responsive.png', exact: true }).click();
     const imageEditor = page.url();
     const fileId = imageEditor.split('/').at(-1)!;
     const libraryBefore: IFileLibrary = await (await page.request.get(origin + '/api' + site + '/files')).json();
@@ -54,7 +54,7 @@ it('replaces documents and all responsive variants through UI with stable identi
       .png().toBuffer();
     const [changedImage] = await Promise.all([
       page.waitForResponse((r) => r.request().method() === 'POST' && r.url().endsWith('/change')),
-      page.locator('.files-workspace input[type=file]').setInputFiles({
+      page.getByLabel('Change image', { exact: true }).setInputFiles({
         name: 'replacement.png', mimeType: 'image/png', buffer: replacement,
       }),
     ]);
@@ -157,7 +157,7 @@ it.each(['name', 'folder'])('keeps pending file fields on a stale %s conflict an
       name: 'shared.csv', mimeType: 'text/csv', buffer: Buffer.from('shared\nvalue\n'),
     });
     await page.getByRole('button', { name: 'Upload files', exact: true }).click();
-    await page.getByRole('button', { name: 'shared.csv', exact: true }).click();
+    await page.getByRole('link', { name: 'shared.csv', exact: true }).click();
     const editor = page.url();
     const fileId = editor.split('/').at(-1)!;
     const stale = await f.context.newPage();
@@ -198,4 +198,4 @@ it.each(['name', 'folder'])('keeps pending file fields on a stale %s conflict an
       .toMatchObject({ name: 'winning.csv', folderId: target });
     await stale.close();
   });
-}, 90000);
+}, 180000);

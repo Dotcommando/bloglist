@@ -240,9 +240,12 @@ export function fileContentUrl(siteId: string, fileId: string, key = 'original')
   return '/api/admin/sites' + filesBase(siteId) + '/' + fileId + '/content?key=' + encodeURIComponent(key);
 }
 
-function validateUpload(file: File): void {
+function validateUpload(file: File, requireImage = false): void {
   const image = /\.(?:jpe?g|png|webp|avif|svg|ico)$/i.test(file.name);
 
+  if (requireImage && !image) {
+    throw new ContentRequestError(415, FileValidationIssue.PickerType);
+  }
   if (!file.size) {
     throw new ContentRequestError(400, FileValidationIssue.Empty);
   }
@@ -264,7 +267,7 @@ export async function changeImage(siteId: string, fileId: string, version: strin
 
 export async function uploadImage(siteId: string, version: string, folderId: string | null,
   file: File, mode: ImageUploadMode, mimeTypes?: readonly string[]): Promise<IFileLibrary> {
-  validateUpload(file);
+  validateUpload(file, mode === ImageUploadMode.Responsive);
 
   return library(await request(filesBase(siteId), {
     expectedVersion: version, folderId, mode, filename: file.name, mimeTypes,

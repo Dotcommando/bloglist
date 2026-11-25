@@ -617,7 +617,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     });
     const imports = await firstImport;
 
-    expect(imports.every((item) => item.ok)).toBe(true);
+    expect(imports.filter((item) => !item.ok)).toEqual([]);
     expect(swapped.status).toBe(200);
     const changed: IMediaLibraryView = await swapped.json();
     const sameFile = await command(base + '/move', { ...scope, folderId: null, name: 'stale.png' });
@@ -2358,11 +2358,11 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
           };
         });
 
-        expect(await spinner.isVisible()).toBe(true);
+        expect(await spinner.isVisible(), 'spinner stays visible for a pending page').toBe(true);
         expect(await files.locator('._visually-hidden[role="status"]').textContent()).toMatch(/loading files/i);
         expect(await files.locator('._file-result-content').getAttribute('aria-busy')).toBe('true');
         expect(await first.boundingBox()).toEqual(before);
-        expect(await search.isEnabled()).toBe(true);
+        expect(await search.isEnabled(), 'search stays available during refresh').toBe(true);
         const [searchBox, sortBox, refreshBox] = await Promise.all([
           search.boundingBox(), sort.boundingBox(), refresh.boundingBox(),
         ]);
@@ -2395,7 +2395,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       expect(await files.getByRole('link').count()).toBe(25);
       await refresh.click();
       await files.getByRole('alert').waitFor({ state: 'detached' });
-      await vi.waitFor(async () => expect(await refresh.isEnabled()).toBe(true));
+      await files.locator('._file-result-content[aria-busy="false"]').waitFor();
+      expect(await refresh.isEnabled(), 'refresh is enabled after the response').toBe(true);
       await files.getByRole('button', { name: 'Grid', exact: true }).click();
       await pager.screenshot({ path: path.resolve('.tmp/files-pager-centered.png') });
       await nextPage.click();

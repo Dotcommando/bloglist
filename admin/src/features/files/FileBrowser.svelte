@@ -17,7 +17,7 @@
 
   let { siteId, root, folderId, mimeTypes, version = '', active = true, selectedId = null,
     disabled = false, canReadContent = true,
-    onFolder, onFile, onPage, onUnauthorized, fileHref, folderHref }: {
+    onFolder, onFile, onPage, onUnauthorized, onDragFile, fileHref, folderHref }: {
     siteId: string;
     root: MediaRoot;
     folderId: string | null;
@@ -31,6 +31,7 @@
     onFile: (file: ISiteFile) => void;
     onPage?: (result: IFileBrowsePage, folderId: string | null) => void;
     onUnauthorized: () => void;
+    onDragFile?: ((file: ISiteFile | null) => void) | undefined;
     fileHref?: (file: ISiteFile) => string;
     folderHref?: (folderId: string | null) => string;
   } = $props();
@@ -218,6 +219,15 @@
   {#if fileHref}
     <a class="_file-action" class:_file-selected={selectedId === file.fileId} href={fileHref(file)}
       aria-disabled={disabled || loading} tabindex={disabled || loading ? -1 : undefined}
+      draggable={!!onDragFile && !disabled && !loading && !file.referencesPending}
+      ondragstart={(event) => {
+        if (event.dataTransfer && onDragFile) {
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('application/x-zarya-file', file.fileId);
+          onDragFile(file);
+        }
+      }}
+      ondragend={() => onDragFile?.(null)}
       onclick={(event) => selectFile(event, file)}>{@render fileLabel(file, thumbnail)}</a>
   {:else}
     <button class="_file-action" class:_file-selected={selectedId === file.fileId} type="button"
@@ -265,7 +275,12 @@
     <div class="_file-toolbar">
       <div class="_file-fields">
         <label class="_form-field" for={id + '-search'}>{$messages.fileBrowseSearch}
-          <input id={id + '-search'} type="search" class="cms-compact" bind:value={query} maxlength="180" {disabled} />
+          <input id={id + '-search'} type="search" class="cms-compact" bind:value={query} maxlength="180" {disabled}
+            onkeydown={(event) => {
+              if (event.key === 'Enter' && !event.isComposing) {
+                event.preventDefault();
+              }
+            }} />
         </label>
         <div class="_file-sort">
           <label class="_form-field">{$messages.fileBrowseSort}

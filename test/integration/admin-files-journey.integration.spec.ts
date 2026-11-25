@@ -42,9 +42,9 @@ it('recovers queued uploads, preserves replacement identity and downloads docume
     await page.getByRole('button', { name: 'Upload images', exact: true }).click();
     await page.getByRole('link', { name: 'responsive.png', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Expand or collapse folder Uploads', exact: true }).click();
-    await page.getByRole('button', { name: 'responsive.png', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'responsive.png', exact: true }).waitFor();
     expect(await page.locator('._file-upload-row').count()).toBe(0);
-    expect(await page.getByRole('button', { name: 'cancelled.png', exact: true }).count()).toBe(0);
+    expect(await page.getByRole('link', { name: 'cancelled.png', exact: true }).count()).toBe(0);
     const catalogBefore = await (await page.request.get(origin + '/api' + site + '/files')).json();
 
     expect(catalogBefore).toMatchObject({
@@ -53,7 +53,7 @@ it('recovers queued uploads, preserves replacement identity and downloads docume
         expect.objectContaining({ name: 'responsive.png', mode: 'Responsive', hasVariants: true }),
       ]),
     });
-    await page.getByRole('button', { name: 'raw.png', exact: true }).click();
+    await page.getByRole('link', { name: 'raw.png', exact: true }).click();
     await page.getByRole('button', { name: 'Copy img', exact: true }).click();
     const before = await page.locator('.file-code textarea').inputValue();
     const [changed] = await Promise.all([
@@ -83,7 +83,7 @@ it('recovers queued uploads, preserves replacement identity and downloads docume
     });
     expect(await page.locator('._file-upload-row').getByRole('combobox').count()).toBe(0);
     await page.getByRole('button', { name: 'Upload files', exact: true }).click();
-    await page.getByRole('button', { name: 'release.csv', exact: true }).click();
+    await page.getByRole('link', { name: 'release.csv', exact: true }).click();
     const publicUrl = await page.getByLabel('URL', { exact: true }).inputValue();
 
     expect(Buffer.from(await (await fetch(new URL(publicUrl, origin))).arrayBuffer())).toEqual(document);

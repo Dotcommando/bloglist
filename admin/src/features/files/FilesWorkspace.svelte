@@ -41,6 +41,9 @@
   let loaded = $state(false);
   let loading = $state(false);
   let busy = $state(false);
+  let draggedFile = $state<ISiteFile | null>(null);
+  const dragSource = $derived(draggedFile
+    ? { root: fileRoot(draggedFile), folderId: draggedFile.folderId } : undefined);
   let error = $state<ContentErrorMessage | null>(null);
   let fileIssue = $state<FileValidationIssue | null>(null);
   let failedFilename = $state<string | null>(null);
@@ -467,7 +470,7 @@
     try {
       const found = await imageUsages(site.siteId, selected.fileId, expectedVersion, selected.revision);
 
-      if (captured !== generation || file?.revision !== selected.revision) {
+      if (captured !== generation || file && file.revision !== selected.revision) {
         return;
       }
       moveRequest = { selected, name: nextName, folderId: nextFolder, expectedVersion, usages: found.usages };
@@ -626,6 +629,15 @@
         {:else}<FileTree siteId={site.siteId} version={treeVersion} trail={activeTrail}
           selectedFolder={folderId} {selectedRoot} {onUnauthorized} onFolders={remember}
           disabled={busy || loading || library.pending || moveRequest !== null}
+          {dragSource} onDropFile={(id) => {
+            const selected = draggedFile;
+
+            draggedFile = null;
+
+            if (selected) {
+              void requestMove(selected, selected.name, id);
+            }
+          }}
           onFolder={openFolder} />{/if}
       </div>
       {/if}<div class="_drawer-footer">{site.name}</div>
@@ -852,7 +864,9 @@
           <p class="_file-hint">{$messages.filesIntro}</p>
           {#if loaded}
             <FileBrowser siteId={site.siteId} root={selectedRoot} {folderId} version={treeVersion} {active}
-              disabled={busy} {canReadContent} onFolder={(id) => openFolder(id, selectedRoot)}
+              disabled={busy || library.pending || moveRequest !== null} {canReadContent}
+              onDragFile={canMove ? (item) => draggedFile = item : undefined}
+              onFolder={(id) => openFolder(id, selectedRoot)}
               onFile={openFile} {folderHref} fileHref={(item) => basePath + '/' + item.fileId} {onUnauthorized}
               onPage={(result) => {
                 remember([...result.breadcrumbs, ...result.folders]);

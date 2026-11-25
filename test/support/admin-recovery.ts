@@ -1,4 +1,4 @@
-import type { Locator, Route } from 'playwright-core';
+import { errors, type Locator, type Route } from 'playwright-core';
 
 import type { IAdminJourney } from './admin-journey.js';
 
@@ -137,12 +137,23 @@ export async function verifyAdminRecovery(f: IAdminJourney, editor: IRecoveryEdi
   }
 
   const saved = await editor.readState();
+  const loginEmail = page.getByLabel('Email', { exact: true });
 
   await editor.input.fill(editor.value('expired'));
   await f.expireSession();
-  await editor.submit.click();
-  await page.getByLabel('Email', { exact: true }).waitFor();
-  await page.getByLabel('Email', { exact: true }).fill('user-1@example.test');
+
+  if (!await loginEmail.isVisible()) {
+    try {
+      await editor.submit.click();
+    } catch (failure) {
+      // A pending authenticated read can redirect while the submit is settling.
+      if (!(failure instanceof errors.TimeoutError) || !await loginEmail.isVisible()) {
+        throw failure;
+      }
+    }
+  }
+
+  await loginEmail.fill('user-1@example.test');
   await page.getByLabel('Password', { exact: true }).fill('synthetic journey password');
   const [login] = await Promise.all([
     page.waitForResponse((r) => r.url().endsWith('/auth/login') && r.request().method() === 'POST'),

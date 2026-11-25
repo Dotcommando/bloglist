@@ -8,7 +8,7 @@
   import { browseFiles } from './files-api';
 
   let { siteId, version, selectedFolder, selectedRoot, onlyRoot, disabled, trail = [],
-    onFolder, onFolders, onUnauthorized }: {
+    dragSource, onDropFile, onFolder, onFolders, onUnauthorized }: {
     siteId: string;
     version: string;
     selectedFolder: string | null;
@@ -16,6 +16,8 @@
     onlyRoot?: MediaRoot;
     trail?: readonly IFileFolder[];
     disabled: boolean;
+    dragSource?: { readonly root: MediaRoot; readonly folderId: string | null } | undefined;
+    onDropFile?: (folderId: string | null) => void;
     onFolder: (folderId: string | null, root: MediaRoot) => void;
     onFolders: (folders: readonly IFileFolder[]) => void;
     onUnauthorized: () => void;
@@ -35,6 +37,20 @@
 
   function key(root: MediaRoot, parent: string | null): string {
     return root + ':' + (parent ?? '');
+  }
+
+  function acceptFile(event: DragEvent, root: MediaRoot, folderId: string | null): boolean {
+    if (disabled || dragSource?.root !== root || dragSource.folderId === folderId) {
+      return false;
+    }
+
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+
+    return true;
   }
 
   async function load(root: MediaRoot, parent: string | null, page = 1): Promise<void> {
@@ -133,6 +149,12 @@
             onclick={() => toggle(root, folder.folderId)}>{expanded.has(folder.folderId) ? '▾' : '▸'}</button>
           <button class="_file-tree-item _file-tree-item__folder cms-file-label"
             aria-current={selectedFolder === folder.folderId ? 'page' : undefined}
+            ondragover={(event) => acceptFile(event, root, folder.folderId)}
+            ondrop={(event) => {
+              if (acceptFile(event, root, folder.folderId)) {
+                onDropFile?.(folder.folderId);
+              }
+            }}
             {disabled} onclick={() => onFolder(folder.folderId, root)}>
             {@render folderIcon()}
             <span class="cms-drawer-label" title={folder.name}>{folder.name}</span>
@@ -182,6 +204,12 @@
         }}>{closedRoots.has(root) ? '▸' : '▾'}</button>
       <button class="_file-tree-item _file-tree-item__folder cms-file-label"
         aria-current={selectedRoot === root && !selectedFolder ? 'page' : undefined}
+        ondragover={(event) => acceptFile(event, root, null)}
+        ondrop={(event) => {
+          if (acceptFile(event, root, null)) {
+            onDropFile?.(null);
+          }
+        }}
         {disabled} onclick={() => onFolder(null, root)}>{@render folderIcon()}assets/{root}</button>
     </div>
     {#if !closedRoots.has(root)}{@render branch(null, root)}{/if}

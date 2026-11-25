@@ -94,7 +94,7 @@ export async function adminJourney(): Promise<IAdminJourney> {
   let context: BrowserContext | undefined;
   const probe = createServer();
   const close = async (failed: boolean): Promise<void> => {
-    const results = await Promise.allSettled([
+    const browserResults = await Promise.allSettled([
       (async () => {
         try {
           if (context) {
@@ -109,6 +109,9 @@ export async function adminJourney(): Promise<IAdminJourney> {
           await browser?.close();
         }
       })(),
+    ]);
+    // Close the browser before draining listeners, so it cannot open new requests during shutdown.
+    const serverResults = await Promise.allSettled([
       (async () => {
         app?.getHttpServer().closeAllConnections();
         await app?.close();
@@ -122,7 +125,8 @@ export async function adminJourney(): Promise<IAdminJourney> {
         }
       }),
     ]);
-    const failures = results.filter((result) => result.status === 'rejected').map((result) => result.reason);
+    const failures = [...browserResults, ...serverResults]
+      .filter((result) => result.status === 'rejected').map((result) => result.reason);
 
     try {
       if (connection) {

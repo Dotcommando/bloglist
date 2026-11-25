@@ -161,8 +161,8 @@
 </CmsDialog>
 
 <style>
-  .image-library { display: grid; gap: 12px; min-width: 0; }
-  ._image-library-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 0; }
+  .image-library { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+  ._image-library-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 16px 0; }
   ._image-library-upload { position: relative; overflow: hidden; justify-self: start; cursor: pointer; }
   ._image-library-upload:focus-within { outline: 2px solid var(--cms-accent); outline-offset: 3px; }
   ._image-library-upload[aria-disabled="true"] { opacity: .55; cursor: default; }

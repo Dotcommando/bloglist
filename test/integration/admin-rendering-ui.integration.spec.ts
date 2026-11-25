@@ -1406,13 +1406,13 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
         }
       });
       await f.page.getByRole('button', { name: 'Save & publish', exact: true }).click();
-      await alert.waitFor();
-      expect(await alert.textContent()).toContain('Draft saved.');
+      await alert.filter({ hasText: 'Draft saved.' }).waitFor();
       expect(await f.page.locator('#page-title').inputValue()).toBe('Keep this draft');
 
-      if (await f.page.getByRole('button', { name: 'Save draft', exact: true }).count() === 0) {
-        await f.page.getByRole('button', { name: 'More', exact: true }).click();
-      }
+      const more = f.page.getByRole('button', { name: 'More', exact: true });
+
+      await expect.poll(() => more.isEnabled()).toBe(true);
+      await more.press('Enter');
       expect(await f.page.getByRole('button', { name: 'Save draft', exact: true }).isEnabled()).toBe(true);
       await f.page.screenshot({ path: '.tmp/page-actions-error.png' });
       expect(f.errors).toEqual([]);

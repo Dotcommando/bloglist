@@ -15,7 +15,7 @@ it('recovers file renames after disconnect, timeout, lost acknowledgement and ac
       name: 'recovery.csv', mimeType: 'text/csv', buffer: Buffer.from('recovery\n42\n'),
     });
     await page.getByRole('button', { name: 'Upload files', exact: true }).click();
-    await page.getByRole('button', { name: 'recovery.csv', exact: true }).click();
+    await page.getByRole('link', { name: 'recovery.csv', exact: true }).click();
     const editor = page.url();
     const fileId = editor.split('/').at(-1)!;
     const readState = async (): Promise<IFileLibrary> => {

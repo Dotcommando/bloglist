@@ -104,16 +104,16 @@ it('builds a fresh site through the real administration and retains favicon, med
       });
       await page.getByRole('combobox', { name: /^Processing/ }).selectOption(mode!);
       await page.getByRole('button', { name: 'Upload images', exact: true }).click();
-      await page.getByRole('button', { name: name!, exact: true }).waitFor();
+      await page.getByRole('link', { name: name!, exact: true }).waitFor();
     }
-    await page.getByRole('button', { name: 'original.png', exact: true }).click();
+    await page.getByRole('link', { name: 'original.png', exact: true }).click();
     await page.getByRole('button', { name: 'Copy img', exact: true }).click();
     const originalMarkup = await page.locator('.file-code textarea').inputValue();
 
     expect(originalMarkup).toContain('original.png');
     expect(originalMarkup).not.toContain('srcset');
     await visit('files');
-    await page.getByRole('button', { name: 'responsive.png', exact: true }).click();
+    await page.getByRole('link', { name: 'responsive.png', exact: true }).click();
     await page.getByRole('button', { name: 'Copy picture', exact: true }).click();
     const responsiveMarkup = await page.locator('.file-code textarea').inputValue();
 

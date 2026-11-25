@@ -2,7 +2,10 @@
 
 [Русская версия](CHANGLOG.ru.md)
 
-## Unreleased
+## CMS 0.17.0 (2026-11-25)
+
+Move files from the media results to folders with drag and drop. Searching the
+image picker keeps page changes unsaved and closing it returns keyboard focus.
 
 Keep file endings visible in [narrow media list rows](docs/defects/admin/file-list-label-clipped.md).
 

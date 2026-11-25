@@ -103,7 +103,7 @@ it.each(['catalog', 'media'])('keeps page TV inputs on a stale %s conflict and r
         buffer: await sharp({ create: { width: 80, height: 50, channels: 3, background: '#385a48' } }).png().toBuffer(),
       });
       await page.getByRole('button', { name: 'Upload images', exact: true }).click();
-      await page.getByRole('button', { name: 'baseline.png', exact: true }).waitFor();
+      await page.getByRole('link', { name: 'baseline.png', exact: true }).waitFor();
     }
 
     const editor = await publishJourneyPage(f, site, 'Concurrent TV', '/concurrent-tv/');
@@ -140,7 +140,7 @@ it.each(['catalog', 'media'])('keeps page TV inputs on a stale %s conflict and r
         buffer: await sharp({ create: { width: 80, height: 50, channels: 3, background: '#385a48' } }).png().toBuffer(),
       });
       await other.getByRole('button', { name: 'Upload images', exact: true }).click();
-      await other.getByRole('button', { name: 'concurrent.png', exact: true }).waitFor();
+      await other.getByRole('link', { name: 'concurrent.png', exact: true }).waitFor();
     }
 
     const pageId = editor.split('/').at(-1)!;

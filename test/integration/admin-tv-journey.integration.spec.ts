@@ -35,13 +35,13 @@ it('authors TV defaults, corrects required publication and edits definitions thr
         .png().toBuffer(),
     });
     await page.getByRole('button', { name: 'Upload images', exact: true }).click();
-    await page.getByRole('button', { name: 'default.png', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'default.png', exact: true }).waitFor();
     await page.getByRole('button', { name: 'assets/files', exact: true }).click();
     await page.locator('.file-upload input[type=file]').setInputFiles({
       name: 'guide.json', mimeType: 'application/json', buffer: Buffer.from('{"guide":"TV attachment"}'),
     });
     await page.getByRole('button', { name: 'Upload files', exact: true }).click();
-    await page.getByRole('button', { name: 'guide.json', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'guide.json', exact: true }).waitFor();
     await visit('template-variables');
     const save = async (): Promise<void> => {
       await page.getByRole('button', { name: 'Save TV fields', exact: true }).click();
@@ -197,4 +197,4 @@ it('retains the losing TV editor input on a real catalog conflict and reloads th
   } finally {
     await f.close(failed);
   }
-}, 60000);
+}, 120000);

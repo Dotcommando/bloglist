@@ -669,7 +669,15 @@ export class MongooseFileLibraryStore implements IMediaLibraryStore {
     const operation = await this.records.operations.findOne({ _id: siteId, siteId, version: head.version })
       .lean().exec();
 
-    if (!operation?.change) {
+    if (!operation) {
+      // Another writer can finish this operation between reading the head and its journal.
+      if (await this.model.exists({ ...scope, version: head.version })) {
+        throw new Error('Missing pending media operation');
+      }
+
+      return;
+    }
+    if (!operation.change) {
       const { library, pending } = await this.read(siteId);
 
       if (pending && library.version === head.version) {

@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "3645cc9b4c9eac5014521096b1799440d4fee148",
-  "checksum": "723f2678610b1a28e237f26c9849084bd636fb062547f0cee21bbf4ee8ec353b",
+  "commit": "b4a37ea6cfeeb1c3b4106e14124b8c6ef07795c9",
+  "checksum": "a733ba6201c55b093f7494228238b4fbd69c6444f61f6d90d7f73c71ca0d8cb2",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 31194,
-      "sha256": "f1b633c98e5a24aaaa2321936a002b33e55df6886b9cc41f78b105b3b5399d44"
+      "bytes": 31366,
+      "sha256": "8455f1496fe3c2d139786a0dc3ce111cfd19f7227bb6c652ff53e6bf7b2bb127"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 55764,
-      "sha256": "12986b6a649ea2079d27529a6d8ce5e39a3a2a9518701f2908673aa1619d0000"
+      "bytes": 56073,
+      "sha256": "2398d002e74e05cba25e732d9ea55aed367ba34cc16a9d7c0cd1c3f8613ed4ea"
     },
     {
       "path": "Dockerfile",
@@ -336,8 +336,8 @@
     },
     {
       "path": "admin/src/features/files/FileBrowser.svelte",
-      "bytes": 18977,
-      "sha256": "3b2feb8e32f84a54295c2f2849de5bba23c6bc8fb14604c9bd5945efb84242be"
+      "bytes": 19611,
+      "sha256": "49ebfd014bf261040d8183c00c2514940afa1be7fbb8cca5836382cc8f63a65d"
     },
     {
       "path": "admin/src/features/files/FileIcon.svelte",
@@ -351,18 +351,18 @@
     },
     {
       "path": "admin/src/features/files/FileTree.svelte",
-      "bytes": 6924,
-      "sha256": "837b128e06e08f3f13546fae1c692d0b865e1d07501d7941854af0f67f2c9d84"
+      "bytes": 7875,
+      "sha256": "ef8b12e8c80c52b2b31bd3ac0a2f0bc6a969e22021f49c8cab4bb9b551344157"
     },
     {
       "path": "admin/src/features/files/FilesWorkspace.svelte",
-      "bytes": 39718,
-      "sha256": "c03335e11a979fd2565a95146010dcdaf12a10fe64bfe2f7ab9a8842c1714281"
+      "bytes": 40275,
+      "sha256": "afe9114e3b43e41204c0e84d1764094eeb66ce3fa8a35fdff3d577d9765f87db"
     },
     {
       "path": "admin/src/features/files/ImageLibraryDialog.svelte",
-      "bytes": 6235,
-      "sha256": "220cfa9eceac9253ad724dd2d6248a91923750a9d99e08928b7ddd9a47dafc0a"
+      "bytes": 6291,
+      "sha256": "3f6a130257d16b15a407b026cd274fc30abc53a6b18791d88ec02abc7e507191"
     },
     {
       "path": "admin/src/features/files/InlineFileName.svelte",
@@ -381,8 +381,8 @@
     },
     {
       "path": "admin/src/features/files/files-api.ts",
-      "bytes": 8425,
-      "sha256": "3d8612b9f382fd9c4983f649476bf62c8adc4a5f8f601648fdc72a8f1f4e710d"
+      "bytes": 8592,
+      "sha256": "154bec251c631c81f064635a49e43bcd81593f112f6637506e9cd3d8f4e2f3d5"
     },
     {
       "path": "admin/src/features/files/files.types.ts",
@@ -656,8 +656,8 @@
     },
     {
       "path": "admin/src/features/template-variables/TvValueEditor.svelte",
-      "bytes": 8664,
-      "sha256": "08246d5c4be4e713490c597d80ced3b8358e39b541e278ec01fa0ab3b699b9c5"
+      "bytes": 8842,
+      "sha256": "a6b5b06514fd2504c5c147d2a924b048b9602c3cca98dabf1245d7e9273d11a6"
     },
     {
       "path": "admin/src/features/template-variables/template-variables-api.ts",
@@ -3046,13 +3046,13 @@
     },
     {
       "path": "docs/cms-development/admin-release-tests.md",
-      "bytes": 4989,
-      "sha256": "1a2c05717329288a1890432077cac2f7b49ef4b4f721ab5aa7a390cab33dccdf"
+      "bytes": 5150,
+      "sha256": "a7a143f06d1fc01bbfc5ba57b2d7958513d974efbf0c64331e46cf26161b6703"
     },
     {
       "path": "docs/cms-development/admin-release-tests.ru.md",
-      "bytes": 7904,
-      "sha256": "8a1619d37ae15285def6d5bb136a8d4b60c5c41eae0f743ef14517ec00b7592f"
+      "bytes": 8116,
+      "sha256": "1dd19b888cefe379d3f8a86263f4b24f87e0365fdbd9906d4b4c597a80028403"
     },
     {
       "path": "docs/cms-development/existing-feature-review.md",
@@ -4736,8 +4736,8 @@
     },
     {
       "path": "src/adapters/outbound/persistence/mongoose/media/file-library-store.adapter.ts",
-      "bytes": 28076,
-      "sha256": "9b3196b10add27e77ec155d9f6d7bc31cc1da71e0ce2135ddf2c643e7019c7a2"
+      "bytes": 28352,
+      "sha256": "e3e1316a42ef426a0463cf603c000e24f5308cafad44601d7eac031a0df7a66e"
     },
     {
       "path": "src/adapters/outbound/persistence/mongoose/media/image-removal.adapter.ts",
@@ -10881,13 +10881,13 @@
     },
     {
       "path": "test/integration/admin-file-url-recovery-journey.integration.spec.ts",
-      "bytes": 3990,
-      "sha256": "1468e589236b91cfa89da5ebabf1024f3c19d8121c4872efdd248b5fed17a1ec"
+      "bytes": 3988,
+      "sha256": "ed8069b9d6e066221ebbe1424ffa0d1a4cb29333d22fce946845f305a3da7b6a"
     },
     {
       "path": "test/integration/admin-files-journey.integration.spec.ts",
-      "bytes": 5920,
-      "sha256": "f122c9de0d8badfd3b53adbf4fdce8f0d116126e27f2ac9eb7db650562958cda"
+      "bytes": 5912,
+      "sha256": "0174b3abca3bd6dc740dea8d753df5c7b3f9e6dbc19cba90539efc90785f80ca"
     },
     {
       "path": "test/integration/admin-frontend.integration.spec.ts",
@@ -10896,8 +10896,8 @@
     },
     {
       "path": "test/integration/admin-hierarchy-scroll.integration.spec.ts",
-      "bytes": 13550,
-      "sha256": "280256440bad28362ad052af0c9c4d9d75be7b197ea0bfdc82fd11f80f4c7a8e"
+      "bytes": 14278,
+      "sha256": "af49385dcbb30afcc52b9267341d752248fc551d98bc76e011370bdc0bd55de2"
     },
     {
       "path": "test/integration/admin-i18n.integration.spec.ts",
@@ -10906,13 +10906,13 @@
     },
     {
       "path": "test/integration/admin-media-mutations-journey.integration.spec.ts",
-      "bytes": 10645,
-      "sha256": "1d351ad262370e35858956641bb62e5e5ce9946121704b5104009c493ba33a5b"
+      "bytes": 10638,
+      "sha256": "3fb3d7609437dee79cd33aaf1229f3eac06dd0e9d16bd2664eb529fcfb6c837c"
     },
     {
       "path": "test/integration/admin-metadata-journey.integration.spec.ts",
-      "bytes": 5202,
-      "sha256": "b20f70e915f266202e2c9948c34047d1b293aefa650687d59eb13554240e2560"
+      "bytes": 5200,
+      "sha256": "27cf1d9f2c18892e08c65addd44f67c5c285bf02bea95ce668df51be5127287d"
     },
     {
       "path": "test/integration/admin-page-details-journey.integration.spec.ts",
@@ -10931,8 +10931,8 @@
     },
     {
       "path": "test/integration/admin-rendering-ui.integration.spec.ts",
-      "bytes": 121605,
-      "sha256": "4b89c2394b5b7e2f34c2a57a9c6b84fc3e620aa5cd97dde8accc824a09a29457"
+      "bytes": 121560,
+      "sha256": "c54afdb2fde2e2f9c50d5a124486ad097bd387b4f70303a2b69ad32f92f4b6d3"
     },
     {
       "path": "test/integration/admin-routing-rejections-journey.integration.spec.ts",
@@ -10941,23 +10941,23 @@
     },
     {
       "path": "test/integration/admin-site-journey.integration.spec.ts",
-      "bytes": 17482,
-      "sha256": "d90cd3e0f6318116d0c4810c084a715fff3211a230c656b833f72ab8974bdff9"
+      "bytes": 17476,
+      "sha256": "cb7509d7f8e37abee5ea36b909751d8453b72589d099513ca6246555b91140fe"
     },
     {
       "path": "test/integration/admin-tv-interactions-journey.integration.spec.ts",
-      "bytes": 8984,
-      "sha256": "25e4c903380db556b61834b023f72ac75691bfef06eaa10b6e970d4abe000e83"
+      "bytes": 8980,
+      "sha256": "09dd91c5851e16c294efcf0cdc4f61754e4169685015c91febf98c36e6f4a5f2"
     },
     {
       "path": "test/integration/admin-tv-journey.integration.spec.ts",
-      "bytes": 10369,
-      "sha256": "572e472704b049887bf371f0e6ecedea315b1eb9eeb3a952abef2711353259f8"
+      "bytes": 10366,
+      "sha256": "fd03cd836b0dfdff71c9815fdf8f85a6c9c58e5e30b613c9d6fcc94024e1c1f6"
     },
     {
       "path": "test/integration/admin-urls-journey.integration.spec.ts",
-      "bytes": 2856,
-      "sha256": "180e4f5301e8e70a37eaad6eea224c38e55cd5d55ea2e180a01355f4cb62ff71"
+      "bytes": 2857,
+      "sha256": "46eb7c913dbc9453d19faa2e98b1e9d7f71363a84e91bf7208548567db87f9de"
     },
     {
       "path": "test/integration/admin-urls.integration.spec.ts",
@@ -10971,8 +10971,8 @@
     },
     {
       "path": "test/integration/admin-users-http.integration.spec.ts",
-      "bytes": 239526,
-      "sha256": "90cefd2e7e33c366cf938a8dcc2384ac7ee6923775b3241f760062256c00f466"
+      "bytes": 239961,
+      "sha256": "52a58d66adb9fcc97bf443c993bd1f669461706ede0eccd1c11c6933a957078d"
     },
     {
       "path": "test/integration/admin-users-ui.integration.spec.ts",
@@ -11086,13 +11086,13 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 114820,
-      "sha256": "a46589b2e7598824886d4583d99acaf2bed643d732ae8acf07563e96c3155f2a"
+      "bytes": 115000,
+      "sha256": "00c30294f1bc6443952808fc65dd3e1b3c3923a1df0f109aab878e3dfa0609b9"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",
-      "bytes": 35377,
-      "sha256": "fa51b4014c0ae158a74ccbac65e496bcb79b7a23b3c7a32833eb7476718d9eff"
+      "bytes": 36902,
+      "sha256": "46f4046d9e23b0daaa04608711ea76444ab65fd69da62269e31617791352d128"
     },
     {
       "path": "test/integration/fork-admin-concurrency.integration.spec.ts",
@@ -11361,13 +11361,13 @@
     },
     {
       "path": "test/integration/template-image-library-ui.integration.spec.ts",
-      "bytes": 15817,
-      "sha256": "1057c87cb632c20e143de51ab5dd0bd3377386c2c80111c4bb15966452adc0f2"
+      "bytes": 16055,
+      "sha256": "90363bdfa39fed789748952cee5902f006d032e1f8f95bb9d2a7ebb6cbfdbe3e"
     },
     {
       "path": "test/integration/template-variables-ui.integration.spec.ts",
-      "bytes": 20448,
-      "sha256": "2ea96b9fabde31bc8b0aed79564027d7ec4c475d2d75a3947b9838d960fda518"
+      "bytes": 20558,
+      "sha256": "201afba5a00de9f61a48888d43a7ad1b536a841cba11abc9509343a53a98e363"
     },
     {
       "path": "test/integration/template-variables.integration.spec.ts",
@@ -11401,13 +11401,13 @@
     },
     {
       "path": "test/support/admin-journey.ts",
-      "bytes": 10879,
-      "sha256": "e1e95c4baaeec68dcabcafbc8768376c182162df3143f857dcd7642180781b5e"
+      "bytes": 11084,
+      "sha256": "bd2b684e0d4706d3397a88ec972252c13fd46241c8ba2497880744a0a3a58726"
     },
     {
       "path": "test/support/admin-recovery.ts",
-      "bytes": 5495,
-      "sha256": "25f213af161bc913b49486fe2a7b102bd2aa243ccd02378c23285e78353ae1e3"
+      "bytes": 5769,
+      "sha256": "3c2431adc0718e978fe55314a047eb66d4be09205aa9f1fb12f5544f4d455a30"
     },
     {
       "path": "test/support/admin-scroll.ts",
@@ -11453,6 +11453,11 @@
       "path": "test/support/favicon.ts",
       "bytes": 565,
       "sha256": "e55df986d1c103a0777c4ea5408470f5de562672306074f7c60a5cc906443406"
+    },
+    {
+      "path": "test/support/file-library-http.ts",
+      "bytes": 2180,
+      "sha256": "ae3e674dc964fead65ea673c8c4c19ef84cb83bb305645226618e5b159746545"
     },
     {
       "path": "test/support/file-library.ts",

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { type Browser, chromium, type Locator } from 'playwright-core';
 
 import { currentAdmin } from '../support/current-admin.js';
+import { fileLibraryResponse } from '../support/file-library-http.js';
 
 enum Hierarchy {
   Pages = 'pages', Templates = 'templates', Chunks = 'chunks', Snippets = 'snippets', Files = 'files', Urls = 'urls',
@@ -116,6 +117,7 @@ describe('selection preserves the hierarchy scroll position', () => {
       let release = (): void => {};
       let receive = (): void => {};
       let pausedPath = '';
+      let pausedFolder: string | null = null;
       let failedPath = '';
       let pending = Promise.resolve();
 
@@ -132,7 +134,7 @@ describe('selection preserves the hierarchy scroll position', () => {
 
             return;
           }
-          if (pathname === pausedPath) {
+          if (pathname === pausedPath && (pausedFolder === null || url.searchParams.get('folderId') === pausedFolder)) {
             receive();
             await pending;
           }
@@ -161,7 +163,8 @@ describe('selection preserves the hierarchy scroll position', () => {
           } else if (pathname.startsWith(base + '/pages/')) {
             json = pages.find((item) => pathname.endsWith('/' + item.pageId));
           } else if (pathname === base + '/files') {
-            json = { version: 'v1', pending: false, files, folders };
+            json = fileLibraryResponse(new URL(route.request().url()).searchParams,
+              { version: 'v1', pending: false, files, folders });
           } else if (pathname.endsWith('/usages')) {
             json = { version: 'v1', usages: [] };
           } else if (pathname === base + '/urls') {
@@ -210,6 +213,10 @@ describe('selection preserves the hierarchy scroll position', () => {
 
         if (section === Hierarchy.Pages) {
           await drawer.locator('[data-page-id="folder"] [data-tree-toggle]').click();
+        } else if (section === Hierarchy.Files) {
+          if (width >= 992) {
+            await drawer.getByRole('button', { name: 'assets/files', exact: true }).click();
+          }
         }
 
         for (const index of [20, 21]) {
@@ -218,7 +225,7 @@ describe('selection preserves the hierarchy scroll position', () => {
             : section === Hierarchy.Urls ? drawer.locator('[data-url-path="/catalog/page-' + index + '/"]')
               : drawer.getByRole('button', {
                 name: section === Hierarchy.Files
-                  ? files[index]!.name : elements[index]!.name,
+                  ? folders[index]!.name : elements[index]!.name,
                 exact: true,
               });
 
@@ -234,10 +241,16 @@ describe('selection preserves the hierarchy scroll position', () => {
           received = new Promise<void>((resolve) => {
             receive = resolve;
           });
+          pausedFolder = section === Hierarchy.Files ? folders[index]!.folderId : null;
           pausedPath = base + (section === Hierarchy.Pages ? '/pages/page-' + index
-            : section === Hierarchy.Files ? '/files/file-' + index + '/usages'
+            : section === Hierarchy.Files ? '/files'
               : section === Hierarchy.Urls ? '/urls/url-' + index + '/history' : '/' + section + '/' + key);
-          const response = page.waitForResponse((response) => new URL(response.url()).pathname === pausedPath);
+          const response = page.waitForResponse((response) => {
+            const url = new URL(response.url());
+
+            return url.pathname === pausedPath
+              && (pausedFolder === null || url.searchParams.get('folderId') === pausedFolder);
+          });
 
           await target.click();
           await received;
@@ -252,7 +265,8 @@ describe('selection preserves the hierarchy scroll position', () => {
             await expect.poll(() => workspace.locator('input[id$="-name"]').inputValue())
               .toBe(elements[index]!.name);
           } else if (section === Hierarchy.Files) {
-            await workspace.getByRole('heading', { name: 'Rename file: ' + files[index]!.name, exact: true }).waitFor();
+            await workspace.getByRole('navigation', { name: 'Breadcrumbs', exact: true })
+              .getByText(folders[index]!.name, { exact: true }).waitFor();
           } else {
             await workspace.getByText('No previous behavior recorded.', { exact: true }).waitFor();
           }

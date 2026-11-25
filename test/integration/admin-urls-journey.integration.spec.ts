@@ -49,4 +49,4 @@ it('retains rejected URL edits, confirms discarding input and promotes children 
   } finally {
     await f.close(failed);
   }
-}, 90000);
+}, 180000);

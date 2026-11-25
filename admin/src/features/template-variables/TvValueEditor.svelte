@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
   import { messages } from '../../i18n/i18n';
   import { MediaFileInputVariant } from '../../shared/ui/media-file-input.types';
   import MediaFileInput from '../../shared/ui/MediaFileInput.svelte';
@@ -37,6 +39,7 @@
   const literalValue = $derived(defaultValue ?? value);
   const choices = $derived(files.filter((file) => field.kind !== TvKind.Image || file.mimeType.startsWith('image/')));
   let libraryOpen = $state(false);
+  let mediaInput = $state<MediaFileInput>();
 
   function initial(): TvValue {
     if (field.kind === TvKind.Text) {
@@ -87,7 +90,8 @@
           ? { kind: TvKind.Markdown, text: event.currentTarget.value } : undefined)}></textarea>
     {:else if media}
       {#if media.kind === TvKind.Image}
-        <MediaFileInput {id} label={field.caption} filename={media.fileId ? file?.name ?? media.fileId : null}
+        <MediaFileInput bind:this={mediaInput} {id} label={field.caption}
+          filename={media.fileId ? file?.name ?? media.fileId : null}
           previewUrl={file ? fileContentUrl(siteId, file.fileId,
             media.mode === TvImageMode.Single ? media.key : defaultImageOutput(file.outputs)?.key) : null}
           {disabled} {readonly} onChoose={() => libraryOpen = true} onClear={() => onChange(undefined)}
@@ -165,7 +169,10 @@
 
 {#if libraryOpen && !readonly}
   <ImageLibraryDialog {siteId} selectedFileId={media?.fileId ?? ''} {onLibraryChange} {onUnauthorized}
-    onSelect={(selected) => selectFile(selected.fileId, selected)} onClose={() => libraryOpen = false} />
+    onSelect={(selected) => selectFile(selected.fileId, selected)} onClose={() => {
+      libraryOpen = false;
+      void tick().then(() => mediaInput?.focus());
+    }} />
 {/if}
 
 <style>

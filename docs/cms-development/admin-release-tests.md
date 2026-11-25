@@ -12,11 +12,13 @@ Use the repository-pinned Node/npm and installed dependencies (`npm ci`). Config
 `ZARYA_TEST_MONGO_URI` for an explicitly designated transaction-capable test MongoDB
 and `ZARYA_TEST_BROWSER_EXECUTABLE` for an installed Chrome/Chromium/Edge executable
 in the environment or local `.env`. Missing prerequisites fail the command.
+Set `ZARYA_TEST_SYNTHETIC_PACKAGES` to the directory containing the prebuilt
+Synthetic add-on packages used by the live-update scenarios (0.2.0 through 0.3.2).
 The command does not start a database or the owner's persistent application.
 
 The runner builds backend and admin once, then uses the existing Vitest and
 playwright-core stack with headless Chromium. Independent specification files run
-in up to six workers by default; dependent steps within a file remain sequential. To
+in up to four workers by default; dependent steps within a file remain sequential. To
 compare a different local worker budget:
 
 ```sh

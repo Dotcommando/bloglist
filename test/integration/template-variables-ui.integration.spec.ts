@@ -5,6 +5,7 @@ import { chromium } from 'playwright-core';
 
 import { verifyScrollShadow } from '../support/admin-scroll.js';
 import { currentAdmin } from '../support/current-admin.js';
+import { fileLibraryResponse } from '../support/file-library-http.js';
 
 it('edits TV definitions and template assignments through the built administration UI', async () => {
   const executablePath = process.env.ZARYA_TEST_BROWSER_EXECUTABLE;
@@ -105,7 +106,7 @@ it('edits TV definitions and template assignments through the built administrati
             })),
           };
         } else if (endpoint.endsWith('/files')) {
-          json = {
+          json = fileLibraryResponse(url.searchParams, {
             version: '0',
             pending: false,
             folders: [],
@@ -125,7 +126,7 @@ it('edits TV definitions and template assignments through the built administrati
                 dimensions: null,
               }],
             })),
-          };
+          });
         } else if (endpoint.endsWith('/publication')) {
           json = {
             templates: ['Game', 'Home'].map((templateId) => ({

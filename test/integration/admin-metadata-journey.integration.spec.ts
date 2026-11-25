@@ -28,7 +28,7 @@ it('restores sitemap membership and clears SEO and Open Graph overrides through 
         .png().toBuffer(),
     });
     await page.getByRole('button', { name: 'Upload images', exact: true }).click();
-    await page.getByRole('button', { name: 'social.png', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'social.png', exact: true }).waitFor();
     await page.goto(editor);
     await page.locator('#page-h1').fill('Editorial heading');
     await page.getByRole('tab', { name: 'SEO', exact: true }).click();

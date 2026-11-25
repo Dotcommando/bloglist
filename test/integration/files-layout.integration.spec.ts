@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { type Browser, chromium, type Page } from 'playwright-core';
 
+import { fileLibraryResponse } from '../support/file-library-http.js';
+
 describe('built Files controls', () => {
   let browser: Browser;
 
@@ -18,7 +20,10 @@ describe('built Files controls', () => {
     await browser?.close();
   });
 
-  async function openFiles(page: Page, nested = false, responsive = false, documents = false): Promise<void> {
+  async function openFiles(page: Page, nested = false, responsive = false, documents = false):
+  Promise<{ folderId: string | null }> {
+    page.setDefaultTimeout(4500);
+    const state = { folderId: nested ? 'folder-1' : null };
     const site = {
       siteId: 'site-1',
       mark: 'Example',
@@ -58,13 +63,16 @@ describe('built Files controls', () => {
         });
       } else if (url.pathname === '/api/admin/sites/site-1/files') {
         await route.fulfill({
-          json: {
+          json: fileLibraryResponse(url.searchParams, {
             version: 'v1',
             pending: false,
-            folders: nested ? [{ folderId: 'folder-1', parentId: null, name: 'Photos' }] : [],
+            folders: nested ? [
+              { folderId: 'folder-1', parentId: null, name: 'Photos' },
+              { folderId: 'folder-2', parentId: 'folder-1', name: 'Photos child' },
+            ] : [],
             files: [{
               fileId: 'image',
-              folderId: nested ? 'folder-1' : null,
+              folderId: state.folderId,
               name: 'Screenshot 2024-09-18 202105.png',
               mode: responsive ? 'Responsive' : 'Original',
               mimeType: 'image/png',
@@ -80,7 +88,7 @@ describe('built Files controls', () => {
                 }] : []),
                 { key: 'file', url: '/media/images/image.png', mimeType: 'image/png', dimensions },
               ],
-            }, ...(documents ? [
+            }, ...(documents ? ([
               ['report.pdf', 'application/pdf'],
               ['letter.doc', 'application/msword'],
               ['letter.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
@@ -88,7 +96,7 @@ describe('built Files controls', () => {
               ['table.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
               ['table.csv', 'text/csv'],
               ['data.json', 'application/json'],
-            ].map(([name, mimeType], index) => ({
+            ] as const).map(([name, mimeType], index) => ({
               fileId: 'document-' + index,
               name,
               mimeType,
@@ -99,7 +107,7 @@ describe('built Files controls', () => {
               originalDimensions: null,
               outputs: [{ key: 'file', url: '/assets/files/' + name, mimeType, dimensions: null }],
             })) : [])],
-          },
+          }),
         });
       } else if (url.pathname.startsWith('/api/admin/sites/site-1/files/') && url.pathname.endsWith('/usages')) {
         await route.fulfill({ json: { version: 'v1', usages: [] } });
@@ -130,9 +138,13 @@ describe('built Files controls', () => {
     await page.goto('http://localhost:31987/admin/sites/site-1/files');
 
     if (nested) {
-      await page.locator('[data-folder-toggle="folder-1"]').click();
+      await page.locator('#files-drawer').getByRole('button', { name: 'Photos', exact: true }).click();
+    } else if ((page.viewportSize()?.width ?? 1440) < 992) {
+      await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
     }
-    await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).waitFor();
+
+    return state;
   }
 
   it('shows a select arrow and aligns Cancel with the select across supported widths', async () => {
@@ -157,7 +169,11 @@ describe('built Files controls', () => {
         await page.setViewportSize({ width, height: 960 });
 
         if (width === 320) {
-          await page.getByRole('button', { name: 'Open workspace', exact: true }).click();
+          const open = page.getByRole('button', { name: 'Open workspace', exact: true });
+
+          if (await open.isVisible()) {
+            await open.click();
+          }
         }
 
         const fieldBox = await select.boundingBox();
@@ -189,19 +205,28 @@ describe('built Files controls', () => {
     }
   });
 
-  it('gives unselected file rows the same filled background as page rows', async () => {
+  it('gives unselected file rows the CMS row background', async () => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
     const page = await context.newPage();
 
     try {
       await openFiles(page);
-      const file = page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true });
+      const file = page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true });
       const fileColor = await file.evaluate((element) => getComputedStyle(element).backgroundColor);
-      const pageColor = await page.locator('._tree-page').first()
-        .evaluate((element) => getComputedStyle(element).backgroundColor);
+      const rowColor = await file.evaluate((element) => {
+        const swatch = document.createElement('span');
+
+        swatch.style.backgroundColor = 'var(--cms-row)';
+        element.append(swatch);
+        const color = getComputedStyle(swatch).backgroundColor;
+
+        swatch.remove();
+
+        return color;
+      });
 
       expect(await file.getAttribute('aria-current')).toBeNull();
-      expect(fileColor).toBe(pageColor);
+      expect(fileColor).toBe(rowColor);
       expect((await file.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     } finally {
       await context.close();
@@ -218,17 +243,19 @@ describe('built Files controls', () => {
 
       expect(await tree.getByRole('button', { name: 'assets/images', exact: true }).count()).toBe(1);
       expect(await tree.getByRole('button', { name: 'assets/files', exact: true }).count()).toBe(1);
-      const imageRow = await tree.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true })
-        .boundingBox();
-      const filesRoot = await tree.getByRole('button', { name: 'assets/files', exact: true }).boundingBox();
+      const browser = page.locator('.file-browser');
 
-      expect(filesRoot!.y - imageRow!.y - imageRow!.height).toBeGreaterThanOrEqual(8);
-      const icons = await tree.locator('[data-file-icon]').evaluateAll((items) => items.map((item) =>
-        item.getAttribute('data-file-icon')));
+      await browser.getByRole('button', { name: 'List', exact: true }).click();
+      expect(await browser.locator('[data-file-icon="image"]').count()).toBe(1);
+      expect(await tree.locator('[data-file-icon]').count()).toBe(0);
+      await tree.getByRole('button', { name: 'assets/files', exact: true }).click();
+      await browser.getByRole('link', { name: 'data.json', exact: true }).waitFor();
+      const icons = await browser.locator('[data-file-icon]').evaluateAll((items) =>
+        items.map((item) => item.getAttribute('data-file-icon')));
 
-      expect(icons.sort()).toEqual(['image', 'pdf', 'word', 'word', 'excel', 'excel', 'csv', 'json'].sort());
-      await tree.getByRole('button', { name: 'data.json', exact: true }).click();
-      expect(await page.getByRole('heading', { name: 'Public file URL', exact: true }).count()).toBe(1);
+      expect(icons.sort()).toEqual(['pdf', 'word', 'word', 'excel', 'excel', 'csv', 'json'].sort());
+      await browser.getByRole('link', { name: 'data.json', exact: true }).click();
+      await page.getByRole('heading', { name: 'Public file URL', exact: true }).waitFor();
       expect(await page.getByRole('button', { name: 'Copy img', exact: true }).count()).toBe(0);
       expect(await page.getByRole('button', { name: 'Copy URL', exact: true }).isEnabled()).toBe(true);
       await tree.getByRole('button', { name: 'assets/files', exact: true }).click();
@@ -258,8 +285,8 @@ describe('built Files controls', () => {
 
     try {
       await openFiles(page, false, true);
-      await page.route('**/api/admin/sites/site-1/files', (route) => route.fulfill({
-        json: {
+      await page.route('**/api/admin/sites/site-1/files?*', (route) => route.fulfill({
+        json: fileLibraryResponse(new URL(route.request().url()).searchParams, {
           version: 'v2',
           pending: false,
           folders: [],
@@ -280,10 +307,11 @@ describe('built Files controls', () => {
               byteSize,
             })),
           }],
-        },
+        }),
       }));
-      await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-      await page.getByRole('button', { name: 'sizes.png', exact: true }).click();
+      await page.locator('.file-browser').getByRole('button', { name: 'Refresh', exact: true }).click();
+      await page.getByRole('link', { name: 'sizes.png', exact: true }).click();
+      await page.locator('.file-variants li').first().waitFor();
 
       for (const language of ['en', 'ru']) {
         await page.locator('.admin-language select').selectOption(language);
@@ -328,7 +356,7 @@ describe('built Files controls', () => {
         });
       });
       await openFiles(page, false, true);
-      await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+      await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
       const img = page.getByRole('button', { name: 'Copy img', exact: true });
       const picture = page.getByRole('button', { name: 'Copy picture', exact: true });
       const sizes = page.getByLabel('sizes', { exact: true });
@@ -374,8 +402,10 @@ describe('built Files controls', () => {
       await page.addInitScript(() => localStorage.setItem('zarya.admin.language', 'ru'));
       await openFiles(page, false, true);
       await page.getByRole('button', { name: 'Файлы', exact: true }).waitFor();
-      expect(await page.getByRole('button', { name: 'Обновить', exact: true }).locator('svg').count()).toBe(1);
-      await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+      const refresh = page.locator('#files-drawer').getByRole('button', { name: 'Обновить', exact: true });
+
+      expect(await refresh.locator('svg').count()).toBe(1);
+      await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
       await page.getByText('Заменить картинку', { exact: true }).waitFor();
       const remove = page.getByRole('button', { name: 'Удалить изображение', exact: true });
 
@@ -417,7 +447,7 @@ describe('built Files controls', () => {
         });
       });
       await openFiles(page);
-      await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+      await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
       await page.clock.install();
       const copy = page.getByRole('button', { name: 'Copy img', exact: true });
       const snackbar = page.locator('[data-snack-bar]');
@@ -480,7 +510,7 @@ describe('built Files controls', () => {
     try {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await openFiles(page);
-      await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+      await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
 
       for (const width of [320, 375, 390, 393, 402, 414, 430, 440, 575, 576, 767, 768, 991, 992, 1199, 1200, 1440]) {
         await page.setViewportSize({ width, height: 960 });
@@ -601,7 +631,7 @@ describe('built Files controls', () => {
             },
           });
         });
-        await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+        await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
         await page.locator('._file-name-label').click();
         await page.locator('._file-name-edit').fill('logo-1.png');
         await page.locator('._file-name-edit').press('Tab');
@@ -641,7 +671,8 @@ describe('built Files controls', () => {
     page.setDefaultTimeout(4000);
 
     try {
-      await openFiles(page, true, true);
+      const state = await openFiles(page, true, true);
+
       await page.route('**/api/admin/sites/site-1/files/image/usages?*', async (route) => {
         await route.fulfill({
           json: {
@@ -664,6 +695,7 @@ describe('built Files controls', () => {
         } = route.request().postDataJSON();
 
         writes.push(body);
+        state.folderId = body.folderId;
         await route.fulfill({
           json: {
             version: 'v2',
@@ -685,7 +717,8 @@ describe('built Files controls', () => {
           },
         });
       });
-      const item = page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true });
+      const item = page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true });
+      const tree = page.getByRole('navigation', { name: 'File tree', exact: true });
       const root = page.getByRole('button', { name: 'assets/images', exact: true });
 
       await item.dragTo(root);
@@ -700,9 +733,9 @@ describe('built Files controls', () => {
       await dialog.getByRole('button', { name: 'Update links', exact: true }).click();
       await page.getByRole('status').filter({ hasText: 'Moved Screenshot' }).waitFor();
       expect(writes).toEqual([expect.objectContaining({ folderId: null, updateReferences: true })]);
-      expect(await item.isVisible()).toBe(true);
-
-      await item.dragTo(page.locator('#files-drawer').getByRole('button', { name: 'Photos', exact: true }));
+      await root.click();
+      await item.waitFor();
+      await item.dragTo(tree.getByRole('button', { name: 'Photos', exact: true }));
       await dialog.getByRole('button', { name: 'Keep old addresses (broken links)', exact: true }).click();
       await expect.poll(() => writes.length).toBe(2);
       expect(writes[1]).toMatchObject({ folderId: 'folder-1', updateReferences: false });
@@ -719,9 +752,11 @@ describe('built Files controls', () => {
       try {
         await page.addInitScript((value) => localStorage.setItem('zarya.admin.language', value), language);
         await openFiles(page);
-        await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
+        await page.getByRole('link', { name: 'Screenshot 2024-09-18 202105.png', exact: true }).click();
         const fields = page.locator('._file-organization input, ._file-organization select');
-        const buttons = page.locator('._file-organization button');
+        const buttons = page.locator('._file-organization form ._file-save-row > button:not([type="button"])');
+
+        await buttons.first().waitFor();
 
         expect(await buttons.count()).toBe(2);
 
@@ -760,19 +795,24 @@ describe('built Files controls', () => {
     const page = await context.newPage();
 
     try {
+      await page.setViewportSize({ width: 1440, height: 960 });
       await openFiles(page, true);
+      await page.goto('http://localhost:31987/admin/sites/site-1/files');
+      const drawer = page.locator('#files-drawer');
+
+      await drawer.locator('[data-folder-toggle="folder-1"]').click();
 
       for (const width of [320, 390, 992, 1440]) {
         await page.setViewportSize({ width, height: 960 });
-        const folder = await page.locator('#files-drawer')
-          .getByRole('button', { name: 'Photos', exact: true }).locator('..').boundingBox();
-        const file = await page.getByRole('button', { name: 'Screenshot 2024-09-18 202105.png', exact: true })
-          .boundingBox();
 
-        if (!folder || !file) {
+        const folder = await drawer.getByRole('button', { name: 'Photos', exact: true }).locator('..').boundingBox();
+        const child = await drawer.getByRole('button', { name: 'Photos child', exact: true })
+          .locator('..').boundingBox();
+
+        if (!folder || !child) {
           throw new Error('Missing expanded folder or child');
         }
-        expect(file.y - folder.y - folder.height).toBe(4);
+        expect(child.y - folder.y - folder.height).toBe(4);
       }
     } finally {
       await context.close();

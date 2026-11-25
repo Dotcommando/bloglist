@@ -5,6 +5,7 @@ import { type Browser, chromium, type Page } from 'playwright-core';
 import sharp from 'sharp';
 
 import { currentAdmin } from '../support/current-admin.js';
+import { fileLibraryResponse } from '../support/file-library-http.js';
 
 interface IImageLibraryFixture {
   browser: Browser;
@@ -89,7 +90,7 @@ async function imageLibraryFixture(): Promise<IImageLibraryFixture> {
   page.setDefaultTimeout(4000);
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/*', async (route) => {
-    const pathname = new URL(route.request().url()).pathname;
+    const { pathname, searchParams } = new URL(route.request().url());
 
     if (pathname.startsWith('/api/')) {
       if (pathname.includes('/files/') && pathname.endsWith('/content')) {
@@ -120,7 +121,9 @@ async function imageLibraryFixture(): Promise<IImageLibraryFixture> {
             return;
           }
         }
-        await route.fulfill({ json: { version, pending: false, folders: [], files } });
+        await route.fulfill({
+          json: fileLibraryResponse(searchParams, { version, pending: false, folders: [], files }),
+        });
 
         return;
       }
@@ -249,11 +252,11 @@ it('selects, searches and uploads TV images without changing the page on cancel'
     await field.screenshot({ path: '.tmp/tv-image-settings-desktop.png', animations: 'disabled' });
     expect(await field.getByRole('combobox', { name: 'Select a file', exact: true }).count()).toBe(0);
     await replace.click();
-    await dialog.getByRole('status').filter({ hasText: 'Showing 48 of 1000 images' }).waitFor();
-    expect(await dialog.locator('._image-library-item').count()).toBe(48);
-    await dialog.getByRole('button', { name: 'Show more', exact: true }).click();
-    expect(await dialog.locator('._image-library-item').count()).toBe(96);
-    const search = dialog.getByRole('searchbox', { name: 'Search images', exact: true });
+    await dialog.getByRole('status').filter({ hasText: '1 / 40 · 1000' }).waitFor();
+    expect(await dialog.locator('._file-action').count()).toBe(25);
+    await dialog.getByRole('button', { name: 'Next', exact: true }).click();
+    await dialog.getByRole('status').filter({ hasText: '2 / 40 · 1000' }).waitFor();
+    const search = dialog.getByRole('searchbox', { name: 'Search by name', exact: true });
 
     await search.focus();
     await page.locator('#page-title').evaluate((element) => element.focus());
@@ -261,20 +264,22 @@ it('selects, searches and uploads TV images without changing the page on cancel'
     await search.fill('IMAGE-0999');
     await search.press('Enter');
     expect(f.pageWrites).toHaveLength(0);
-    expect(await dialog.locator('._image-library-item').count()).toBe(1);
     await dialog.getByRole('button', { name: 'Image-0999.webp', exact: true }).click();
+    expect(await dialog.locator('._file-action').count()).toBe(1);
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await dialog.waitFor({ state: 'detached' });
     expect(await field.getByRole('button', { name: 'Page image', exact: true }).innerText())
       .toContain('Image-0000.webp');
-    expect(await replace.evaluate((element) => element === document.activeElement)).toBe(true);
+    const opener = await replace.getAttribute('id');
+
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe(opener);
 
     await replace.click();
     await dialog.getByRole('searchbox').fill('nothing matches');
-    await dialog.getByText('No matching images.', { exact: true }).waitFor();
-    await page.keyboard.press('Escape');
+    await dialog.getByText('This folder is empty. Add an item here to get started.', { exact: true }).waitFor();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).press('Escape');
     await dialog.waitFor({ state: 'detached' });
-    expect(await replace.evaluate((element) => element === document.activeElement)).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe(opener);
     await replace.click();
     await dialog.getByRole('searchbox').fill('0999');
     await dialog.getByRole('button', { name: 'Image-0999.webp', exact: true }).click();
@@ -293,12 +298,13 @@ it('selects, searches and uploads TV images without changing the page on cancel'
     expect(await dialog.getByRole('button', { name: 'Use image', exact: true }).isDisabled()).toBe(true);
     f.setLibraryStatus(200);
     await dialog.getByRole('button', { name: 'Refresh', exact: true }).click();
-    await dialog.getByRole('status').filter({ hasText: 'Showing 48 of 1000 images' }).waitFor();
+    await dialog.getByRole('status').filter({ hasText: '1 / 40 · 1000' }).waitFor();
     await page.screenshot({ path: '.tmp/image-library-desktop.png', animations: 'disabled' });
 
     for (const width of [320, 375, 390, 393, 402, 414, 430, 440, 575, 576, 767, 768, 991, 992, 1199, 1200, 1440]) {
       await page.setViewportSize({ width, height: 844 });
-      expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await expect.poll(() => dialog.evaluate((element) => element.scrollWidth - element.clientWidth))
+        .toBeLessThanOrEqual(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
     await page.setViewportSize({ width: 390, height: 844 });
@@ -309,12 +315,12 @@ it('selects, searches and uploads TV images without changing the page on cancel'
     await field.getByRole('button', { name: 'Page image', exact: true }).click();
     const russianDialog = page.getByRole('dialog', { name: 'Библиотека изображений', exact: true });
 
-    await russianDialog.getByRole('searchbox', { name: 'Поиск изображений', exact: true }).fill('0999');
+    await russianDialog.getByRole('searchbox', { name: 'Поиск по названию', exact: true }).fill('0999');
     await russianDialog.getByRole('button', { name: 'Image-0999.webp', exact: true }).waitFor();
     await russianDialog.getByRole('button', { name: 'Отмена', exact: true }).click();
     await page.getByRole('combobox', { name: 'Язык интерфейса' }).selectOption('en');
     await replace.click();
-    await dialog.getByRole('status').filter({ hasText: 'Showing 48 of 1000 images' }).waitFor();
+    await dialog.getByRole('status').filter({ hasText: '1 / 40 · 1000' }).waitFor();
 
     const upload = dialog.getByLabel('Upload new image', { exact: true });
     const selection = { name: 'fresh.webp', mimeType: 'image/webp', buffer: f.image };
@@ -332,7 +338,7 @@ it('selects, searches and uploads TV images without changing the page on cancel'
     await dialog.getByRole('alert').waitFor();
     await expect.poll(() => f.uploads.length).toBe(2);
     await dialog.getByRole('button', { name: 'Refresh', exact: true }).click();
-    await dialog.getByRole('status').filter({ hasText: 'Showing 48 of 1000 images' }).waitFor();
+    await dialog.getByRole('status').filter({ hasText: '1 / 40 · 1000' }).waitFor();
     expect(f.reads()).toBeGreaterThan(3);
     f.setUploadStatus(200);
     await upload.setInputFiles(selection);

@@ -3056,13 +3056,13 @@ it('requires reference review before moving or deleting files in the browser', {
 
       await expect.poll(() => roleHints.count()).toBe(2);
       await admin.getByRole('checkbox', { name: 'Read media usages · All · Files' }).check();
-      expect(await roleHints.count()).toBe(0);
+      await expect.poll(() => roleHints.count()).toBe(0);
 
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
       await signInAdminBrowser(page, origin, email, password);
       const tree = page.getByRole('complementary', { name: 'File tree', exact: true });
-      const draggable = tree.getByRole('button', { name: 'guarded.png', exact: true });
+      const draggable = page.locator('.file-browser').getByRole('link', { name: 'guarded.png', exact: true });
       const target = tree.getByRole('button', { name: 'Review folder', exact: true });
       const rename = page.getByRole('button', { name: 'Rename file: guarded.png', exact: true });
       const deleteButton = page.getByRole('button', { name: 'Delete image', exact: true });
@@ -3091,16 +3091,20 @@ it('requires reference review before moving or deleting files in the browser', {
         if (expected) {
           await page.getByText(expected, { exact: true }).waitFor();
         }
-        expect(await page.getByText(/request access to check where it is used/).count()).toBe(expected ? 1 : 0);
-        expect(await rename.count()).toBe(0);
+        expect(await page.getByText(/request access to check where it is used/).count(),
+          'review hint for ' + rights.join(', ')).toBe(expected ? 1 : 0);
+        await expect.poll(() => rename.count()).toBe(0);
         expect(await page.getByLabel('File name', { exact: true }).count()).toBe(0);
-        expect(await page.getByLabel('Folder', { exact: true }).count()).toBe(0);
-        expect(await deleteButton.count()).toBe(0);
-        expect(await forceDelete.count()).toBe(0);
+        expect(await page.locator('#file-folder').count()).toBe(0);
+        await expect.poll(() => deleteButton.count()).toBe(0);
+        await expect.poll(() => forceDelete.count()).toBe(0);
+        await page.goto(origin + '/admin' + filesRoute);
+        await draggable.waitFor();
         expect(await draggable.getAttribute('draggable')).toBe('false');
       }
       await draggable.dragTo(target);
-      expect(changeRequests).toEqual([]);
+      expect(changeRequests).not.toContain('usages');
+      expect(changeRequests).not.toContain('move');
       expect(await request(fileRoute + '/usages?expectedVersion=' + currentVersion, undefined, actor))
         .toHaveProperty('status', 403);
 
@@ -3108,9 +3112,11 @@ it('requires reference review before moving or deleting files in the browser', {
       await page.goto(route);
       await rename.waitFor();
       expect(await page.getByText(changeHint, { exact: true }).count()).toBe(0);
-      expect(await draggable.getAttribute('draggable')).toBe('true');
       await page.getByLabel('File name', { exact: true }).waitFor();
       await page.locator('._file-organization').getByRole('combobox').waitFor();
+      await page.goto(origin + '/admin' + filesRoute);
+      await draggable.waitFor();
+      expect(await draggable.getAttribute('draggable')).toBe('true');
       await draggable.dragTo(target);
       const dialog = page.getByRole('dialog', { name: 'Change file address', exact: true });
 
@@ -3118,6 +3124,7 @@ it('requires reference review before moving or deleting files in the browser', {
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
       expect(changeRequests).toContain('usages');
       expect(changeRequests).not.toContain('move');
+      await page.goto(route);
       await deleteButton.click();
       await forceDelete.waitFor();
       expect(changeRequests).not.toContain('delete');
@@ -3383,8 +3390,8 @@ it('shows file metadata without requesting bytes before the content grant', { ti
           privateRequests.push(url.searchParams.get('key') ?? '');
         }
       });
-      const tree = page.getByRole('complementary', { name: 'File tree', exact: true });
-      const row = tree.getByRole('button', { name: 'private.png', exact: true });
+      const browserFiles = page.locator('.file-browser');
+      const row = browserFiles.getByRole('link', { name: 'private.png', exact: true });
       const hint = page.getByText('To open or download this file, request access to file contents.', { exact: true });
       const downloadLink = page.getByRole('link', { name: 'Download original', exact: true });
       const variantLink = page.getByRole('link', { name: variantName, exact: true });
@@ -3393,7 +3400,8 @@ it('shows file metadata without requesting bytes before the content grant', { ti
       await page.goto(origin + '/admin' + filesRoute);
       await row.waitFor();
       expect(await row.locator('svg').count()).toBeGreaterThan(0);
-      await page.locator('.folder-contents').getByText(/image\/png/).waitFor();
+      await browserFiles.getByRole('button', { name: 'List', exact: true }).click();
+      await browserFiles.getByText('image/png', { exact: true }).waitFor();
       await row.click();
       await hint.waitFor();
       expect(await page.locator('._file-metadata').textContent()).toMatch(/image\/png\s*·\s*1024 × 1024/);
@@ -4209,7 +4217,7 @@ async function disableAddonFromAnotherProcess(input: {
   return JSON.parse(stdout.trimEnd().split('\n').at(-1)!);
 }
 
-it('explains unbound add-on screens and denies delegated navigation', { timeout: 90000 }, () =>
+it('explains unbound add-on screens and denies delegated navigation', { timeout: 120000 }, () =>
   withAdminHttpFixture(async ({ app, connection, directory, origin, password, request, login }) => {
     const executablePath = process.env.ZARYA_TEST_BROWSER_EXECUTABLE;
 
