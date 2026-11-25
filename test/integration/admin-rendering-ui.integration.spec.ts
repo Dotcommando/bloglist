@@ -888,9 +888,10 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
 
   it('separates Main, SEO and Open Graph and selects a public library image without losing hidden fields', async () => {
     const f = await fixture();
+    const folder = { folderId: 'social-images', name: 'Social images', parentId: null, root: 'images' };
     const image = {
       fileId: 'og-photo',
-      folderId: null,
+      folderId: folder.folderId,
       name: 'social.webp',
       mode: 'Responsive',
       hasVariants: true,
@@ -915,11 +916,31 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
           timeZone: 'UTC',
         },
       }));
-      await f.page.route('**/sites/site-1/files', (route) => route.fulfill({
-        json: {
-          version: 'media-1', pending: false, files: [image], folders: [],
-        },
-      }));
+      await f.page.route((url) => url.pathname === '/api/admin/sites/site-1/files', (route) => {
+        const query = new URL(route.request().url()).searchParams;
+
+        if (query.has('fileId')) {
+          return route.fulfill({ json: image });
+        }
+
+        const child = query.get('folderId') === folder.folderId;
+        const files = child || !query.has('root') ? [image] : [];
+        const folders = child ? [] : [folder];
+
+        return route.fulfill({
+          json: {
+            version: 'media-1',
+            pending: false,
+            files,
+            folders,
+            breadcrumbs: child ? [folder] : [],
+            paths: {},
+            total: files.length + folders.length,
+            fileTotal: files.length,
+            folderTotal: folders.length,
+          },
+        });
+      });
       await f.page.route('**/files/og-photo/content?*', (route) => route.fulfill({
         contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="63"/>',
       }));
@@ -941,13 +962,24 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
 
       await trigger.click();
       const dialog = f.page.getByRole('dialog', { name: 'Image library', exact: true });
+      const tile = dialog.getByRole('button', { name: folder.name, exact: true });
+      const trail = dialog.getByRole('navigation', { name: 'Breadcrumbs', exact: true });
+      const returnToRoot = trail.getByRole('button', { name: 'assets/images', exact: true });
+      const pageUrl = f.page.url();
 
+      await tile.click();
+      await trail.locator('[aria-current="page"]').filter({ hasText: folder.name }).waitFor();
+      expect(await returnToRoot.getAttribute('class')).toBe('cms-breadcrumb-action');
+      await returnToRoot.click();
+      await tile.click();
+      expect(f.page.url()).toBe(pageUrl);
       await dialog.getByRole('button', { name: 'social.webp', exact: true }).click();
       await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
       expect(await f.page.locator('#page-og-image').innerText()).toContain('Choose image');
       expect(await f.page.locator('.og-image-field input[type="url"]').count()).toBe(0);
       expect(await trigger.evaluate((element) => element === document.activeElement)).toBe(true);
       await trigger.click();
+      await tile.click();
       await dialog.getByRole('button', { name: 'social.webp', exact: true }).click();
       await dialog.getByRole('button', { name: 'Use image', exact: true }).click();
       await vi.waitFor(async () => expect(await f.page.locator('#page-og-image').innerText()).toContain('social.webp'));
@@ -962,6 +994,7 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
       expect(await trigger.innerText()).toContain('Choose image');
       expect(await dialog.count()).toBe(0);
       await trigger.press('Space');
+      await tile.click();
       await dialog.getByRole('button', { name: 'social.webp', exact: true }).click();
       await dialog.getByRole('button', { name: 'Use image', exact: true }).click();
       expect(await f.page.getByRole('radio', { name: '1200 × 630 px', exact: true }).isChecked()).toBe(true);
@@ -984,7 +1017,7 @@ describe('built responsive rendering editors with deterministic HTTP fixtures', 
           await f.page.setViewportSize({ width, height: 900 });
           expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
           const imageBox = await f.page.locator('.og-image-field').boundingBox();
-          const inputBox = await f.page.locator('._media-file-control').boundingBox();
+          const inputBox = await f.page.locator('.og-image-field ._media-file-control').boundingBox();
           const typeBox = await f.page.locator('#page-og-type').boundingBox();
           const descriptionBox = await f.page.locator('#page-og-description').boundingBox();
 

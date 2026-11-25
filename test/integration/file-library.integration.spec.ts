@@ -991,6 +991,33 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await contents.getByText('Direct children: folders — 1 · files — 0').waitFor();
       await contents.getByRole('button', { name: 'Inner', exact: true }).click();
       await contents.getByText('This folder is empty.', { exact: false }).waitFor();
+      const trail = contents.getByRole('navigation', { name: 'Breadcrumbs', exact: true });
+      const parent = trail.getByRole('link', { name: 'Outer', exact: true });
+      const rootCrumb = trail.getByRole('link', { name: 'assets/files', exact: true });
+
+      await parent.waitFor({ timeout: 2000 });
+      expect(await rootCrumb.getAttribute('href')).toBe('/admin/sites/' + treeSiteId + '/files?root=files');
+      expect(await trail.locator('[aria-current="page"]').innerText()).toBe('Inner');
+      expect(await trail.getByRole('button').count()).toBe(0);
+      await parent.press('Enter');
+      await contents.getByRole('button', { name: 'Inner', exact: true }).waitFor();
+      expect(await trail.locator('[aria-current="page"]').innerText()).toBe('Outer');
+      await page.goBack();
+      await contents.getByText('This folder is empty.', { exact: false }).waitFor();
+      expect(await trail.locator('[aria-current="page"]').innerText()).toBe('Inner');
+      const copiedPath = await parent.getAttribute('href');
+      const copy = await context.newPage();
+
+      try {
+        await copy.goto(origin + copiedPath!);
+        const copiedTrail = copy.locator('#files-workspace .folder-contents')
+          .getByRole('navigation', { name: 'Breadcrumbs', exact: true });
+
+        await copiedTrail.locator('[aria-current="page"]').waitFor();
+        expect(await copiedTrail.locator('[aria-current="page"]').innerText()).toBe('Outer');
+      } finally {
+        await copy.close();
+      }
       await outer.click();
       expect(await toggle.getAttribute('aria-expanded')).toBe('true');
       await toggle.click();

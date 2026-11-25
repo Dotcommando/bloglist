@@ -304,11 +304,16 @@
   function openFile(selected: ISiteFile): void {
     navigateAdmin(basePath + '/' + selected.fileId);
   }
+
+  function folderHref(id: string | null, root = selectedRoot): string {
+    return basePath + '?root=' + root + (id === null ? '' : '&folder=' + encodeURIComponent(id));
+  }
+
   function openFolder(id: string | null, root: MediaRoot): void {
     selectedRoot = root;
     folderId = id;
     select(null);
-    navigateAdmin(basePath);
+    navigateAdmin(folderHref(id, root));
     void showPanel(WorkspacePanel.Editor);
   }
 
@@ -548,9 +553,18 @@
 
   $effect(() => {
     const id = route.fileId ?? null;
+    const location = route.fileLocation;
 
     if (active) {
       untrack(() => {
+        if (location) {
+          selectedRoot = location.root;
+          folderId = location.folderId;
+
+          if (panel !== WorkspacePanel.Editor) {
+            void showPanel(WorkspacePanel.Editor);
+          }
+        }
         if (!loaded || id && selectedId !== id) {
           void load(id);
         } else {
@@ -626,7 +640,7 @@
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
         </button>
         {#if file}
-          <nav class="_file-card-breadcrumbs" aria-label={$messages.fileBreadcrumbs}>
+          <nav class="cms-breadcrumbs" aria-label={$messages.fileBreadcrumbs}>
             <ol>
               <li><a href={basePath} aria-disabled={busy || undefined} onclick={(event) => {
                 if (busy) {
@@ -839,7 +853,7 @@
           {#if loaded}
             <FileBrowser siteId={site.siteId} root={selectedRoot} {folderId} version={treeVersion} {active}
               disabled={busy} {canReadContent} onFolder={(id) => openFolder(id, selectedRoot)}
-              onFile={openFile} fileHref={(item) => basePath + '/' + item.fileId} {onUnauthorized}
+              onFile={openFile} {folderHref} fileHref={(item) => basePath + '/' + item.fileId} {onUnauthorized}
               onPage={(result) => {
                 remember([...result.breadcrumbs, ...result.folders]);
 
@@ -959,19 +973,6 @@
 </CmsDialog>
 
 <style>
-  ._file-card-breadcrumbs { flex: 1 1 160px; min-width: 0; }
-  ._file-card-breadcrumbs ol { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
-  ._file-card-breadcrumbs li[aria-current='page'] {
-    display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0;
-  }
-  ._file-card-breadcrumbs a {
-    display: inline-flex; align-items: center; min-height: 36px;
-    color: var(--cms-accent); font-size: 14px; text-underline-offset: 3px;
-  }
-  ._file-card-breadcrumbs a:hover { text-decoration: none; }
-  ._file-card-breadcrumbs a[aria-disabled='true'] { color: var(--cms-muted); cursor: default; }
-  ._file-card-breadcrumbs .cms-icon { width: 14px; height: 14px; color: var(--cms-muted); }
-  @media (pointer: coarse) { ._file-card-breadcrumbs a { min-height: 44px; } }
   .file-address-changes dd { margin: 0 0 8px; overflow-wrap: anywhere; }
   .file-address-usages { min-width: 0; max-width: 100%; padding-left: 20px; box-sizing: border-box; }
   ._file-address-usage { min-width: 0; margin-bottom: 8px; }

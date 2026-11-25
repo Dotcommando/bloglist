@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+Show media folder breadcrumbs with links to each ancestor in Files.
+
 Use responsive media label sizes and [keep filename endings visible](docs/defects/admin/file-label-extension-hidden.md).
 
 Label the site export and import cards separately from installation archives.

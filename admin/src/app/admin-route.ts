@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 
+import { MediaRoot } from '../features/files/files.types.js';
 import { SourceFile } from '../features/rendering/rendering.types.js';
 
 export enum AdminRouteKind {
@@ -50,6 +51,7 @@ export interface IAdminRoute {
   readonly elementId?: string | null;
   readonly sourceFile?: SourceFile;
   readonly fileId?: string | null;
+  readonly fileLocation?: { readonly root: MediaRoot; readonly folderId: string | null };
   readonly urlId?: string | null;
   readonly urlPageId?: string | null;
   readonly virtualFolderPath?: string | null;
@@ -147,12 +149,18 @@ export function parseAdminRoute(pathname: string): IAdminRoute {
   const files = /^\/admin\/sites\/([A-Za-z0-9_-]{1,128})\/files(?:\/([A-Za-z0-9_-]{1,128}))?$/.exec(pathname);
 
   if (files) {
+    const root = address.searchParams.get('root');
+    const folder = address.searchParams.get('folder');
+
     return {
       kind: AdminRouteKind.Files,
       siteId: files[1]!,
       pageId: null,
       section: AdminSection.Files,
       fileId: files[2] ?? null,
+      ...(!files[2] && (root === MediaRoot.Images || root === MediaRoot.Files)
+        ? { fileLocation: { root, folderId: folder && identifier.test(folder) ? folder : null } }
+        : {}),
     };
   }
 

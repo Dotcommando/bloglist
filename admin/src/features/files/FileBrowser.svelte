@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
 
+  import { followAdminLink } from '../../app/admin-route';
   import { adminLanguage, messages } from '../../i18n/i18n';
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import Checkbox from '../../shared/ui/Checkbox.svelte';
@@ -16,7 +17,7 @@
 
   let { siteId, root, folderId, mimeTypes, version = '', active = true, selectedId = null,
     disabled = false, canReadContent = true,
-    onFolder, onFile, onPage, onUnauthorized, fileHref }: {
+    onFolder, onFile, onPage, onUnauthorized, fileHref, folderHref }: {
     siteId: string;
     root: MediaRoot;
     folderId: string | null;
@@ -31,6 +32,7 @@
     onPage?: (result: IFileBrowsePage, folderId: string | null) => void;
     onUnauthorized: () => void;
     fileHref?: (file: ISiteFile) => string;
+    folderHref?: (folderId: string | null) => string;
   } = $props();
   const id = $props.id();
   let query = $state('');
@@ -50,6 +52,12 @@
   let error = $state<ContentErrorMessage | null>(null);
   const failed = new SvelteSet<string>();
   const pages = $derived(result ? Math.max(1, Math.ceil(result.total / result.loadedPageSize)) : 1);
+  const trail = $derived.by(() => {
+    const folders = result?.breadcrumbs ?? [];
+    const current = folders.findIndex((folder) => folder.folderId === folderId);
+
+    return folders.slice(0, current + 1);
+  });
   const labels = $derived({
     [FileSort.Name]: $messages.fileBrowseName,
     [FileSort.Created]: $messages.fileBrowseCreated,
@@ -218,20 +226,40 @@
   {/if}
 {/snippet}
 
+{#snippet parentFolder(label: string, id: string | null)}
+  {#if folderHref}
+    <a href={folderHref(id)} aria-disabled={disabled || undefined} onclick={(event) => {
+      if (disabled) {
+        event.preventDefault();
+      } else {
+        followAdminLink(event);
+      }
+    }}>{label}</a>
+  {:else}
+    <button class="cms-breadcrumb-action" type="button" {disabled} onclick={() => onFolder(id)}>{label}</button>
+  {/if}
+{/snippet}
+
 <section class="file-browser folder-contents" aria-label={$messages.folderContents}>
   {#if fileHref}<h2>{$messages.folderContents}</h2>{/if}
   {#if folderId !== null || !fileHref}
-  <nav class="_file-breadcrumbs" aria-label={$messages.folderContents}>
-    {#if folderId === null}<span aria-current="location">assets/{root}</span>
-    {:else}
-      <button class="cms-secondary" type="button" {disabled} onclick={() => onFolder(null)}>assets/{root}</button>
-    {/if}
-    {#each result?.breadcrumbs ?? [] as folder (folder.folderId)}
-      <span aria-hidden="true">/</span>
-      <button class="cms-secondary" type="button" disabled={disabled || loading || folder.folderId === folderId}
-        onclick={() => onFolder(folder.folderId)}>{folder.name}</button>
-    {/each}
-  </nav>
+    <nav class="cms-breadcrumbs cms-file-label" aria-label={$messages.fileBreadcrumbs}>
+      <ol>
+        <li aria-current={folderId === null ? 'page' : undefined}>
+          {#if folderId === null}<span>assets/{root}</span>
+          {:else}{@render parentFolder('assets/' + root, null)}{/if}
+        </li>
+        {#each trail as folder (folder.folderId)}
+          <li aria-current={folder.folderId === folderId ? 'page' : undefined}>
+            <svg class="cms-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+            {#if folder.folderId === folderId}<span>{folder.name}</span>
+            {:else}{@render parentFolder(folder.name, folder.folderId)}{/if}
+          </li>
+        {/each}
+      </ol>
+    </nav>
   {/if}
   <div class="_file-controls">
     <div class="_file-toolbar">
@@ -360,7 +388,7 @@
 <style>
   .file-browser { display: grid; min-width: 0; gap: 12px; }
   .file-browser h2, .file-browser p { margin: 0; }
-  ._file-breadcrumbs, ._file-options, ._file-tools, ._file-views, ._file-pagination {
+  ._file-options, ._file-tools, ._file-views, ._file-pagination {
     display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   }
   ._file-controls { min-width: 0; container-type: inline-size; }

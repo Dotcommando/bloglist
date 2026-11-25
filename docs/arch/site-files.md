@@ -259,6 +259,10 @@ scoped to the current site. The Files workspace and file pickers read it.
 The preference uses the existing server browse limits and leaves archive
 signatures compatible.
 
+The folder breadcrumb marks the current folder. Parent links in Files carry
+the media root and folder ID in the existing workspace URL. The file picker
+uses the same style for controls that move between folders in the dialog.
+
 File and folder labels use 13px below 768px and 14px from 768px. When a file
 name needs shortening, the media browser keeps its first grapheme, the final
 three stem graphemes and the last extension. Repeated dots adjacent to that
