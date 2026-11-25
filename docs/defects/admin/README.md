@@ -4,6 +4,7 @@ Read only matching interactions and failure mechanisms.
 
 | Record | Guarantee and triggers | Regression |
 | --- | --- | --- |
+| [admin/file-list-label-clipped](file-list-label-clipped.md) | Narrow Files list rows fit the visible filename inside the action. | [Browser regression](../../../test/integration/file-library.integration.spec.ts) |
 | [admin/file-label-extension-hidden](file-label-extension-hidden.md) | A clipped media label keeps its file extension and identifying ending. | [Browser regression](../../../test/integration/file-library.integration.spec.ts) |
 | [admin/site-dump-group-heading](site-dump-group-heading.md) | Separate the site Export and Import cards from installation archive operations. | [Browser regression](../../../test/integration/admin-users-http.integration.spec.ts) |
 | [admin/media-browser-refresh-shift](media-browser-refresh-shift.md) | Updates must preserve media results and show the shared spinner within the visible results. | [Browser regression](../../../test/integration/file-library.integration.spec.ts) |

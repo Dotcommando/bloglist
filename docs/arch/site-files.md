@@ -268,6 +268,9 @@ name needs shortening, the media browser keeps its first grapheme, the final
 three stem graphemes and the last extension. Repeated dots adjacent to that
 extension remain part of the display. Full names remain in tooltips and in the
 accessible controls.
+In the list, the filename fits the inner label column after the icon, gap,
+padding and borders. The table can scroll horizontally when the full set of
+metadata columns needs more space.
 
 An open file card shows a Files breadcrumb leading back to the file's folder
 in the media browser. The current crumb is the file name and the workspace

@@ -22,7 +22,7 @@
       const { text: value, fixedSuffix: suffix = '' } = label;
 
       node.textContent = value;
-      const available = node.clientWidth;
+      const available = node.getBoundingClientRect().width;
 
       if (!available || width() <= available) {
         return;

@@ -2183,6 +2183,43 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
 
         expect(await short.textContent()).toBe('tiny.png');
       }
+
+      await manager.getByRole('button', { name: 'List', exact: true }).click();
+
+      for (const width of [390, 706, 768, 390]) {
+        await page.setViewportSize({ width, height: 960 });
+
+        for (const [name, suffix] of cases) {
+          const fitted = manager.getByRole('link', { name, exact: true }).locator('._ellipsis-visible');
+
+          await expect.poll(() => fitted.evaluate((element, ending) => {
+            const row = element.closest('._file-action')!;
+            const label = element.closest('._file-info')!;
+            const list = element.closest('._file-table')!;
+            const style = getComputedStyle(row);
+            const range = document.createRange();
+
+            range.selectNodeContents(element);
+            const text = range.getBoundingClientRect();
+            const clip = Math.min(element.getBoundingClientRect().right, label.getBoundingClientRect().right,
+              list.getBoundingClientRect().right, row.getBoundingClientRect().right
+              - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth));
+
+            return {
+              suffix: element.textContent!.endsWith(ending),
+              overflow: text.right <= clip + 0.5 ? null : {
+                viewport: window.innerWidth,
+                textWidth: text.width,
+                labelWidth: element.getBoundingClientRect().width,
+                rowRight: row.getBoundingClientRect().right,
+                textRight: text.right,
+                listRight: list.getBoundingClientRect().right,
+                clip,
+              },
+            };
+          }, suffix)).toEqual({ suffix: true, overflow: null });
+        }
+      }
     } finally {
       await context.close();
       await browser.close();

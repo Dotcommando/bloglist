@@ -421,6 +421,7 @@
   ._file-page-status { display: flex; align-items: center; min-height: 44px; font-variant-numeric: tabular-nums; }
   ._file-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 128px), 1fr)); gap: 10px; }
   ._file-table { overflow-x: auto; }
+  ._file-table th:first-child { width: 35%; }
   ._file-action {
     display: grid;
     justify-items: start;
@@ -440,11 +441,13 @@
   ._file-visual { display: grid; place-items: center; }
   ._file-tiles ._file-visual { width: 100%; height: 96px; border-radius: 4px; background: var(--cms-surface); }
   ._file-tiles ._file-visual :global(svg) { width: 32px; height: 32px; color: var(--cms-muted); }
-  ._file-table ._file-action { display: flex; align-items: center; min-height: 44px; gap: 8px; }
-  ._file-table ._file-visual { flex-shrink: 0; }
+  ._file-table ._file-action {
+    grid-template-columns: auto minmax(0, 1fr); align-items: center; min-width: 128px; min-height: 44px; gap: 8px;
+  }
   ._file-action img { width: 100%; height: 96px; object-fit: contain; }
-  ._file-info { display: grid; min-width: 0; max-width: 100%; gap: 2px; }
-  ._file-tiles ._file-info { width: 100%; }
+  ._file-info { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; gap: 2px; }
+  /* Keep the measured text from sizing its own table column. */
+  ._file-table ._file-info { contain: inline-size; }
   ._file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   ._file-path { max-width: 100%; color: var(--cms-muted); overflow-wrap: anywhere; }
 </style>

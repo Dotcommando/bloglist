@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+Keep file endings visible in [narrow media list rows](docs/defects/admin/file-list-label-clipped.md).
+
 Show media folder breadcrumbs with links to each ancestor in Files.
 
 Use responsive media label sizes and [keep filename endings visible](docs/defects/admin/file-label-extension-hidden.md).

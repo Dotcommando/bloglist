@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "41f73fc0a537af0016dadf73e3e3344bb47df87c",
-  "checksum": "6223a29b70a54a0fb0cce7b6f4c4354944d123ae7af163e767b0eb035d0c9af5",
+  "commit": "3645cc9b4c9eac5014521096b1799440d4fee148",
+  "checksum": "723f2678610b1a28e237f26c9849084bd636fb062547f0cee21bbf4ee8ec353b",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 31091,
-      "sha256": "24ca6ef7b6d0f051a0031c43c72fc488c12d86f202c69dd33d4666bbe73a92c4"
+      "bytes": 31194,
+      "sha256": "f1b633c98e5a24aaaa2321936a002b33e55df6886b9cc41f78b105b3b5399d44"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 55547,
-      "sha256": "6b2da75bd348bdb584aea4d3a0c89677e514af58b4955c017afd0e2a8f021260"
+      "bytes": 55764,
+      "sha256": "12986b6a649ea2079d27529a6d8ce5e39a3a2a9518701f2908673aa1619d0000"
     },
     {
       "path": "Dockerfile",
@@ -336,8 +336,8 @@
     },
     {
       "path": "admin/src/features/files/FileBrowser.svelte",
-      "bytes": 18818,
-      "sha256": "084a171361169eb321280180e5816442922c3c9224ce5fe08a4e086c3d5a147f"
+      "bytes": 18977,
+      "sha256": "3b2feb8e32f84a54295c2f2849de5bba23c6bc8fb14604c9bd5945efb84242be"
     },
     {
       "path": "admin/src/features/files/FileIcon.svelte",
@@ -991,8 +991,8 @@
     },
     {
       "path": "admin/src/shared/ui/MiddleEllipsis.svelte",
-      "bytes": 2642,
-      "sha256": "ffe4b7cb6d748af4d772976f20d1ddb4cda0fdb33474d57f5d3eeeb97bc6d4c1"
+      "bytes": 2660,
+      "sha256": "0794c2914f2099344d71c15213b6c3a595d9c7e7c0ee5408271ff9277619749c"
     },
     {
       "path": "admin/src/shared/ui/PasswordInput.svelte",
@@ -1791,8 +1791,8 @@
     },
     {
       "path": "docs/arch/site-files.md",
-      "bytes": 19135,
-      "sha256": "54c9afa7e292f4410ab30d2c8f9c4894025e08de48fc61ae86700a6cb6e901ca"
+      "bytes": 19321,
+      "sha256": "fc09774fe53ce0a2c748b681c87fa7cb4ec745037a45577e6f64aaf8fe76a916"
     },
     {
       "path": "docs/arch/snippet-worker-pool.md",
@@ -2700,6 +2700,41 @@
       "sha256": "4578d8797ec5dbf0a4f9ee3821eb2335e0f495c770aae9f7443f8831fc85e5c4"
     },
     {
+      "path": "docs/changes/0.17.0/file-list-label-width/00-state--06-complete--done.md",
+      "bytes": 182,
+      "sha256": "841847e8f046f49ac3604bbf6826587cab58ac493f65e0852e93b426c4a58d4d"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/10-behavior.md",
+      "bytes": 305,
+      "sha256": "1b095d5aa9293e48fe286fb8693f105b38b6b720ace85818ed253a32e26ca7f8"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/20-existing-behavior.md",
+      "bytes": 326,
+      "sha256": "fe43df7e8c9e9231ea194271dfa00e7d16bba4122480b9278d3c7f84da535d48"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/30-design.md",
+      "bytes": 512,
+      "sha256": "bccd069d91968e9b54a5b537bb6391c511f0b9fb888f5f5caaa1e94a53e9a582"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/40-cases.md",
+      "bytes": 367,
+      "sha256": "577446076f924f666ebcc7bd94583673f7c9ba8ab711e66fc14d2ec7c4c45eb1"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/50-verification.md",
+      "bytes": 899,
+      "sha256": "36028d7705de89d6efa0cfd7323d96846fae1e17a3689c05219b075c331f9f66"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-list-label-width/60-decisions.md",
+      "bytes": 246,
+      "sha256": "529830b706958ff5a74e3d2416ca005806f58356163d3d4c7ebd390c271c6ce8"
+    },
+    {
       "path": "docs/changes/0.17.0/file-name-fitting/00-state--06-complete--done.md",
       "bytes": 203,
       "sha256": "a61174ab77c969582b618de36298d760426db0975f6396bedc6b6f2781ad6d77"
@@ -3101,8 +3136,8 @@
     },
     {
       "path": "docs/defects/admin/README.md",
-      "bytes": 4804,
-      "sha256": "f1b18efc107b80fc6cd82a25ebd3b6b1bdae497d89b705a1867a05fc78fad865"
+      "bytes": 5020,
+      "sha256": "f0b5d55954faf271ad521affad98e35de348082a231195d89a3ae87fc86aa45c"
     },
     {
       "path": "docs/defects/admin/access-heading-spacing.md",
@@ -3138,6 +3173,11 @@
       "path": "docs/defects/admin/file-label-extension-hidden.md",
       "bytes": 809,
       "sha256": "f7f9d1b1ee03b224b1b2b5f13976225a25aea5c3e29a0c30422398b60ed6b8f1"
+    },
+    {
+      "path": "docs/defects/admin/file-list-label-clipped.md",
+      "bytes": 1038,
+      "sha256": "dcdfc51d79df5f85d5e986c02728508adf6504947e6bb45e33d23e87d74f5441"
     },
     {
       "path": "docs/defects/admin/file-organization-draft-reset.md",
@@ -11046,8 +11086,8 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 113148,
-      "sha256": "b6348145581d7a3e0ea2123156b7286caaaed789269bbd4d70646ac40304fa8d"
+      "bytes": 114820,
+      "sha256": "a46589b2e7598824886d4583d99acaf2bed643d732ae8acf07563e96c3155f2a"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",
