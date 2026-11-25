@@ -4,6 +4,7 @@ Read only matching interactions and failure mechanisms.
 
 | Record | Guarantee and triggers | Regression |
 | --- | --- | --- |
+| [admin/media-browser-refresh-shift](media-browser-refresh-shift.md) | Updates must preserve media results and show the shared spinner within the visible results. | [Browser regression](../../../test/integration/file-library.integration.spec.ts) |
 | [admin/media-browser-control-alignment](media-browser-control-alignment.md) | Shared controls and centered pagination for Files and pickers. | [Browser regression](../../../test/integration/file-library.integration.spec.ts) |
 | [admin/installation-dump-form-layout](installation-dump-form-layout.md) | Installation archive actions use two responsive cards and the shared file chooser. | [Browser regression](../../../test/integration/admin-users-http.integration.spec.ts) |
 | [admin/account-action-target-size](account-action-target-size.md) | Account actions require a 44 px target in narrow and wide layouts; tags: account editor, responsive, target size | [Browser regression](../../../test/integration/admin-users-ui.integration.spec.ts) |

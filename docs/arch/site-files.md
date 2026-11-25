@@ -247,8 +247,12 @@ only after both phases succeed. If another file occupies a planned old address,
 free that address before retrying. An intentionally skipped link update creates
 no recovery plan. Historical releases and dynamic URLs remain as authored.
 
-A media browser groups search, folder scope, sort and view controls above its
-results. Grid and List have icons and a filled selected control.
+A media browser groups compact search, folder scope, sort and view controls above
+its results. Grid and List have icons and a filled selected control.
+Refresh, search, sorting and pagination dim the affected results and show the
+shared spinner at the center of their visible area. Previous results stay mounted
+and the filters remain available. A failed refresh keeps the results and leaves
+Refresh available to retry.
 The paging controls and status share a centered row. Settings /
 General stores the media page size of 25, 50 or 100 as a browser preference
 scoped to the current site. The Files workspace and file pickers read it.

@@ -5,6 +5,7 @@
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import Checkbox from '../../shared/ui/Checkbox.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
+  import ResultsLoadingOverlay from '../../shared/ui/ResultsLoadingOverlay.svelte';
   import { formatFileSize } from './file-size';
   import FileIcon from './FileIcon.svelte';
   import { FileSort, type IFileBrowsePage, type ISiteFile, type MediaRoot } from './files.types';
@@ -38,7 +39,11 @@
   let page = $state(1);
   let pageSize = $state<MediaPageSize>(defaultMediaPageSize);
   let revision = $state(0);
-  let result = $state<IFileBrowsePage & { loadedPageSize: MediaPageSize }>();
+  let result = $state<IFileBrowsePage & {
+    loadedPage: number;
+    loadedPageSize: MediaPageSize;
+    loadedRecursive: boolean;
+  }>();
   let loading = $state(true);
   let error = $state<ContentErrorMessage | null>(null);
   const failed = new SvelteSet<string>();
@@ -121,7 +126,12 @@
           if (input.page > last) {
             page = last;
           } else {
-            result = { ...next, loadedPageSize: input.pageSize };
+            result = {
+              ...next,
+              loadedPage: input.page,
+              loadedPageSize: input.pageSize,
+              loadedRecursive: input.recursive,
+            };
             failed.clear();
             onPage?.(next, input.folderId);
           }
@@ -169,7 +179,7 @@
 {/snippet}
 
 {#snippet itemPath(itemId: string)}
-  {#if recursive && result?.paths[itemId]}
+  {#if result?.loadedRecursive && result.paths[itemId]}
     <small class="_file-path">{result.paths[itemId]}</small>
   {/if}
 {/snippet}
@@ -204,7 +214,7 @@
   {/if}
 {/snippet}
 
-<section class="file-browser folder-contents" aria-label={$messages.folderContents} aria-busy={loading}>
+<section class="file-browser folder-contents" aria-label={$messages.folderContents}>
   {#if fileHref}<h2>{$messages.folderContents}</h2>{/if}
   {#if folderId !== null || !fileHref}
   <nav class="_file-breadcrumbs" aria-label={$messages.folderContents}>
@@ -220,118 +230,126 @@
   </nav>
   {/if}
   <div class="_file-controls">
-    <div class="_file-fields">
-      <label class="_form-field" for={id + '-search'}>{$messages.fileBrowseSearch}
-        <input id={id + '-search'} type="search" bind:value={query} maxlength="180" {disabled} />
-      </label>
-      <div class="_file-sort">
-        <label class="_form-field">{$messages.fileBrowseSort}
-          <select bind:value={sort} {disabled}>
-            {#each Object.values(FileSort) as field (field)}
-              <option value={field}>{labels[field]}</option>
-            {/each}
-          </select>
+    <div class="_file-toolbar">
+      <div class="_file-fields">
+        <label class="_form-field" for={id + '-search'}>{$messages.fileBrowseSearch}
+          <input id={id + '-search'} type="search" class="cms-compact" bind:value={query} maxlength="180" {disabled} />
         </label>
-        <button class="cms-secondary _file-direction" type="button" {disabled}
-          aria-label={$messages.fileBrowseDescending} aria-pressed={descending}
-          title={descending ? $messages.fileBrowseDescending : $messages.fileBrowseAscending}
-          onclick={() => descending = !descending}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-            stroke-width="1.7" aria-hidden="true">
-            <path d={descending ? 'M12 5v14m-5-5 5 5 5-5' : 'M12 19V5m-5 5 5-5 5 5'} />
-          </svg>
-        </button>
-      </div>
-    </div>
-    <div class="_file-options">
-      <Checkbox bind:checked={recursive} {disabled}>{$messages.fileBrowseRecursive}</Checkbox>
-      <div class="_file-tools">
-        <div class="_file-views" role="group" aria-label={$messages.fileBrowseView}>
-          <button class="cms-secondary _file-view-button" type="button" aria-pressed={grid} {disabled}
-            onclick={() => layout(true)}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+        <div class="_file-sort">
+          <label class="_form-field">{$messages.fileBrowseSort}
+            <select class="cms-compact" bind:value={sort} {disabled}>
+              {#each Object.values(FileSort) as field (field)}
+                <option value={field}>{labels[field]}</option>
+              {/each}
+            </select>
+          </label>
+          <button class="cms-secondary cms-action-square cms-compact" type="button" {disabled}
+            aria-label={$messages.fileBrowseDescending} aria-pressed={descending}
+            title={descending ? $messages.fileBrowseDescending : $messages.fileBrowseAscending}
+            onclick={() => descending = !descending}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
               stroke-width="1.7" aria-hidden="true">
-              <rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" />
-              <rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" />
+              <path d={descending ? 'M12 5v14m-5-5 5 5 5-5' : 'M12 19V5m-5 5 5-5 5 5'} />
             </svg>
-            {$messages.fileBrowseGrid}
-          </button>
-          <button class="cms-secondary _file-view-button" type="button" aria-pressed={!grid} {disabled}
-            onclick={() => layout(false)}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-              stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
-              <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
-            </svg>
-            {$messages.fileBrowseList}
           </button>
         </div>
-        <RefreshButton disabled={disabled || loading} onclick={() => revision++} />
+      </div>
+      <div class="_file-options">
+        <Checkbox bind:checked={recursive} {disabled}>{$messages.fileBrowseRecursive}</Checkbox>
+        <div class="_file-tools">
+          <div class="_file-views" role="group" aria-label={$messages.fileBrowseView}>
+            <button class="cms-secondary cms-compact _file-view-button" type="button" aria-pressed={grid} {disabled}
+              onclick={() => layout(true)}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                stroke-width="1.7" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" />
+                <rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" />
+              </svg>
+              {$messages.fileBrowseGrid}
+            </button>
+            <button class="cms-secondary cms-compact _file-view-button" type="button" aria-pressed={!grid} {disabled}
+              onclick={() => layout(false)}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+                <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
+              </svg>
+              {$messages.fileBrowseList}
+            </button>
+          </div>
+          <RefreshButton compact disabled={disabled || loading} onclick={() => revision++} />
+        </div>
       </div>
     </div>
   </div>
   {#if error}<p class="cms-error" role="alert">{$messages[error]}</p>{/if}
-  {#if loading}<p role="status">{$messages.loadingFiles}</p>{/if}
-  {#if result}
-    {#if fileHref && !recursive}
-      <p>{$messages.folderFilesSummary.replace('{folders}', String(result.folderTotal))
-        .replace('{files}', String(result.fileTotal))}</p>
-    {/if}
-    {#if !result.total}
-      <p>{$messages.folderEmpty}</p>
-    {:else if grid}
-      <div class="_file-tiles">
-        {#each result.folders as folder (folder.folderId)}
-          <button type="button" class="_file-action" disabled={disabled || loading}
-            onclick={() => onFolder(folder.folderId)}>
-            <span class="_file-visual">{@render folderIcon()}</span>
-            <span class="_file-info">
-              <span class="_file-name" title={folder.name}>{folder.name}</span>
-              {@render itemPath(folder.folderId)}
-            </span>
-          </button>
-        {/each}
-        {#each result.files as file (file.fileId)}
-          {@render fileAction(file, true)}
-        {/each}
-      </div>
-    {:else}
-      <div class="_file-table">
-        <table class="cms-table">
-          <thead><tr>
-            {#each Object.values(FileSort) as field (field)}<th scope="col">{labels[field]}</th>{/each}
-          </tr></thead>
-          <tbody>
-            {#each result.folders as folder (folder.folderId)}
-              <tr>
-                <td><button type="button" class="_file-action" disabled={disabled || loading}
+  {#if result || loading}
+    <div class="_file-results" class:_file-results__initial={!result}>
+      <div class="_file-result-content" aria-busy={loading}>
+        {#if result}
+          {#if fileHref && !result.loadedRecursive}
+            <p>{$messages.folderFilesSummary.replace('{folders}', String(result.folderTotal))
+              .replace('{files}', String(result.fileTotal))}</p>
+          {/if}
+          {#if !result.total}
+            <p>{$messages.folderEmpty}</p>
+          {:else if grid}
+            <div class="_file-tiles">
+              {#each result.folders as folder (folder.folderId)}
+                <button type="button" class="_file-action" disabled={disabled || loading}
                   onclick={() => onFolder(folder.folderId)}>
                   <span class="_file-visual">{@render folderIcon()}</span>
                   <span class="_file-info">
                     <span class="_file-name" title={folder.name}>{folder.name}</span>
                     {@render itemPath(folder.folderId)}
                   </span>
-                </button></td>
-                <td>—</td><td>—</td><td>{$messages.fileFolder}</td><td>—</td>
-              </tr>
-            {/each}
-            {#each result.files as file (file.fileId)}
-              <tr>
-                <td>{@render fileAction(file, false)}</td><td>{date(file.createdAt)}</td>
-                <td>{date(file.updatedAt)}</td><td>{file.mimeType}</td>
-                <td>{formatFileSize(file.byteSize, $adminLanguage)}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+                </button>
+              {/each}
+              {#each result.files as file (file.fileId)}
+                {@render fileAction(file, true)}
+              {/each}
+            </div>
+          {:else}
+            <div class="_file-table">
+              <table class="cms-table">
+                <thead><tr>
+                  {#each Object.values(FileSort) as field (field)}<th scope="col">{labels[field]}</th>{/each}
+                </tr></thead>
+                <tbody>
+                  {#each result.folders as folder (folder.folderId)}
+                    <tr>
+                      <td><button type="button" class="_file-action" disabled={disabled || loading}
+                        onclick={() => onFolder(folder.folderId)}>
+                        <span class="_file-visual">{@render folderIcon()}</span>
+                        <span class="_file-info">
+                          <span class="_file-name" title={folder.name}>{folder.name}</span>
+                          {@render itemPath(folder.folderId)}
+                        </span>
+                      </button></td>
+                      <td>—</td><td>—</td><td>{$messages.fileFolder}</td><td>—</td>
+                    </tr>
+                  {/each}
+                  {#each result.files as file (file.fileId)}
+                    <tr>
+                      <td>{@render fileAction(file, false)}</td><td>{date(file.createdAt)}</td>
+                      <td>{date(file.updatedAt)}</td><td>{file.mimeType}</td>
+                      <td>{formatFileSize(file.byteSize, $adminLanguage)}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {/if}
+          <nav class="_file-pagination" aria-label={$messages.fileBrowsePagination}>
+            <button class="cms-secondary" type="button" disabled={disabled || loading || result.loadedPage <= 1}
+              onclick={() => page = (result?.loadedPage ?? page) - 1}>{$messages.fileBrowsePrevious}</button>
+            <span class="_file-page-status" role="status">{result.loadedPage} / {pages} · {result.total}</span>
+            <button class="cms-secondary" type="button" disabled={disabled || loading || result.loadedPage >= pages}
+              onclick={() => page = (result?.loadedPage ?? page) + 1}>{$messages.fileBrowseNext}</button>
+          </nav>
+        {/if}
       </div>
-    {/if}
-    <nav class="_file-pagination" aria-label={$messages.fileBrowsePagination}>
-      <button class="cms-secondary" type="button" disabled={disabled || loading || page <= 1}
-        onclick={() => page--}>{$messages.fileBrowsePrevious}</button>
-      <span class="_file-page-status" role="status">{page} / {pages} · {result.total}</span>
-      <button class="cms-secondary" type="button" disabled={disabled || loading || page >= pages}
-        onclick={() => page++}>{$messages.fileBrowseNext}</button>
-    </nav>
+      <ResultsLoadingOverlay active={loading} label={$messages.loadingFiles} />
+    </div>
   {/if}
 </section>
 
@@ -341,19 +359,32 @@
   ._file-breadcrumbs, ._file-options, ._file-tools, ._file-views, ._file-pagination {
     display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   }
-  ._file-controls { display: grid; gap: 8px; min-width: 0; container-type: inline-size; }
-  ._file-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  ._file-fields ._form-field { margin: 0; font-size: 14px; font-weight: 600; }
-  ._file-sort { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: end; gap: 8px; }
-  ._file-direction { display: grid; place-items: center; width: 48px; min-height: 48px; padding: 0; }
+  ._file-controls { min-width: 0; container-type: inline-size; }
+  ._file-toolbar, ._file-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  ._file-fields ._form-field { min-width: 0; margin: 0; gap: 4px; font-size: 13px; font-weight: 600; }
+  ._file-sort { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
   ._file-options { justify-content: space-between; }
   @container (min-width: 576px) {
-    ._file-fields { grid-template-columns: minmax(0, 1fr) minmax(200px, 280px); }
+    ._file-fields { grid-template-columns: minmax(0, 280px) minmax(0, 176px); }
+  }
+  @container (min-width: 992px) {
+    ._file-toolbar { grid-template-columns: minmax(0, 448px) minmax(0, 1fr); align-items: end; gap: 16px; }
+  }
+  @media (pointer: fine) {
+    ._file-options :global(.cms-checkbox) { min-height: 36px; padding: 6px 0; }
+  }
+  @media (pointer: coarse) {
+    ._file-toolbar :global(.cms-compact) { height: 44px; min-height: 44px; }
+    ._file-fields input.cms-compact, ._file-fields select.cms-compact { font-size: 16px; }
+    ._file-toolbar .cms-action-square { width: 44px; }
   }
   ._file-view-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
   ._file-view-button[aria-pressed='true'], ._file-view-button[aria-pressed='true']:hover:not(:disabled) {
     background: var(--cms-accent); color: var(--cms-surface); border-color: var(--cms-accent);
   }
+  ._file-results { position: relative; min-width: 0; }
+  ._file-results__initial { min-height: 96px; }
+  ._file-result-content { display: grid; min-width: 0; gap: 12px; }
   ._file-pagination { justify-content: center; margin-top: 4px; }
   ._file-page-status { display: flex; align-items: center; min-height: 44px; font-variant-numeric: tabular-nums; }
   ._file-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 128px), 1fr)); gap: 10px; }

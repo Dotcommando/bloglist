@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "838be127eaf96f4431d49691d91e8e66092a3b2f",
-  "checksum": "2013786e07571dab8fc60a4a503e362a8f1add49a78d32053e28b5c8d7d6a93d",
+  "commit": "ac18420706454fbbe13eb85136d5d368951aeef9",
+  "checksum": "7671b3126d06c3e56753a1e51d9976c508ddacfc43c9c916bc3862a2944ecc01",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30526,
-      "sha256": "f40ca89b5cb074a4cc85a24750a53f6dd889de83cf0b3daad9d2229400ef23fe"
+      "bytes": 30688,
+      "sha256": "2e9f58ca3471ed3fc7c4d8d6a90b45cd997243ab82fd6e121e82f36830d6f10b"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 54476,
-      "sha256": "c5a73dde66c1c4502ca36f571829f7b63e5985936200edd92ef5cb43db7be509"
+      "bytes": 54805,
+      "sha256": "e3f735c0bc717674200c195041cf774f1b6ebeadbb012f73910125889029b7eb"
     },
     {
       "path": "Dockerfile",
@@ -106,8 +106,8 @@
     },
     {
       "path": "admin/src/AGENTS.md",
-      "bytes": 10731,
-      "sha256": "d6de4c21b76cf7fe8a669e1f0b638aa211e7f6158715e9fbcecf8e007d08b645"
+      "bytes": 10870,
+      "sha256": "63946c38d0b62c647ec0732c3108e05f288ebd8183cbaaab9a5888eb2ddf6557"
     },
     {
       "path": "admin/src/app/AdminWorkspace.svelte",
@@ -336,8 +336,8 @@
     },
     {
       "path": "admin/src/features/files/FileBrowser.svelte",
-      "bytes": 15824,
-      "sha256": "0b6480a9d26b5964043722033361c449c942087cc595e397c35c60b6d56ab9be"
+      "bytes": 17602,
+      "sha256": "b75e1c3848df9b2a51d3243f3d861634fbf8a3735a117d2623cc7e7d64c4bf48"
     },
     {
       "path": "admin/src/features/files/FileIcon.svelte",
@@ -946,8 +946,8 @@
     },
     {
       "path": "admin/src/shared/styles/styles.css",
-      "bytes": 44255,
-      "sha256": "63e93cf138a97410bfb6d2ae5e46dd247633b9843a3b246d331ad5afe44bf41d"
+      "bytes": 44338,
+      "sha256": "13f2b06fd8839a57c23f74535c2072f36ce9a66399dc6f1cc2928b56bf2049db"
     },
     {
       "path": "admin/src/shared/styles/tables.css",
@@ -1003,6 +1003,11 @@
       "path": "admin/src/shared/ui/RefreshButton.svelte",
       "bytes": 788,
       "sha256": "3ef85fd66957edcaccb94e1f791fd5bf6761628baa5c72aa0e34572ac2a35030"
+    },
+    {
+      "path": "admin/src/shared/ui/ResultsLoadingOverlay.svelte",
+      "bytes": 3110,
+      "sha256": "921c4eee716af0f7465dabd31659f470b58136e65d2ed3a13099ddfd6c975631"
     },
     {
       "path": "admin/src/shared/ui/SnackBar.svelte",
@@ -1781,8 +1786,8 @@
     },
     {
       "path": "docs/arch/site-files.md",
-      "bytes": 18080,
-      "sha256": "1c188b0186e72b998704865df67d4f96d5484733fc5c92e4a9c9d543e9da38ea"
+      "bytes": 18356,
+      "sha256": "19123035192564e2546bc2c99164a280f093aa162845eaf213ccd3868edf85dc"
     },
     {
       "path": "docs/arch/snippet-worker-pool.md",
@@ -2725,6 +2730,41 @@
       "sha256": "e26b67a3b9d4bba4c70023924e15a9beb0c674b00b1d0fd0f59a20455f7b7de8"
     },
     {
+      "path": "docs/changes/0.17.0/media-browser-refresh/00-state--06-complete--done.md",
+      "bytes": 299,
+      "sha256": "012d33e8cf2f97c2f452a85407129165f13949fb5b5243466451de8219eb9079"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/10-behavior.md",
+      "bytes": 529,
+      "sha256": "d993889b1c8caeb4ba90186b3ed80aa4533103831b42c74eced9af8a31bc698f"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/20-existing-behavior.md",
+      "bytes": 390,
+      "sha256": "71a6d5c3b2c023c892907a2ce769e9f99748d12a6dc18b2653d196f73bdbad86"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/30-design.md",
+      "bytes": 531,
+      "sha256": "af3422be5c1eef57f98eb60c540a77efb0b5b104effec13264f49c6cbfb13643"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/40-cases.md",
+      "bytes": 631,
+      "sha256": "7fec16ed3c56fb875eb5ef4b83dd91cb8acf252f18567f8fcff376fbac9c1e35"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/50-verification.md",
+      "bytes": 1060,
+      "sha256": "1720ce6967d34494fc6ffb82684f5afd3f1c71ae78971647719c1cecea8761bf"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-refresh/60-decisions.md",
+      "bytes": 308,
+      "sha256": "87a6c520d52d031aa51462be05de1938821e67a995ac10f362316e40ed1847fb"
+    },
+    {
       "path": "docs/changes/1.0.0/admin-pages-tree-pagination/00-state--01-scope--active.md",
       "bytes": 301,
       "sha256": "3ee27ac927a7a203200a84af1bf3b6d126d6493952ab224cae65d06b21b5d028"
@@ -2841,8 +2881,8 @@
     },
     {
       "path": "docs/cms-development/feature-design.md",
-      "bytes": 11019,
-      "sha256": "849d3f8d13f599052e1f3527e87cfcddc0747fcf2dd35d9b1df46d560ce3e3f0"
+      "bytes": 12029,
+      "sha256": "75bd44e4e59c457e41a416bbb27f3f34081064a6b36c648865cc7f1657d4974e"
     },
     {
       "path": "docs/cms-development/feature-lifecycle.md",
@@ -2916,8 +2956,8 @@
     },
     {
       "path": "docs/defects/admin/README.md",
-      "bytes": 4094,
-      "sha256": "3e038d1841fee3732fa00df90a57db3f5988ba8c3f8308c3109717b5a5fd1b61"
+      "bytes": 4343,
+      "sha256": "ac492c15d7e64f3611d0a74a13861f7faebb6d25213e685d837cb870a81771e0"
     },
     {
       "path": "docs/defects/admin/access-heading-spacing.md",
@@ -2963,6 +3003,11 @@
       "path": "docs/defects/admin/media-browser-control-alignment.md",
       "bytes": 745,
       "sha256": "59a379a76e61d35430faa522801fcfd9e4dcd5bacb1abc182a48b3b49f6013e9"
+    },
+    {
+      "path": "docs/defects/admin/media-browser-refresh-shift.md",
+      "bytes": 1129,
+      "sha256": "8c3110897b368d7134253f9c118e4a7b7d7852466edc998de5f0c93b5ee5dbc5"
     },
     {
       "path": "docs/defects/admin/mobile-draft-validation-focus.md",
@@ -10846,8 +10891,8 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 102180,
-      "sha256": "c5dc5286d678bb9a61be1e3c05060149ff8f8515629d48706932adc3228ba023"
+      "bytes": 106202,
+      "sha256": "e525ec2022bb6407ceda1c952415e3c7c8a2877ee3d3ec204f9061161ca6d302"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",

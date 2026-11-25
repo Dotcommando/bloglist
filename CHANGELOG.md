@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+Keep media results in place under [the shared loading overlay](docs/defects/admin/media-browser-refresh-shift.md)
+and use compact controls in the Files toolbar.
+
 Center [the media browser pager and its status](docs/defects/admin/media-browser-control-alignment.md),
 group the header controls and move the page size to Settings / General.
 Explain the existing permission boundary for category dumps.

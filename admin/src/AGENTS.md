@@ -21,6 +21,7 @@ workspace toolbar. Do not repeat it as a breadcrumb or another h1 in the content
 Show the shared saving spinner and a localized operation label while a request
 blocks the user's controls. Keep feedback on the smallest affected surface.
 Leave its content mounted so a pending operation preserves the layout.
+For in-place data updates, follow the [results overlay standard](../../docs/cms-development/feature-design.md#loading-over-existing-data).
 
 ## Section submenus
 

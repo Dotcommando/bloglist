@@ -153,6 +153,22 @@ Public template syntax and reflow/repaint extraction do not process Svelte.
 Use [admin instructions](../../admin/AGENTS.md), their interaction conventions and
 the [admin contract](../arch/admin-frontend.md) for controls, layout and states.
 
+### Loading over existing data
+
+- When refreshing a data region, including sort, filter and page changes, keep
+  its previous content and pagination mounted. Dim only the affected results
+  with a translucent overlay outside normal layout. Keep unrelated controls,
+  including the filters that drive the results, available.
+- Reuse the CMS `ResultsLoadingOverlay` in core workspaces. It uses the shared
+  `page-saving-overlay` and `_saving-spinner` styles. Center the indicator on
+  both axes of the visible results and keep it centered as the user scrolls or
+  the workspace resizes. Add-on workspaces follow the [same interaction
+  standard through the host styles](../addon-development/code-standards.md#loading-over-existing-data).
+- Mark the affected results busy. Provide an accessible localized loading status
+  outside the busy region so assistive technology can announce it. Remove the
+  overlay when the request settles. Keep the previous results on failure and
+  show an error with a way to retry.
+
 ## Source and configuration conventions
 
 Use the root `eslint.config.mjs` across JS/TS and all workspaces; no second

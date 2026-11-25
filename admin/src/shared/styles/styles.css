@@ -469,6 +469,7 @@ a._usage-link { display: inline-flex; align-items: center; }
   font-size: 13px; line-height: 20px; white-space: nowrap;
 }
 .cms-action-square.cms-compact { width: 36px; height: 36px; min-height: 36px; padding: 0; }
+select.cms-compact { padding-right: 32px; background-position: right 8px center; }
 input.cms-page-number { width: 36px; min-width: 0; padding: 0 4px; text-align: center; appearance: textfield; }
 .page-drawer .cms-form:has(.cms-page-number) { width: auto; min-width: 0; }
 input.cms-page-number::-webkit-inner-spin-button,

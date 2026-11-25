@@ -1861,8 +1861,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       const tiles = view.getByRole('button', { name: 'Grid', exact: true });
       const list = view.getByRole('button', { name: 'List', exact: true });
 
-      expect(await tiles.locator('svg').isVisible()).toBe(true);
-      expect(await list.locator('svg').isVisible()).toBe(true);
+      await tiles.locator('svg').waitFor();
+      await list.locator('svg').waitFor();
       expect(await tiles.getAttribute('aria-pressed')).toBe('true');
       expect(await list.getAttribute('aria-pressed')).toBe('false');
       const activeFill = await tiles.evaluate((button) => getComputedStyle(button).backgroundColor);
@@ -2131,6 +2131,89 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       expect(status!.y + status!.height / 2).toBeCloseTo(back!.y + back!.height / 2, 0);
       expect(status!.y + status!.height / 2).toBeCloseTo(next!.y + next!.height / 2, 0);
       expect(await files.getByRole('combobox').count()).toBe(1);
+      const refresh = files.getByRole('button', { name: 'Refresh', exact: true });
+      const search = files.getByRole('searchbox');
+      const sort = files.getByRole('combobox', { name: 'Sort', exact: true });
+      const list = files.getByRole('button', { name: 'List', exact: true });
+
+      await list.click();
+      const first = files.getByRole('link', { name: '000000.png', exact: true });
+      const before = await first.boundingBox();
+      let signalIntercept!: () => void;
+      let finish!: () => void;
+      const intercepted = new Promise<void>((resolve) => {
+        signalIntercept = resolve;
+      });
+      const pending = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+
+      await page.route((url) => url.pathname === base && !url.searchParams.has('foldersOnly'), async (route) => {
+        signalIntercept();
+        await pending;
+        await route.fulfill({ status: 500, json: { error: 'InternalError' } });
+      }, { times: 1 });
+
+      try {
+        await refresh.click();
+        await intercepted;
+        const overlay = files.locator('.page-saving-overlay');
+
+        await overlay.waitFor({ timeout: 2000 });
+        const spinner = overlay.locator('._saving-spinner');
+        const geometry = async (): Promise<{ dx: number; dy: number; tint: string }> => page.evaluate(() => {
+          const cover = document.querySelector('#files-workspace .file-browser .page-saving-overlay')!;
+          const bounds = cover.getBoundingClientRect();
+          const viewport = cover.closest('._workspace-scroll')!.getBoundingClientRect();
+          const indicator = cover.querySelector('._saving-spinner')!.getBoundingClientRect();
+
+          return {
+            dx: Math.abs(indicator.left + indicator.width / 2 - (bounds.left + bounds.right) / 2),
+            dy: Math.abs(indicator.top + indicator.height / 2
+              - (Math.max(bounds.top, viewport.top) + Math.min(bounds.bottom, viewport.bottom)) / 2),
+            tint: getComputedStyle(cover).backgroundColor,
+          };
+        });
+
+        expect(await spinner.isVisible()).toBe(true);
+        expect(await files.locator('._visually-hidden[role="status"]').textContent()).toMatch(/loading files/i);
+        expect(await files.locator('._file-result-content').getAttribute('aria-busy')).toBe('true');
+        expect(await first.boundingBox()).toEqual(before);
+        expect(await search.isEnabled()).toBe(true);
+        const [searchBox, sortBox, refreshBox] = await Promise.all([
+          search.boundingBox(), sort.boundingBox(), refresh.boundingBox(),
+        ]);
+
+        expect(searchBox!.height).toBe(36);
+        expect(searchBox!.width).toBeLessThanOrEqual(280);
+        expect(sortBox!.height).toBe(36);
+        expect(sortBox!.width).toBeLessThan(170);
+        expect(refreshBox!.height).toBe(36);
+        expect(Math.abs(searchBox!.y - refreshBox!.y)).toBeLessThan(1);
+        expect((await geometry()).tint).toMatch(/(?:0\.18|\/ 0\.18)/);
+        const centered = { dx: expect.closeTo(0, 0), dy: expect.closeTo(0, 0) };
+
+        await vi.waitFor(async () => expect(await geometry()).toMatchObject(centered));
+        const workspaceScroll = page.locator('#files-workspace ._workspace-scroll:visible');
+
+        expect(await workspaceScroll.evaluate((element) => {
+          element.scrollTop += 250;
+
+          return element.scrollTop;
+        })).toBeGreaterThan(0);
+        await vi.waitFor(async () => expect(await geometry()).toMatchObject(centered));
+        await page.screenshot({ path: path.resolve('.tmp/files-refresh-overlay.png') });
+      } finally {
+        finish();
+      }
+
+      await files.getByRole('alert').waitFor();
+      expect(await files.locator('.page-saving-overlay').count()).toBe(0);
+      expect(await files.getByRole('link').count()).toBe(25);
+      await refresh.click();
+      await files.getByRole('alert').waitFor({ state: 'detached' });
+      await vi.waitFor(async () => expect(await refresh.isEnabled()).toBe(true));
+      await files.getByRole('button', { name: 'Grid', exact: true }).click();
       await pager.screenshot({ path: path.resolve('.tmp/files-pager-centered.png') });
       await nextPage.click();
       await files.getByRole('link', { name: '000025.png', exact: true }).waitFor();
