@@ -55,6 +55,7 @@ export default {
   filesInvalid: 'Check the file name, format and upload size.',
   filesMissing: 'The image or site is unavailable. Refresh Files.',
   fileTree: 'File tree',
+  fileBreadcrumbs: 'Breadcrumbs',
   loadingFiles: 'Loading files…',
   filesIntro: 'Choose a folder on the left, create a subfolder or upload files here.',
   filesPending: 'The public file update is incomplete. Finish it before changing the library.',

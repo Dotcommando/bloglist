@@ -1875,6 +1875,17 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await tiles.click();
       await page.getByRole('link', { name: 'small.png', exact: true }).click();
       await page.getByRole('heading', { name: 'Rename file: small.png', exact: true }).waitFor();
+      const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumbs', exact: true });
+      const filesLink = breadcrumbs.getByRole('link', { name: 'Files', exact: true });
+      const filesPath = '/admin/sites/' + siteId + '/files';
+
+      await filesLink.waitFor({ timeout: 2000 });
+      expect(await filesLink.getAttribute('href')).toBe(filesPath);
+      expect(await breadcrumbs.locator('[aria-current="page"]').innerText()).toBe('small.png');
+      await filesLink.press('Enter');
+      await page.waitForURL(origin + filesPath);
+      await page.getByRole('link', { name: 'small.png', exact: true }).click();
+      await page.getByRole('heading', { name: 'Rename file: small.png', exact: true }).waitFor();
       const nameInput = page.getByLabel('File name', { exact: true });
       const folderInput = page.getByRole('combobox', { name: 'Folder', exact: true });
       const saveName = page.getByRole('button', { name: 'Save name', exact: true });
@@ -1922,6 +1933,11 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await page.reload();
       await page.getByRole('heading', { name: 'Rename file: lighthouse.png', exact: true }).waitFor();
       expect(await folderInput.inputValue()).toBe(photos);
+      expect(await breadcrumbs.locator('[aria-current="page"]').innerText()).toBe('lighthouse.png');
+      await filesLink.click();
+      await page.waitForURL(origin + filesPath);
+      await page.getByRole('heading', { name: '/Photos', exact: true, level: 1 }).waitFor();
+      await page.getByRole('link', { name: 'lighthouse.png', exact: true }).click();
       await page.getByRole('button', { name: 'Copy picture', exact: true }).click();
       expect(await page.locator('.file-code textarea').inputValue()).toContain('<picture>');
       expect(await page.locator('.file-code textarea').inputValue()).toContain('width="24" height="16"');
@@ -1943,6 +1959,12 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await page.locator('._file-upload-row select').selectOption('Original');
       await page.getByRole('button', { name: 'Upload images', exact: true }).click();
       await page.waitForFunction(() => !document.querySelector('.file-upload ._file-upload-row'));
+      await page.getByRole('link', { name: 'browser.png', exact: true }).click();
+      await filesLink.waitFor();
+      await page.screenshot({ path: path.resolve('.tmp/files-breadcrumbs-mobile.png') });
+      await filesLink.click();
+      await page.waitForURL(origin + filesPath);
+      await page.getByRole('link', { name: 'browser.png', exact: true }).waitFor();
       await page.screenshot({ path: path.resolve('.tmp/files-mobile.png'), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(errors).toEqual([]);

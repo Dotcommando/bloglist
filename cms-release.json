@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "ac18420706454fbbe13eb85136d5d368951aeef9",
-  "checksum": "7671b3126d06c3e56753a1e51d9976c508ddacfc43c9c916bc3862a2944ecc01",
+  "commit": "e5b7694e436d39407fac5d95a8f91a3909c0f449",
+  "checksum": "4ad44e130b7dafabd82fe0346c37e31f68edb68e06d01eb2f452a75b42ad3685",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30688,
-      "sha256": "2e9f58ca3471ed3fc7c4d8d6a90b45cd997243ab82fd6e121e82f36830d6f10b"
+      "bytes": 30754,
+      "sha256": "43ee6d5b763ac08fda8d3d1409ebb18dbf19930c32145f045b4cb0efc169ef25"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 54805,
-      "sha256": "e3f735c0bc717674200c195041cf774f1b6ebeadbb012f73910125889029b7eb"
+      "bytes": 54950,
+      "sha256": "51851b2c0f941a636f0b131fcc28766878573e3b31371a388c069e3e3c472483"
     },
     {
       "path": "Dockerfile",
@@ -356,8 +356,8 @@
     },
     {
       "path": "admin/src/features/files/FilesWorkspace.svelte",
-      "bytes": 38470,
-      "sha256": "112d48bafc69330484fc7deec4e3747a2a9ccf45d9e7b5b146e9f89952149bb3"
+      "bytes": 40068,
+      "sha256": "809477237d8dc8cd98b1b79db63f1667e42993836d0135c4c513dd85432e9e4c"
     },
     {
       "path": "admin/src/features/files/ImageLibraryDialog.svelte",
@@ -751,8 +751,8 @@
     },
     {
       "path": "admin/src/i18n/locales/en/files.ts",
-      "bytes": 7367,
-      "sha256": "856792d09b1a2cdb34fa2684d3132684dc01332859fe80ff2acb37a585f42c40"
+      "bytes": 7401,
+      "sha256": "8b339051052d7d38b7d8195c73aa56718f2e7fbaaf567f59f158c83e92bdd04c"
     },
     {
       "path": "admin/src/i18n/locales/en/hooks.ts",
@@ -856,8 +856,8 @@
     },
     {
       "path": "admin/src/i18n/locales/ru/files.ts",
-      "bytes": 11584,
-      "sha256": "3197abff96e9524471c019409453bc1af66154fa0d800d8a755850ab7bd9d417"
+      "bytes": 11634,
+      "sha256": "e97c6e49fc980b557308f2064d9ed34afd2ead09f2fb61d7c73f4538e943d6ba"
     },
     {
       "path": "admin/src/i18n/locales/ru/hooks.ts",
@@ -1786,8 +1786,8 @@
     },
     {
       "path": "docs/arch/site-files.md",
-      "bytes": 18356,
-      "sha256": "19123035192564e2546bc2c99164a280f093aa162845eaf213ccd3868edf85dc"
+      "bytes": 18577,
+      "sha256": "b96212becc10f7fa04c6390b52759e02cf4f97b60f4446d4da46c0980a0f2463"
     },
     {
       "path": "docs/arch/snippet-worker-pool.md",
@@ -2623,6 +2623,41 @@
       "path": "docs/changes/0.16.1/refresh-icon-legibility/50-verification.md",
       "bytes": 686,
       "sha256": "0de60fb6fcc53213aa4b0c3e8db4286dd3b250ad8682e42f3cdf95e78b1fac3f"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/00-state--06-complete--done.md",
+      "bytes": 247,
+      "sha256": "be6289cfd81ef31e754ca503c1b0d8204043c6f9cc6dfd4ac1bc224f80f317e1"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/10-behavior.md",
+      "bytes": 397,
+      "sha256": "92738c1cd4b4ad91dc3a00dfb8cdb4aea4ff1f5e70dac370e470b1b87533ba88"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/20-existing-behavior.md",
+      "bytes": 325,
+      "sha256": "5a3cc079ab184aabd5532f4f4a98d73e890fc30bc7fd16657d1aa6d3dbbd1f89"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/30-design.md",
+      "bytes": 502,
+      "sha256": "758b16a8e337f5872d91db2eeea77d6d002109ed8c084b034b0092d68c0c23c0"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/40-cases.md",
+      "bytes": 375,
+      "sha256": "bf90c7e2749f45f127bb06634ab037a17d099ac5cb9a10f0d456d4ecdf90fb40"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/50-verification.md",
+      "bytes": 731,
+      "sha256": "5b479033166c24be5f38e46a0a65d3dd958f6ebbf59f083b677a540f0c6026e0"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-card-breadcrumbs/60-decisions.md",
+      "bytes": 227,
+      "sha256": "4987e32d20fdc6d0793f7d251de9ea9c6c49c57a51f89214124429aa7f908ebc"
     },
     {
       "path": "docs/changes/0.17.0/files-library/00-state--06-complete--done.md",
@@ -10891,8 +10926,8 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 106202,
-      "sha256": "e525ec2022bb6407ceda1c952415e3c7c8a2877ee3d3ec204f9061161ca6d302"
+      "bytes": 107652,
+      "sha256": "5d9576cf72bd4786dd51181682dcec5e3a8c46f3d605b800fe4f4f5616b45dfc"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",

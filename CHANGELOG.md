@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+Add a Files breadcrumb to return from a file card to its folder.
+
 Keep media results in place under [the shared loading overlay](docs/defects/admin/media-browser-refresh-shift.md)
 and use compact controls in the Files toolbar.
 

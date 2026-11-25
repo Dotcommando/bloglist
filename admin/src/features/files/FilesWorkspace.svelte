@@ -625,17 +625,36 @@
           }}>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
         </button>
-        <h1 class="_workspace-title">
-          {#if file && canMove}
-            {#key file.fileId}<InlineFileName value={file.name} disabled={busy || moveRequest !== null}
-              onRename={(next) => {
-                if (file) {
-                  void requestMove(file, next, file.folderId);
+        {#if file}
+          <nav class="_file-card-breadcrumbs" aria-label={$messages.fileBreadcrumbs}>
+            <ol>
+              <li><a href={basePath} aria-disabled={busy || undefined} onclick={(event) => {
+                if (busy) {
+                  event.preventDefault();
+                } else {
+                  followAdminLink(event);
                 }
-              }} />{/key}
-          {:else if file}{file.name}
-          {:else}{folderId ? folderLabel(folderId) : rootLabel}{/if}
-        </h1>
+              }}>{$messages.files}</a></li>
+              <li aria-current="page">
+                <svg class="cms-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+                <h1 class="_workspace-title">
+                  {#if canMove}
+                    {#key file.fileId}<InlineFileName value={file.name} disabled={busy || moveRequest !== null}
+                      onRename={(next) => {
+                        if (file) {
+                          void requestMove(file, next, file.folderId);
+                        }
+                      }} />{/key}
+                  {:else}{file.name}{/if}
+                </h1>
+              </li>
+            </ol>
+          </nav>
+        {:else}
+          <h1 class="_workspace-title">{folderId ? folderLabel(folderId) : rootLabel}</h1>
+        {/if}
       </div>
       <div use:scrollShadow class="_workspace-scroll files-workspace">
         {#if error}<p class="cms-error" role="alert">{failedFilename ? failedFilename + ': ' : ''}{errorText}</p>{/if}
@@ -940,6 +959,19 @@
 </CmsDialog>
 
 <style>
+  ._file-card-breadcrumbs { flex: 1 1 160px; min-width: 0; }
+  ._file-card-breadcrumbs ol { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  ._file-card-breadcrumbs li[aria-current='page'] {
+    display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0;
+  }
+  ._file-card-breadcrumbs a {
+    display: inline-flex; align-items: center; min-height: 36px;
+    color: var(--cms-accent); font-size: 14px; text-underline-offset: 3px;
+  }
+  ._file-card-breadcrumbs a:hover { text-decoration: none; }
+  ._file-card-breadcrumbs a[aria-disabled='true'] { color: var(--cms-muted); cursor: default; }
+  ._file-card-breadcrumbs .cms-icon { width: 14px; height: 14px; color: var(--cms-muted); }
+  @media (pointer: coarse) { ._file-card-breadcrumbs a { min-height: 44px; } }
   .file-address-changes dd { margin: 0 0 8px; overflow-wrap: anywhere; }
   .file-address-usages { min-width: 0; max-width: 100%; padding-left: 20px; box-sizing: border-box; }
   ._file-address-usage { min-width: 0; margin-bottom: 8px; }

@@ -259,6 +259,10 @@ scoped to the current site. The Files workspace and file pickers read it.
 The preference uses the existing server browse limits and leaves archive
 signatures compatible.
 
+An open file card shows a Files breadcrumb leading back to the file's folder
+in the media browser. The current crumb is the file name and the workspace
+heading. It retains inline renaming where the actor has permission.
+
 A restricted picker sends its allowed MIME types with the upload. CMS inspects
 the actual bytes and compares the detected type before storing a private asset.
 The ordinary Files upload supports the full CMS type list.
