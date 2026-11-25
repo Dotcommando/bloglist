@@ -131,7 +131,7 @@
             aria-expanded={expanded.has(folder.folderId)}
             aria-label={$messages.folderToggle.replace('{name}', () => folder.name)}
             onclick={() => toggle(root, folder.folderId)}>{expanded.has(folder.folderId) ? '▾' : '▸'}</button>
-          <button class="_file-tree-item _file-tree-item__folder"
+          <button class="_file-tree-item _file-tree-item__folder cms-file-label"
             aria-current={selectedFolder === folder.folderId ? 'page' : undefined}
             {disabled} onclick={() => onFolder(folder.folderId, root)}>
             {@render folderIcon()}
@@ -180,7 +180,7 @@
             closedRoots.add(root);
           }
         }}>{closedRoots.has(root) ? '▸' : '▾'}</button>
-      <button class="_file-tree-item _file-tree-item__folder"
+      <button class="_file-tree-item _file-tree-item__folder cms-file-label"
         aria-current={selectedRoot === root && !selectedFolder ? 'page' : undefined}
         {disabled} onclick={() => onFolder(null, root)}>{@render folderIcon()}assets/{root}</button>
     </div>

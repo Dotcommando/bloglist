@@ -2065,6 +2065,103 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     expect(await readFile(path.join(legacyRoot, image.original.contentId))).toBeInstanceOf(Buffer);
   });
 
+  it('fits Files labels on one line without hiding the file extension', async () => {
+    const executablePath = process.env.ZARYA_TEST_BROWSER_EXECUTABLE;
+
+    if (!executablePath) {
+      throw new Error('Explicit test browser required');
+    }
+
+    const siteId = (await local.get<ICreateSite>(CREATE_SITE).execute({
+      ...siteInput(), mark: 'FilesLabels', primaryDomain: 'files-labels.test',
+    })).siteId;
+    const folder = await operations.createFolder.execute({
+      siteId, expectedVersion: '0', parentId: null, name: 'Label test folder',
+    });
+
+    await operations.upload.execute({
+      siteId,
+      expectedVersion: folder.version,
+      filename: 'tiny.png',
+      folderId: null,
+      mode: ImageUploadMode.Original,
+      content: assetBinary(await png(16, 8), 'image/png'),
+    });
+    const cases = [
+      ['long-long-long-long-file-01.png', '-01.png'],
+      ['long-long-long-long-file-01.not-an-ext.png', 'ext.png'],
+      ['long-long-long-long-file-01.not-an-ext..png', 'ext..png'],
+      ['A\u0308-long-long-long-long-nLe\u0301.png', 'nLe\u0301.png'],
+    ] as const;
+    const browser = await chromium.launch({ executablePath, headless: true });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+    const base = '/api/admin/sites/' + siteId + '/files';
+
+    try {
+      await context.addCookies([{
+        name: 'zarya_admin_session',
+        value: cookie.slice(cookie.indexOf('=') + 1),
+        url: origin + '/api/admin',
+        httpOnly: true,
+        sameSite: 'Strict',
+      }]);
+      const page = await context.newPage();
+
+      await page.route((url) => url.pathname === base && !url.searchParams.has('foldersOnly'), async (route) => {
+        const response = await route.fetch();
+        const data: IMediaLibraryView = await response.json();
+        const files = [...data.files, ...cases.map(([name], index) => ({
+          ...data.files[0]!, fileId: 'fitted-' + index, name, outputs: [],
+        }))];
+
+        await route.fulfill({
+          response,
+          json: {
+            ...data,
+            files,
+            fileTotal: files.length,
+            total: data.folders.length + files.length,
+          },
+        });
+      });
+      await page.goto(origin + '/admin/sites/' + siteId + '/files');
+      const manager = page.locator('#files-workspace .file-browser');
+      const search = manager.getByRole('searchbox');
+      const folderTitle = manager.getByTitle('Label test folder', { exact: true });
+
+      for (const [width, fontSize] of [[1440, '14px'], [768, '14px'], [390, '13px']] as const) {
+        await page.setViewportSize({ width, height: 960 });
+
+        if (width === 768) {
+          await page.getByRole('button', { name: 'assets/images', exact: true }).click();
+        }
+        await search.waitFor();
+        await folderTitle.waitFor();
+        expect(await folderTitle.evaluate((element) => getComputedStyle(element).fontSize)).toBe(fontSize);
+
+        for (const [name, suffix] of cases) {
+          const title = manager.getByRole('link', { name, exact: true }).getByTitle(name, { exact: true });
+          const fitted = title.locator('._ellipsis-visible');
+
+          await expect.poll(() => fitted.textContent({ timeout: 2000 })).toMatch(/\.\.\./u);
+          const visible = (await fitted.textContent())!;
+
+          expect(visible.startsWith(name.startsWith('A') ? 'A\u0308' : 'l')).toBe(true);
+          expect(visible.endsWith(suffix)).toBe(true);
+          await expect.poll(() => fitted.evaluate((element) => ({
+            fontSize: getComputedStyle(element).fontSize, fits: element.scrollWidth <= element.clientWidth,
+          }))).toEqual({ fontSize, fits: true });
+        }
+        const short = manager.getByRole('link', { name: 'tiny.png', exact: true }).locator('._ellipsis-visible');
+
+        expect(await short.textContent()).toBe('tiny.png');
+      }
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  }, 60_000);
+
   it('opens Files in Chrome at 100,000 files without requesting the complete catalogue', async () => {
     const executablePath = process.env.ZARYA_TEST_BROWSER_EXECUTABLE;
 

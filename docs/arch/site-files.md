@@ -259,6 +259,12 @@ scoped to the current site. The Files workspace and file pickers read it.
 The preference uses the existing server browse limits and leaves archive
 signatures compatible.
 
+File and folder labels use 13px below 768px and 14px from 768px. When a file
+name needs shortening, the media browser keeps its first grapheme, the final
+three stem graphemes and the last extension. Repeated dots adjacent to that
+extension remain part of the display. Full names remain in tooltips and in the
+accessible controls.
+
 An open file card shows a Files breadcrumb leading back to the file's folder
 in the media browser. The current crumb is the file name and the workspace
 heading. It retains inline renaming where the actor has permission.

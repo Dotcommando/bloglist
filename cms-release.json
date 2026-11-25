@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "99ef34eec78d40094f73e732df55a395589e9dc5",
-  "checksum": "79262ef44978a03a37f704eb1884dc8b9180c39ece7963e0c14dac8226686146",
+  "commit": "be3158edff63482afbe6c93680984131936046be",
+  "checksum": "906664fe47f2045af46103a8766c444636fc3857a1b73efe509a088f067c360e",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30900,
-      "sha256": "397b485bec6ad13885a06e05f6be6ea658ee48820bbb2154cfa5da2cac54a1ce"
+      "bytes": 31022,
+      "sha256": "0f5eb5b249db1392c5e8bb52fb666bfdbd635f18e0e0798d4a937ec61c5e8bed"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 55136,
-      "sha256": "734b68ff91bcec24d3af0734ad096686f634a8195295624a196dc26b94f5c27d"
+      "bytes": 55381,
+      "sha256": "25d16d9e3a7cd66574cfb7d59c8b52cbfd3b167670fe7323f447acc6014f4d7e"
     },
     {
       "path": "Dockerfile",
@@ -336,8 +336,8 @@
     },
     {
       "path": "admin/src/features/files/FileBrowser.svelte",
-      "bytes": 17602,
-      "sha256": "b75e1c3848df9b2a51d3243f3d861634fbf8a3735a117d2623cc7e7d64c4bf48"
+      "bytes": 17874,
+      "sha256": "0e88b0c65b3fd9d1751bd31b990a44dba9f70730c9194e6b9d7742fdf1f98327"
     },
     {
       "path": "admin/src/features/files/FileIcon.svelte",
@@ -351,8 +351,8 @@
     },
     {
       "path": "admin/src/features/files/FileTree.svelte",
-      "bytes": 6894,
-      "sha256": "9721235e76fef783bd186ae9b7e8507fa34fddbaf07c8844632dadd56cfd2345"
+      "bytes": 6924,
+      "sha256": "837b128e06e08f3f13546fae1c692d0b865e1d07501d7941854af0f67f2c9d84"
     },
     {
       "path": "admin/src/features/files/FilesWorkspace.svelte",
@@ -368,6 +368,11 @@
       "path": "admin/src/features/files/InlineFileName.svelte",
       "bytes": 2378,
       "sha256": "d4744665b768db9a797f0c616dd05c44ca6d3dc7af447c2905782eee999fc5b2"
+    },
+    {
+      "path": "admin/src/features/files/file-name-suffix.ts",
+      "bytes": 448,
+      "sha256": "e90ba5d38f6dcbe1382d5fb9aa8a8b8dccbb87cba527107fee1050614be543f4"
     },
     {
       "path": "admin/src/features/files/file-size.ts",
@@ -946,8 +951,8 @@
     },
     {
       "path": "admin/src/shared/styles/styles.css",
-      "bytes": 44338,
-      "sha256": "13f2b06fd8839a57c23f74535c2072f36ce9a66399dc6f1cc2928b56bf2049db"
+      "bytes": 44442,
+      "sha256": "70953e8388c4aa6eff9a461fc08a4e31ddd1daf0a8ce7bc4066db41a7f1d4c0e"
     },
     {
       "path": "admin/src/shared/styles/tables.css",
@@ -986,8 +991,8 @@
     },
     {
       "path": "admin/src/shared/ui/MiddleEllipsis.svelte",
-      "bytes": 2239,
-      "sha256": "943a2e7e0034cd564692a59e09e9a7d49d470cec48bd8bc03b1ba19d1c85e176"
+      "bytes": 2642,
+      "sha256": "ffe4b7cb6d748af4d772976f20d1ddb4cda0fdb33474d57f5d3eeeb97bc6d4c1"
     },
     {
       "path": "admin/src/shared/ui/PasswordInput.svelte",
@@ -1786,8 +1791,8 @@
     },
     {
       "path": "docs/arch/site-files.md",
-      "bytes": 18577,
-      "sha256": "b96212becc10f7fa04c6390b52759e02cf4f97b60f4446d4da46c0980a0f2463"
+      "bytes": 18908,
+      "sha256": "0401632b278deff5c8cff9bbdf0630f93ef15ab08a58ede1d88d47ea22ac5d59"
     },
     {
       "path": "docs/arch/snippet-worker-pool.md",
@@ -2660,6 +2665,41 @@
       "sha256": "4987e32d20fdc6d0793f7d251de9ea9c6c49c57a51f89214124429aa7f908ebc"
     },
     {
+      "path": "docs/changes/0.17.0/file-name-fitting/00-state--06-complete--done.md",
+      "bytes": 203,
+      "sha256": "a61174ab77c969582b618de36298d760426db0975f6396bedc6b6f2781ad6d77"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/10-behavior.md",
+      "bytes": 401,
+      "sha256": "3d7985a5c7f39b88ac6796b690ffc2d0e606ed07c0623957625faf67b1354688"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/20-existing-behavior.md",
+      "bytes": 403,
+      "sha256": "c97419e17af0ed986f6916880ce0114c9c112bfd845ee18c3e21d4d83e6c8fb4"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/30-design.md",
+      "bytes": 522,
+      "sha256": "11f6736a4c55e5a7f808aae05a336cfd78fdbfc12beef77b458459935a9a2e86"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/40-cases.md",
+      "bytes": 410,
+      "sha256": "53df489ef0c1b29aacf4bd0f313e229a41603b9826064df8ba6627fea1d0aec6"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/50-verification.md",
+      "bytes": 1034,
+      "sha256": "e48aaa961e576a0a68aa95c0ed84fba77084c952914022d6eafe260cb129411f"
+    },
+    {
+      "path": "docs/changes/0.17.0/file-name-fitting/60-decisions.md",
+      "bytes": 340,
+      "sha256": "a389255d0470abf5235acf6c9d58ac1df37f01de01c83cb2b27e9a0bbb1d4ec1"
+    },
+    {
       "path": "docs/changes/0.17.0/files-library/00-state--06-complete--done.md",
       "bytes": 681,
       "sha256": "7aed5b67fea1b4b901f63018c2839de73c4603da35f115e557cf3db1387a40e2"
@@ -3026,8 +3066,8 @@
     },
     {
       "path": "docs/defects/admin/README.md",
-      "bytes": 4576,
-      "sha256": "927b8090fddbc5b215d1b9a65f9b35dc9081974936b0763f8af46a706875df06"
+      "bytes": 4804,
+      "sha256": "f1b18efc107b80fc6cd82a25ebd3b6b1bdae497d89b705a1867a05fc78fad865"
     },
     {
       "path": "docs/defects/admin/access-heading-spacing.md",
@@ -3058,6 +3098,11 @@
       "path": "docs/defects/admin/build-info-not-dismissed.md",
       "bytes": 1720,
       "sha256": "2ec760c7bce626089ebd9821cba54c6603e6e9f561ee186376fda80388fd2f58"
+    },
+    {
+      "path": "docs/defects/admin/file-label-extension-hidden.md",
+      "bytes": 809,
+      "sha256": "f7f9d1b1ee03b224b1b2b5f13976225a25aea5c3e29a0c30422398b60ed6b8f1"
     },
     {
       "path": "docs/defects/admin/file-organization-draft-reset.md",
@@ -10966,8 +11011,8 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 107652,
-      "sha256": "5d9576cf72bd4786dd51181682dcec5e3a8c46f3d605b800fe4f4f5616b45dfc"
+      "bytes": 111646,
+      "sha256": "b0566307a7f98f1a657c3b33f49c6ee67621882469b2a833d4c4d0bff6271421"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",

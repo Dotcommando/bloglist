@@ -1,11 +1,16 @@
 <script lang="ts">
-  let { text }: { text: string } = $props();
+  interface ILabel {
+    text: string;
+    fixedSuffix?: string | undefined;
+  }
 
-  function shorten(node: HTMLSpanElement, initial: string): {
-    update: (value: string) => void;
+  let { text, fixedSuffix }: ILabel = $props();
+
+  function shorten(node: HTMLSpanElement, initial: ILabel): {
+    update: (label: ILabel) => void;
     destroy: () => void;
   } {
-    let value = initial;
+    let label = initial;
     const range = document.createRange();
     const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
     const width = (): number => {
@@ -14,6 +19,8 @@
       return range.getBoundingClientRect().width;
     };
     const fit = (): void => {
+      const { text: value, fixedSuffix: suffix = '' } = label;
+
       node.textContent = value;
       const available = node.clientWidth;
 
@@ -21,15 +28,24 @@
         return;
       }
 
-      const characters = Array.from(segmenter.segment(value), (part) => part.segment);
+      const source = suffix ? value.slice(0, -suffix.length) : value;
+      const characters = Array.from(segmenter.segment(source), (part) => part.segment);
       const display = (count: number): string => {
+        if (suffix) {
+          return characters.slice(0, count).join('') + '...' + suffix;
+        }
+
         const end = Math.floor(count / 2);
 
         return characters.slice(0, count - end).join('') + '...'
           + (end ? characters.slice(-end).join('') : '');
       };
-      let low = 0;
+      let low = suffix ? 1 : 0;
       let high = characters.length - 1;
+
+      if (high < low) {
+        return;
+      }
 
       while (low < high) {
         const count = Math.ceil((low + high) / 2);
@@ -52,7 +68,7 @@
 
     return {
       update: (next) => {
-        value = next;
+        label = next;
         fit();
       },
       destroy: () => {
@@ -64,7 +80,7 @@
 </script>
 
 <span class="middle-ellipsis" title={text}>
-  <span class="_ellipsis-visible" aria-hidden="true" use:shorten={text}></span>
+  <span class="_ellipsis-visible" aria-hidden="true" use:shorten={{ text, fixedSuffix }}></span>
   <span class="_ellipsis-full">{text}</span>
 </span>
 

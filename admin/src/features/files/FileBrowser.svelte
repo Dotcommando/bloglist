@@ -4,8 +4,10 @@
   import { adminLanguage, messages } from '../../i18n/i18n';
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import Checkbox from '../../shared/ui/Checkbox.svelte';
+  import MiddleEllipsis from '../../shared/ui/MiddleEllipsis.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import ResultsLoadingOverlay from '../../shared/ui/ResultsLoadingOverlay.svelte';
+  import { fileNameSuffix } from './file-name-suffix';
   import { formatFileSize } from './file-size';
   import FileIcon from './FileIcon.svelte';
   import { FileSort, type IFileBrowsePage, type ISiteFile, type MediaRoot } from './files.types';
@@ -197,7 +199,9 @@
     {/if}
   </span>
   <span class="_file-info">
-    <span class="_file-name" title={file.name}>{file.name}</span>
+    <span class="_file-name cms-file-label">
+      <MiddleEllipsis text={file.name} fixedSuffix={fileNameSuffix(file.name)} />
+    </span>
     {@render itemPath(file.fileId)}
   </span>
 {/snippet}
@@ -299,7 +303,7 @@
                   onclick={() => onFolder(folder.folderId)}>
                   <span class="_file-visual">{@render folderIcon()}</span>
                   <span class="_file-info">
-                    <span class="_file-name" title={folder.name}>{folder.name}</span>
+                    <span class="_file-name cms-file-label" title={folder.name}>{folder.name}</span>
                     {@render itemPath(folder.folderId)}
                   </span>
                 </button>
@@ -321,7 +325,7 @@
                         onclick={() => onFolder(folder.folderId)}>
                         <span class="_file-visual">{@render folderIcon()}</span>
                         <span class="_file-info">
-                          <span class="_file-name" title={folder.name}>{folder.name}</span>
+                          <span class="_file-name cms-file-label" title={folder.name}>{folder.name}</span>
                           {@render itemPath(folder.folderId)}
                         </span>
                       </button></td>
@@ -412,6 +416,7 @@
   ._file-table ._file-visual { flex-shrink: 0; }
   ._file-action img { width: 100%; height: 96px; object-fit: contain; }
   ._file-info { display: grid; min-width: 0; max-width: 100%; gap: 2px; }
+  ._file-tiles ._file-info { width: 100%; }
   ._file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   ._file-path { max-width: 100%; color: var(--cms-muted); overflow-wrap: anywhere; }
 </style>

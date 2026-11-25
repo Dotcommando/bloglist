@@ -400,6 +400,8 @@ a._usage-link { display: inline-flex; align-items: center; }
 }
 ._file-tree-item__folder:hover { background: transparent; }
 ._file-tree-root { margin-bottom: 8px; }
+.cms-file-label { font-size: 13px; }
+@media (min-width: 768px) { .cms-file-label { font-size: 14px; } }
 .folder-contents { margin: 20px 0 28px; padding: 16px; border: 1px solid #dce0d6; border-radius: 7px; background: #f6f7f3; }
 .folder-contents h2 { margin: 0 0 8px; font-size: 18px; }
 ._folder-summary, ._folder-empty { margin: 8px 0; color: #69736c; font-size: 13px; line-height: 1.6; }
