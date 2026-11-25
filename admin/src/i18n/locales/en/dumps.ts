@@ -2,6 +2,7 @@ export default {
   dumpsEachPartialDumpContainsOne:
     'Each partial dump contains one category. Source imports update drafts without publishing.',
   dumpsInstallation: 'Installation archive',
+  dumpsSiteArchive: 'Site archive',
   dumpsInstallationCreateTitle: 'Create',
   dumpsInstallationRestoreTitle: 'Restore',
   dumpsInstallationScope: 'Includes all sites and shared CMS data.',

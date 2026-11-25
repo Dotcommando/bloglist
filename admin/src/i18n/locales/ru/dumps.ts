@@ -3,6 +3,7 @@ export default {
     'Каждый частичный дамп содержит одну категорию. Импорт исходников обновляет черновики '
     + 'без публикации.',
   dumpsInstallation: 'Дамп установки',
+  dumpsSiteArchive: 'Дамп сайта',
   dumpsInstallationCreateTitle: 'Создание',
   dumpsInstallationRestoreTitle: 'Восстановление',
   dumpsInstallationScope: 'Включает все сайты и общие данные CMS.',

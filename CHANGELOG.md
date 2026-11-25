@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+Label the site export and import cards separately from installation archives.
+[Site dump heading](docs/defects/admin/site-dump-group-heading.md)
+
 Add a Files breadcrumb to return from a file card to its folder.
 
 Keep media results in place under [the shared loading overlay](docs/defects/admin/media-browser-refresh-shift.md)

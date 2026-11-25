@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "e5b7694e436d39407fac5d95a8f91a3909c0f449",
-  "checksum": "4ad44e130b7dafabd82fe0346c37e31f68edb68e06d01eb2f452a75b42ad3685",
+  "commit": "99ef34eec78d40094f73e732df55a395589e9dc5",
+  "checksum": "79262ef44978a03a37f704eb1884dc8b9180c39ece7963e0c14dac8226686146",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30754,
-      "sha256": "43ee6d5b763ac08fda8d3d1409ebb18dbf19930c32145f045b4cb0efc169ef25"
+      "bytes": 30900,
+      "sha256": "397b485bec6ad13885a06e05f6be6ea658ee48820bbb2154cfa5da2cac54a1ce"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 54950,
-      "sha256": "51851b2c0f941a636f0b131fcc28766878573e3b31371a388c069e3e3c472483"
+      "bytes": 55136,
+      "sha256": "734b68ff91bcec24d3af0734ad096686f634a8195295624a196dc26b94f5c27d"
     },
     {
       "path": "Dockerfile",
@@ -321,8 +321,8 @@
     },
     {
       "path": "admin/src/features/dumps/DumpsWorkspace.svelte",
-      "bytes": 21885,
-      "sha256": "680909d25c6fe6dbd546366881d8c3979f2e4a6415727ae1256b50847e5a54f1"
+      "bytes": 22345,
+      "sha256": "4eae80f738e5195b42b642b23c2bdf7f52eba29549eb394dfe2dabec240d8999"
     },
     {
       "path": "admin/src/features/dumps/dumps-api.ts",
@@ -746,8 +746,8 @@
     },
     {
       "path": "admin/src/i18n/locales/en/dumps.ts",
-      "bytes": 3345,
-      "sha256": "1dc7b4c00e2a36755b55b692741b5be47b43e67ffa2d01c3b60479c6674155a8"
+      "bytes": 3381,
+      "sha256": "544dcf319e4aab9a341489c8642eebb0e0a4537fc0e5e8d9e888b40ada6711a8"
     },
     {
       "path": "admin/src/i18n/locales/en/files.ts",
@@ -851,8 +851,8 @@
     },
     {
       "path": "admin/src/i18n/locales/ru/dumps.ts",
-      "bytes": 5089,
-      "sha256": "85fdd696456a4637249b068e6911014136ad7171cc22cf2532ea9538c255385b"
+      "bytes": 5132,
+      "sha256": "7a462780b74dbb8a4be37cf5148e629ada71e8dcb8601907254915ab13c28c4e"
     },
     {
       "path": "admin/src/i18n/locales/ru/files.ts",
@@ -1776,8 +1776,8 @@
     },
     {
       "path": "docs/arch/site-dumps.md",
-      "bytes": 12976,
-      "sha256": "49c59f56c2f716654f1d5e12b78617e38a72d5cd148e0e9425035df461dac93e"
+      "bytes": 13147,
+      "sha256": "acf4630aa0b360c101aad83b3cc93b0f27990d746140114cfd1eb542797e7cc5"
     },
     {
       "path": "docs/arch/site-editing-and-url-behavior.md",
@@ -2800,6 +2800,41 @@
       "sha256": "87a6c520d52d031aa51462be05de1938821e67a995ac10f362316e40ed1847fb"
     },
     {
+      "path": "docs/changes/0.17.0/site-dump-heading/00-state--06-complete--done.md",
+      "bytes": 191,
+      "sha256": "3d5aba7e70c78b213b9b0a51cb51935953c2eea902d851c08117a24c13db1b55"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/10-behavior.md",
+      "bytes": 326,
+      "sha256": "62d4a9ea9e3fc710d71b852fc284e3d5961f6960a3a12db38f26f0ffd92f9c9c"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/20-existing-behavior.md",
+      "bytes": 253,
+      "sha256": "1310c609d574cc467e94a0895d303aacf27ddd333e3bd25a6227f99a1d537380"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/30-design.md",
+      "bytes": 346,
+      "sha256": "d571c36ab9a68b282a19a62a875069f93994dba7eabaa9ea39c1b7b0c46fdec3"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/40-cases.md",
+      "bytes": 367,
+      "sha256": "62b071d36668221b425306e7b5591a63bbec945e25bd348d49c5fa409d6a324d"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/50-verification.md",
+      "bytes": 705,
+      "sha256": "6cb6b7da09769fe1ee386bb8ccf77110d9b136174f15ef06d7082b5d6b8ceec0"
+    },
+    {
+      "path": "docs/changes/0.17.0/site-dump-heading/60-decisions.md",
+      "bytes": 227,
+      "sha256": "7cf04c98273372e2063e40e9bcce339f4c371bc9bdd41811184b3b779b6334d0"
+    },
+    {
       "path": "docs/changes/1.0.0/admin-pages-tree-pagination/00-state--01-scope--active.md",
       "bytes": 301,
       "sha256": "3ee27ac927a7a203200a84af1bf3b6d126d6493952ab224cae65d06b21b5d028"
@@ -2991,8 +3026,8 @@
     },
     {
       "path": "docs/defects/admin/README.md",
-      "bytes": 4343,
-      "sha256": "ac492c15d7e64f3611d0a74a13861f7faebb6d25213e685d837cb870a81771e0"
+      "bytes": 4576,
+      "sha256": "927b8090fddbc5b215d1b9a65f9b35dc9081974936b0763f8af46a706875df06"
     },
     {
       "path": "docs/defects/admin/access-heading-spacing.md",
@@ -3058,6 +3093,11 @@
       "path": "docs/defects/admin/refresh-glyph-legibility.md",
       "bytes": 711,
       "sha256": "5bf7b00f13276540eb290699f3ac3c08ecea4e1526a549c56a70301dc1c04f7b"
+    },
+    {
+      "path": "docs/defects/admin/site-dump-group-heading.md",
+      "bytes": 852,
+      "sha256": "2cd806efd03d59ccdaf20bd5eb7f570a36e5ac03d82f11d683bff1e462b40161"
     },
     {
       "path": "docs/defects/admin/template-variables-deep-link-missing.md",
@@ -10811,8 +10851,8 @@
     },
     {
       "path": "test/integration/admin-users-http.integration.spec.ts",
-      "bytes": 238495,
-      "sha256": "53c06823035f3c5d2ba42c4d9b367f815e46d4a7d7d22855e953bedc28a855e7"
+      "bytes": 239526,
+      "sha256": "90cefd2e7e33c366cf938a8dcc2384ac7ee6923775b3241f760062256c00f466"
     },
     {
       "path": "test/integration/admin-users-ui.integration.spec.ts",

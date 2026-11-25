@@ -32,6 +32,10 @@ and reloads the editor after success to discard stale buffers and settings.
 
 ## Operations
 
+The Dumps workspace groups Export and Import under Site archive. The system
+administrator also sees Installation archive above it, with its own Create
+and Restore cards.
+
 All site operations require an existing site and the corresponding action grant.
 Site Admin can list, create, upload and restore full archives for an assigned
 site. System Admin can also download, delete and handle partial archives. Local

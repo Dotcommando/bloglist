@@ -654,9 +654,24 @@ it('shows category dump choices only to a system administrator', { timeout: 4000
         await page.goto(origin + '/admin' + route);
         await page.getByRole('button', { name: 'Settings', exact: true }).click();
         await page.getByRole('button', { name: 'Dumps', exact: true }).click();
-        const choices = page.getByLabel('Dump type', { exact: true });
+        const siteArchive = page.getByRole('region', { name: 'Site archive', exact: true });
+        const installation = page.getByRole('region', { name: 'Installation archive', exact: true });
+        const choices = siteArchive.getByLabel('Dump type', { exact: true });
 
-        await choices.waitFor();
+        await siteArchive.waitFor({ timeout: 2000 });
+        await siteArchive.getByRole('heading', { name: 'Export', exact: true, level: 3 }).waitFor();
+        await siteArchive.getByRole('heading', { name: 'Import', exact: true, level: 3 }).waitFor();
+        expect(await installation.count()).toBe(account === email ? 0 : 1);
+
+        if (account !== email) {
+          const siteTitle = siteArchive.getByRole('heading', { name: 'Site archive', exact: true, level: 2 });
+          const installationTitle = installation.getByRole('heading', {
+            name: 'Installation archive', exact: true, level: 2,
+          });
+
+          expect((await siteTitle.boundingBox())!.y).toBeGreaterThan((await installationTitle.boundingBox())!.y);
+          expect(await siteTitle.getAttribute('class')).toBe(await installationTitle.getAttribute('class'));
+        }
         expect(await choices.locator('option').evaluateAll((options) => options.map((option) =>
           option instanceof HTMLOptionElement ? option.value : null))).toEqual(types);
         expect(await page.getByText('Category dumps are available to system administrators.').isVisible())

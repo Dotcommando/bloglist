@@ -227,9 +227,6 @@
 </script>
 
 <section class="site-dumps" hidden={!active} aria-busy={loading || busy} aria-label={$messages.accessSettingsDumps}>
-  <header class="_dump-heading">
-    <p class="_dump-intro">{$messages.dumpsEachPartialDumpContainsOne}</p>
-  </header>
   {#if error}<p class="cms-error" role="alert">{$messages[error]}</p>{/if}
   {#if success}<p class="cms-success" role="status">{$messages[success]}</p>{/if}
   {#if missingOnExport}<p role="status">
@@ -282,89 +279,95 @@
       </div>
     </section>
   {/if}
-  <div class="_dump-transfers">
-  <form class="_dump-panel" aria-label={$messages.dumpsExport} onsubmit={(event) => {
-    event.preventDefault();
-    void run(async () => {
-      const created = await createSiteDump(siteId, type === DumpType.Site ? undefined : {
-        type,
-        ...(selectable ? { itemIds: [...selected] } : {}),
-        ...(type === DumpType.Addons ? { addonParts: { configuration, businessData, package: includePackage } } : {}),
-      });
+  <section class="_dump-heading" aria-labelledby={id + '-site'}>
+    <h2 class="_dump-section-title" id={id + '-site'}>{$messages.dumpsSiteArchive}</h2>
+    <p class="_dump-intro">{$messages.dumpsEachPartialDumpContainsOne}</p>
+    <div class="_dump-transfers">
+      <form class="_dump-panel" aria-label={$messages.dumpsExport} onsubmit={(event) => {
+        event.preventDefault();
+        void run(async () => {
+          const created = await createSiteDump(siteId, type === DumpType.Site ? undefined : {
+            type,
+            ...(selectable ? { itemIds: [...selected] } : {}),
+            ...(type === DumpType.Addons ? {
+              addonParts: { configuration, businessData, package: includePackage },
+            } : {}),
+          });
 
-      success = 'dumpsDumpCreated';
-      missingOnExport = created.missingFileReferences ?? 0;
-    });
-  }}>
-    <h2 class="_dump-section-title">{$messages.dumpsExport}</h2>
-    <fieldset class="_url-fieldset _dump-fields" disabled={busy || loading}>
-      <label class="_form-field">{$messages.dumpsDumpType}
-        <select bind:value={type} aria-label={$messages.dumpsDumpType}>{#each types as category (category)}
-          <option value={category}>{typeName(category)}</option>{/each}</select>
-        {#if siteOnly}<small>{$messages.dumpsPartialSystemAdmin}</small>{/if}
-      </label>
-      {#if selectable}
-        {#if !catalogue}<p role="status">{$messages.loadingSites}</p>
-        {:else if !catalogue.items.length}<p>{$messages.dumpsNoItemsToExport}</p>
-        {:else}
-          <Checkbox checked={selected.size === catalogue.items.length} onCheckedChange={(checked) => {
-            selected = new SvelteSet(checked ? catalogue!.items.map((item) => item.id) : []);
-          }}>{$messages.dumpsSelectAll}</Checkbox>
-          <div class="_dump-table-scroll"><table class="_dump-table"
-            aria-label={$messages.dumpsExportItems}>
-            <thead><tr><th scope="col">{$messages.parameterName}</th>
-              <th scope="col">{$messages.accessSettingsKey}</th></tr></thead>
-            <tbody>{#each catalogue.items as item (item.id)}
-              <tr class="_dump-select-row" aria-selected={selected.has(item.id)}>
-                <td><Checkbox checked={selected.has(item.id)} onCheckedChange={(checked) => {
-                  selected = toggle(selected, item.id, checked);
-                }}>{item.name}</Checkbox></td><td>{item.key}</td></tr>
-            {/each}</tbody></table></div>
-        {/if}
-      {:else if type === DumpType.Files}
-        <p>{$messages.dumpsAllFilesAreExportedTogether}</p>{/if}
-      {#if type === DumpType.Addons}
-        <fieldset class="_url-fieldset"><legend>{$messages.dumpsAddOnContents}</legend>
-          <Checkbox bind:checked={configuration}>{$messages.dumpsSettingsAndConfiguration}</Checkbox>
-          <Checkbox bind:checked={businessData}>{$messages.dumpsBusinessData}</Checkbox>
-          <Checkbox bind:checked={includePackage}>{$messages.dumpsInstallationPackage}</Checkbox>
+          success = 'dumpsDumpCreated';
+          missingOnExport = created.missingFileReferences ?? 0;
+        });
+      }}>
+        <h3 class="_dump-section-title">{$messages.dumpsExport}</h3>
+        <fieldset class="_url-fieldset _dump-fields" disabled={busy || loading}>
+          <label class="_form-field">{$messages.dumpsDumpType}
+            <select bind:value={type} aria-label={$messages.dumpsDumpType}>{#each types as category (category)}
+              <option value={category}>{typeName(category)}</option>{/each}</select>
+            {#if siteOnly}<small>{$messages.dumpsPartialSystemAdmin}</small>{/if}
+          </label>
+          {#if selectable}
+            {#if !catalogue}<p role="status">{$messages.loadingSites}</p>
+            {:else if !catalogue.items.length}<p>{$messages.dumpsNoItemsToExport}</p>
+            {:else}
+              <Checkbox checked={selected.size === catalogue.items.length} onCheckedChange={(checked) => {
+                selected = new SvelteSet(checked ? catalogue!.items.map((item) => item.id) : []);
+              }}>{$messages.dumpsSelectAll}</Checkbox>
+              <div class="_dump-table-scroll"><table class="_dump-table"
+                aria-label={$messages.dumpsExportItems}>
+                <thead><tr><th scope="col">{$messages.parameterName}</th>
+                  <th scope="col">{$messages.accessSettingsKey}</th></tr></thead>
+                <tbody>{#each catalogue.items as item (item.id)}
+                  <tr class="_dump-select-row" aria-selected={selected.has(item.id)}>
+                    <td><Checkbox checked={selected.has(item.id)} onCheckedChange={(checked) => {
+                      selected = toggle(selected, item.id, checked);
+                    }}>{item.name}</Checkbox></td><td>{item.key}</td></tr>
+                {/each}</tbody></table></div>
+            {/if}
+          {:else if type === DumpType.Files}
+            <p>{$messages.dumpsAllFilesAreExportedTogether}</p>{/if}
+          {#if type === DumpType.Addons}
+            <fieldset class="_url-fieldset"><legend>{$messages.dumpsAddOnContents}</legend>
+              <Checkbox bind:checked={configuration}>{$messages.dumpsSettingsAndConfiguration}</Checkbox>
+              <Checkbox bind:checked={businessData}>{$messages.dumpsBusinessData}</Checkbox>
+              <Checkbox bind:checked={includePackage}>{$messages.dumpsInstallationPackage}</Checkbox>
+            </fieldset>
+          {/if}
+          <div class="_dump-actions"><button class="cms-primary" disabled={selectable && !selected.size
+            || type === DumpType.Addons && !configuration && !businessData && !includePackage}>
+            {$messages.dumpsCreateDump}</button>
+          </div>
         </fieldset>
-      {/if}
-      <div class="_dump-actions"><button class="cms-primary" disabled={selectable && !selected.size
-        || type === DumpType.Addons && !configuration && !businessData && !includePackage}>
-        {$messages.dumpsCreateDump}</button>
-      </div>
-    </fieldset>
-  </form>
-  <form class="_dump-panel" aria-label={$messages.dumpsImport} onsubmit={(event) => {
-    event.preventDefault();
-    const file = selection?.[0];
+      </form>
+      <form class="_dump-panel" aria-label={$messages.dumpsImport} onsubmit={(event) => {
+        event.preventDefault();
+        const file = selection?.[0];
 
-    if (file) {
-      void run(async () => {
-        const saved = await importSiteDump(siteId, file);
+        if (file) {
+          void run(async () => {
+            const saved = await importSiteDump(siteId, file);
 
-        selection = undefined;
+            selection = undefined;
 
-        if (saved.type !== DumpType.Site) {
-          await inspect(saved);
+            if (saved.type !== DumpType.Site) {
+              await inspect(saved);
+            }
+            success = saved.type === DumpType.Site
+              ? 'dumpsDumpUploadedAndVerifiedChoose'
+              : 'dumpsDumpUploadedAndVerifiedSelect';
+          });
         }
-        success = saved.type === DumpType.Site
-          ? 'dumpsDumpUploadedAndVerifiedChoose'
-          : 'dumpsDumpUploadedAndVerifiedSelect';
-      });
-    }
-  }}>
-    <h2 class="_dump-section-title">{$messages.dumpsImport}</h2>
-    <fieldset class="_url-fieldset _dump-fields" disabled={busy || loading}>
-      <label class="_form-field">{$messages.dumpsUploadADumpFromYour}
-        <input class="_dump-file" type="file" accept=".gz,application/gzip" bind:files={selection} />
-      </label>
-      <div class="_dump-actions"><button class="cms-secondary" disabled={!selection?.length}>
-        {$messages.dumpsUploadDump}</button></div>
-    </fieldset>
-  </form>
-  </div>
+      }}>
+        <h3 class="_dump-section-title">{$messages.dumpsImport}</h3>
+        <fieldset class="_url-fieldset _dump-fields" disabled={busy || loading}>
+          <label class="_form-field">{$messages.dumpsUploadADumpFromYour}
+            <input class="_dump-file" type="file" accept=".gz,application/gzip" bind:files={selection} />
+          </label>
+          <div class="_dump-actions"><button class="cms-secondary" disabled={!selection?.length}>
+            {$messages.dumpsUploadDump}</button></div>
+        </fieldset>
+      </form>
+    </div>
+  </section>
   {#if review && importing}
     <section class="_dump-panel _dump-review" aria-label={$messages.dumpsImportDump}>
       <h2>{$messages.dumpsImport2}{typeName(review.type)}</h2>
