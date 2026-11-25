@@ -3,19 +3,23 @@
 
   import { adminLanguage, messages } from '../../i18n/i18n';
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
+  import Checkbox from '../../shared/ui/Checkbox.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import { formatFileSize } from './file-size';
   import FileIcon from './FileIcon.svelte';
   import { FileSort, type IFileBrowsePage, type ISiteFile, type MediaRoot } from './files.types';
   import { browseFiles, fileContentUrl } from './files-api';
+  import { defaultMediaPageSize, type MediaPageSize, readMediaPageSize } from './media-page-size';
 
-  let { siteId, root, folderId, mimeTypes, version = '', selectedId = null, disabled = false, canReadContent = true,
+  let { siteId, root, folderId, mimeTypes, version = '', active = true, selectedId = null,
+    disabled = false, canReadContent = true,
     onFolder, onFile, onPage, onUnauthorized, fileHref }: {
     siteId: string;
     root: MediaRoot;
     folderId: string | null;
     mimeTypes?: readonly string[] | undefined;
     version?: string;
+    active?: boolean;
     selectedId?: string | null;
     disabled?: boolean;
     canReadContent?: boolean;
@@ -32,13 +36,13 @@
   let descending = $state(false);
   let grid = $state(true);
   let page = $state(1);
-  let pageSize = $state(25);
+  let pageSize = $state<MediaPageSize>(defaultMediaPageSize);
   let revision = $state(0);
-  let result = $state<IFileBrowsePage>();
+  let result = $state<IFileBrowsePage & { loadedPageSize: MediaPageSize }>();
   let loading = $state(true);
   let error = $state<ContentErrorMessage | null>(null);
   const failed = new SvelteSet<string>();
-  const pages = $derived(Math.max(1, Math.ceil((result?.total ?? 0) / pageSize)));
+  const pages = $derived(result ? Math.max(1, Math.ceil(result.total / result.loadedPageSize)) : 1);
   const labels = $derived({
     [FileSort.Name]: $messages.fileBrowseName,
     [FileSort.Created]: $messages.fileBrowseCreated,
@@ -49,6 +53,12 @@
   const dateFormat = $derived(new Intl.DateTimeFormat($adminLanguage, {
     dateStyle: 'medium', timeZone: result?.timeZone ?? 'UTC',
   }));
+
+  $effect(() => {
+    if (active) {
+      pageSize = readMediaPageSize(siteId);
+    }
+  });
 
   $effect(() => {
     try {
@@ -81,6 +91,9 @@
   });
 
   $effect(() => {
+    if (!active) {
+      return;
+    }
     void version;
     void revision;
     const scope = siteId;
@@ -95,26 +108,26 @@
       pageSize,
       ...(mimeTypes ? { mimeTypes } : {}),
     };
-    let active = true;
+    let current = true;
 
     loading = true;
     error = null;
 
     const timer = setTimeout(() => {
       void browseFiles(scope, input).then((next) => {
-        if (active) {
+        if (current) {
           const last = Math.max(1, Math.ceil(next.total / input.pageSize));
 
           if (input.page > last) {
             page = last;
           } else {
-            result = next;
+            result = { ...next, loadedPageSize: input.pageSize };
             failed.clear();
             onPage?.(next, input.folderId);
           }
         }
       }).catch((value: unknown) => {
-        if (active) {
+        if (current) {
           if (value instanceof ContentRequestError && value.status === 401) {
             onUnauthorized();
           } else {
@@ -122,14 +135,14 @@
           }
         }
       }).finally(() => {
-        if (active) {
+        if (current) {
           loading = false;
         }
       });
     }, 120);
 
     return () => {
-      active = false;
+      current = false;
       clearTimeout(timer);
     };
   });
@@ -165,14 +178,18 @@
   {@const preview = file.outputs.find((output) => output.key !== 'file') ?? file.outputs.find((output) =>
     output.mimeType.startsWith('image/') && output.byteSize != null && output.byteSize <= 128 * 1024
     && (output.dimensions?.width ?? Infinity) <= 640 && (output.dimensions?.height ?? Infinity) <= 640)}
-  {#if thumbnail && canReadContent && preview && !failed.has(file.fileId)}
-    <img src={fileContentUrl(siteId, file.fileId, preview.key) + '&v=' + encodeURIComponent(file.assetVersion ?? '')}
-      alt="" loading="lazy" onerror={() => failed.add(file.fileId)} />
-  {:else}
-    <FileIcon mimeType={file.mimeType} />
-  {/if}
-  <span class="_file-name" title={file.name}>{file.name}</span>
-  {@render itemPath(file.fileId)}
+  <span class="_file-visual">
+    {#if thumbnail && canReadContent && preview && !failed.has(file.fileId)}
+      <img src={fileContentUrl(siteId, file.fileId, preview.key) + '&v=' + encodeURIComponent(file.assetVersion ?? '')}
+        alt="" loading="lazy" onerror={() => failed.add(file.fileId)} />
+    {:else}
+      <FileIcon mimeType={file.mimeType} />
+    {/if}
+  </span>
+  <span class="_file-info">
+    <span class="_file-name" title={file.name}>{file.name}</span>
+    {@render itemPath(file.fileId)}
+  </span>
 {/snippet}
 
 {#snippet fileAction(file: ISiteFile, thumbnail: boolean)}
@@ -189,7 +206,8 @@
 
 <section class="file-browser folder-contents" aria-label={$messages.folderContents} aria-busy={loading}>
   {#if fileHref}<h2>{$messages.folderContents}</h2>{/if}
-  <nav class="_file-browser-bar" aria-label={$messages.folderContents}>
+  {#if folderId !== null || !fileHref}
+  <nav class="_file-breadcrumbs" aria-label={$messages.folderContents}>
     {#if folderId === null}<span aria-current="location">assets/{root}</span>
     {:else}
       <button class="cms-secondary" type="button" {disabled} onclick={() => onFolder(null)}>assets/{root}</button>
@@ -200,25 +218,56 @@
         onclick={() => onFolder(folder.folderId)}>{folder.name}</button>
     {/each}
   </nav>
-  <div class="_file-browser-bar">
-    <label class="_file-filter" for={id + '-search'}>{$messages.fileBrowseSearch}
-      <input id={id + '-search'} type="search" bind:value={query} maxlength="180" {disabled} />
-    </label>
-    <label><input type="checkbox" bind:checked={recursive} {disabled} /> {$messages.fileBrowseRecursive}</label>
-    <label class="_file-filter">{$messages.fileBrowseSort}
-      <select bind:value={sort} {disabled}>
-        {#each Object.values(FileSort) as field (field)}
-          <option value={field}>{labels[field]}</option>
-        {/each}
-      </select>
-    </label>
-    <button class="cms-secondary" type="button" aria-pressed={descending} {disabled}
-      onclick={() => descending = !descending}>{descending ? '↓' : '↑'} {$messages.fileBrowseSort}</button>
-    <button class="cms-secondary" type="button" aria-pressed={grid} {disabled}
-      onclick={() => layout(true)}>{$messages.fileBrowseGrid}</button>
-    <button class="cms-secondary" type="button" aria-pressed={!grid} {disabled}
-      onclick={() => layout(false)}>{$messages.fileBrowseList}</button>
-    <RefreshButton disabled={disabled || loading} onclick={() => revision++} />
+  {/if}
+  <div class="_file-controls">
+    <div class="_file-fields">
+      <label class="_form-field" for={id + '-search'}>{$messages.fileBrowseSearch}
+        <input id={id + '-search'} type="search" bind:value={query} maxlength="180" {disabled} />
+      </label>
+      <div class="_file-sort">
+        <label class="_form-field">{$messages.fileBrowseSort}
+          <select bind:value={sort} {disabled}>
+            {#each Object.values(FileSort) as field (field)}
+              <option value={field}>{labels[field]}</option>
+            {/each}
+          </select>
+        </label>
+        <button class="cms-secondary _file-direction" type="button" {disabled}
+          aria-label={$messages.fileBrowseDescending} aria-pressed={descending}
+          title={descending ? $messages.fileBrowseDescending : $messages.fileBrowseAscending}
+          onclick={() => descending = !descending}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+            stroke-width="1.7" aria-hidden="true">
+            <path d={descending ? 'M12 5v14m-5-5 5 5 5-5' : 'M12 19V5m-5 5 5-5 5 5'} />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="_file-options">
+      <Checkbox bind:checked={recursive} {disabled}>{$messages.fileBrowseRecursive}</Checkbox>
+      <div class="_file-tools">
+        <div class="_file-views" role="group" aria-label={$messages.fileBrowseView}>
+          <button class="cms-secondary _file-view-button" type="button" aria-pressed={grid} {disabled}
+            onclick={() => layout(true)}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+              stroke-width="1.7" aria-hidden="true">
+              <rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" />
+              <rect x="4" y="14" width="6" height="6" rx="1" /><rect x="14" y="14" width="6" height="6" rx="1" />
+            </svg>
+            {$messages.fileBrowseGrid}
+          </button>
+          <button class="cms-secondary _file-view-button" type="button" aria-pressed={!grid} {disabled}
+            onclick={() => layout(false)}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+              stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+              <path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" />
+            </svg>
+            {$messages.fileBrowseList}
+          </button>
+        </div>
+        <RefreshButton disabled={disabled || loading} onclick={() => revision++} />
+      </div>
+    </div>
   </div>
   {#if error}<p class="cms-error" role="alert">{$messages[error]}</p>{/if}
   {#if loading}<p role="status">{$messages.loadingFiles}</p>{/if}
@@ -234,8 +283,11 @@
         {#each result.folders as folder (folder.folderId)}
           <button type="button" class="_file-action" disabled={disabled || loading}
             onclick={() => onFolder(folder.folderId)}>
-            {@render folderIcon()}<span class="_file-name" title={folder.name}>{folder.name}</span>
-            {@render itemPath(folder.folderId)}
+            <span class="_file-visual">{@render folderIcon()}</span>
+            <span class="_file-info">
+              <span class="_file-name" title={folder.name}>{folder.name}</span>
+              {@render itemPath(folder.folderId)}
+            </span>
           </button>
         {/each}
         {#each result.files as file (file.fileId)}
@@ -252,8 +304,12 @@
             {#each result.folders as folder (folder.folderId)}
               <tr>
                 <td><button type="button" class="_file-action" disabled={disabled || loading}
-                  onclick={() => onFolder(folder.folderId)}>{@render folderIcon()}{folder.name}
-                  {@render itemPath(folder.folderId)}
+                  onclick={() => onFolder(folder.folderId)}>
+                  <span class="_file-visual">{@render folderIcon()}</span>
+                  <span class="_file-info">
+                    <span class="_file-name" title={folder.name}>{folder.name}</span>
+                    {@render itemPath(folder.folderId)}
+                  </span>
                 </button></td>
                 <td>—</td><td>—</td><td>{$messages.fileFolder}</td><td>—</td>
               </tr>
@@ -269,26 +325,37 @@
         </table>
       </div>
     {/if}
-    <div class="_file-browser-bar">
+    <nav class="_file-pagination" aria-label={$messages.fileBrowsePagination}>
       <button class="cms-secondary" type="button" disabled={disabled || loading || page <= 1}
         onclick={() => page--}>{$messages.fileBrowsePrevious}</button>
-      <span role="status">{page} / {pages} · {result.total}</span>
+      <span class="_file-page-status" role="status">{page} / {pages} · {result.total}</span>
       <button class="cms-secondary" type="button" disabled={disabled || loading || page >= pages}
         onclick={() => page++}>{$messages.fileBrowseNext}</button>
-      <label>{$messages.fileBrowsePageSize}
-        <select bind:value={pageSize} {disabled}>
-          {#each [25, 50, 100] as size (size)}<option value={size}>{size}</option>{/each}
-        </select>
-      </label>
-    </div>
+    </nav>
   {/if}
 </section>
 
 <style>
   .file-browser { display: grid; min-width: 0; gap: 12px; }
   .file-browser h2, .file-browser p { margin: 0; }
-  ._file-browser-bar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
-  ._file-filter { display: grid; gap: 4px; min-width: 0; }
+  ._file-breadcrumbs, ._file-options, ._file-tools, ._file-views, ._file-pagination {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  }
+  ._file-controls { display: grid; gap: 8px; min-width: 0; container-type: inline-size; }
+  ._file-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  ._file-fields ._form-field { margin: 0; font-size: 14px; font-weight: 600; }
+  ._file-sort { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: end; gap: 8px; }
+  ._file-direction { display: grid; place-items: center; width: 48px; min-height: 48px; padding: 0; }
+  ._file-options { justify-content: space-between; }
+  @container (min-width: 576px) {
+    ._file-fields { grid-template-columns: minmax(0, 1fr) minmax(200px, 280px); }
+  }
+  ._file-view-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  ._file-view-button[aria-pressed='true'], ._file-view-button[aria-pressed='true']:hover:not(:disabled) {
+    background: var(--cms-accent); color: var(--cms-surface); border-color: var(--cms-accent);
+  }
+  ._file-pagination { justify-content: center; margin-top: 4px; }
+  ._file-page-status { display: flex; align-items: center; min-height: 44px; font-variant-numeric: tabular-nums; }
   ._file-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 128px), 1fr)); gap: 10px; }
   ._file-table { overflow-x: auto; }
   ._file-action {
@@ -300,13 +367,20 @@
     padding: 8px;
     text-align: left;
     color: var(--cms-ink);
+    text-decoration: none;
     background: var(--cms-row);
     border: 1px solid var(--cms-border);
     border-radius: 8px;
   }
   ._file-action:hover, ._file-selected { background: var(--cms-row-hover); border-color: var(--cms-accent); }
-  ._file-tiles ._file-action { min-height: 72px; }
+  ._file-tiles ._file-action { align-content: start; min-height: 128px; }
+  ._file-visual { display: grid; place-items: center; }
+  ._file-tiles ._file-visual { width: 100%; height: 96px; border-radius: 4px; background: var(--cms-surface); }
+  ._file-tiles ._file-visual :global(svg) { width: 32px; height: 32px; color: var(--cms-muted); }
+  ._file-table ._file-action { display: flex; align-items: center; min-height: 44px; gap: 8px; }
+  ._file-table ._file-visual { flex-shrink: 0; }
   ._file-action img { width: 100%; height: 96px; object-fit: contain; }
-  ._file-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  ._file-info { display: grid; min-width: 0; max-width: 100%; gap: 2px; }
+  ._file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   ._file-path { max-width: 100%; color: var(--cms-muted); overflow-wrap: anywhere; }
 </style>

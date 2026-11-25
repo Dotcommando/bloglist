@@ -16,6 +16,7 @@ export default {
   dumpsUnresolvedFileReferences: 'Количество неразрешимых файловых ссылок в выбранных данных — {count}.',
   dumpsOmitUnresolvedFiles: 'Восстановить без неразрешимых ссылок, если это допускают данные аддона',
   dumpsDumpType: 'Тип дампа',
+  dumpsPartialSystemAdmin: 'Дампы по категориям доступны системному администратору.',
   dumpsNoItemsToExport: 'Нет элементов для экспорта.',
   dumpsSelectAll: 'Выбрать все',
   dumpsExportItems: 'Элементы для экспорта',

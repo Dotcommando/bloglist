@@ -15,6 +15,9 @@
   import CpuUsageWorkspace from '../cpu/CpuUsageWorkspace.svelte';
   import DeploymentWorkspace from '../deployment/DeploymentWorkspace.svelte';
   import DumpsWorkspace from '../dumps/DumpsWorkspace.svelte';
+  import {
+    defaultMediaPageSize, isMediaPageSize, type MediaPageSize, mediaPageSizes, readMediaPageSize, setMediaPageSize,
+  } from '../files/media-page-size';
   import type PageResolutionsComponent from '../page-statistics/PageResolutionsWorkspace.svelte';
   import ResourceSettings from '../resources/ResourceSettings.svelte';
   import type { ISiteAddresses } from '../urls/urls.types';
@@ -40,6 +43,7 @@
   } = $props();
   let timeZone = $state('UTC');
   let savedTimeZone = $state('UTC');
+  let mediaPageSize = $state<MediaPageSize>(defaultMediaPageSize);
   const timeZones = [...new Set(['UTC', 'Asia/Nicosia', ...Intl.supportedValuesOf('timeZone')])].sort();
   let tab = $state(SettingsTab.General);
   const basicSettings = $derived(can('cms.site-settings.read'));
@@ -75,6 +79,11 @@
     }
     if (active && tab === SettingsTab.PageResolutions) {
       statisticsComponent ??= import('../page-statistics/PageResolutionsWorkspace.svelte');
+    }
+  });
+  $effect(() => {
+    if (active) {
+      mediaPageSize = readMediaPageSize(site.siteId);
     }
   });
   let statisticsComponent = $state<Promise<{ default: typeof PageResolutionsComponent }> | null>(null);
@@ -380,6 +389,24 @@
       {:else}<RefreshButton onclick={() => {
         void load();
       }} />{/if}
+        <section class="_media-preferences" aria-labelledby="media-preferences-heading">
+          <h2 id="media-preferences-heading">{$messages.settingsMediaLibrary}</h2>
+          <div class="_form-field">
+            <label for="media-page-size">{$messages.settingsMediaPageSize}</label>
+            <select id="media-page-size" aria-describedby="media-page-size-scope" value={mediaPageSize}
+              onchange={(event) => {
+                const size = Number(event.currentTarget.value);
+
+                if (isMediaPageSize(size)) {
+                  mediaPageSize = size;
+                  setMediaPageSize(site.siteId, size);
+                }
+              }}>
+              {#each mediaPageSizes as size (size)}<option value={size}>{size}</option>{/each}
+            </select>
+            <small id="media-page-size-scope">{$messages.settingsMediaPageSizeScope}</small>
+          </div>
+        </section>
         {#if canRebuild}<section class="_site-rebuild" aria-labelledby="site-rebuild-heading">
           <h2 id="site-rebuild-heading">{$messages.rebuildSite}</h2>
           <p id="site-rebuild-hint">{$messages.rebuildFromSavedSettings} {$messages.rebuildSiteHint}</p>
@@ -470,6 +497,9 @@
 
 <style>
   ._workspace-toolbar { padding-block: 20px 4px; }
+  ._media-preferences { display: grid; gap: 16px; margin-top: 32px; }
+  ._media-preferences h2, ._media-preferences ._form-field { margin: 0; }
+  ._media-preferences select { max-width: 240px; }
 
   @media (min-width: 992px) {
     ._workspace-toolbar { padding-block: 32px 8px; }

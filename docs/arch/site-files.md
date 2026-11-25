@@ -247,6 +247,14 @@ only after both phases succeed. If another file occupies a planned old address,
 free that address before retrying. An intentionally skipped link update creates
 no recovery plan. Historical releases and dynamic URLs remain as authored.
 
+A media browser groups search, folder scope, sort and view controls above its
+results. Grid and List have icons and a filled selected control.
+The paging controls and status share a centered row. Settings /
+General stores the media page size of 25, 50 or 100 as a browser preference
+scoped to the current site. The Files workspace and file pickers read it.
+The preference uses the existing server browse limits and leaves archive
+signatures compatible.
+
 A restricted picker sends its allowed MIME types with the upload. CMS inspects
 the actual bytes and compares the detected type before storing a private asset.
 The ordinary Files upload supports the full CMS type list.

@@ -1857,6 +1857,22 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     try {
       await page.goto(origin + '/admin/sites/' + siteId + '/files');
       await page.getByRole('heading', { name: 'assets/images', exact: true, level: 1 }).waitFor();
+      const view = page.getByRole('group', { name: 'File view', exact: true });
+      const tiles = view.getByRole('button', { name: 'Grid', exact: true });
+      const list = view.getByRole('button', { name: 'List', exact: true });
+
+      expect(await tiles.locator('svg').isVisible()).toBe(true);
+      expect(await list.locator('svg').isVisible()).toBe(true);
+      expect(await tiles.getAttribute('aria-pressed')).toBe('true');
+      expect(await list.getAttribute('aria-pressed')).toBe('false');
+      const activeFill = await tiles.evaluate((button) => getComputedStyle(button).backgroundColor);
+
+      expect(await list.evaluate((button) => getComputedStyle(button).backgroundColor)).not.toBe(activeFill);
+      await list.click();
+      expect(await tiles.getAttribute('aria-pressed')).toBe('false');
+      expect(await list.getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => list.evaluate((button) => getComputedStyle(button).backgroundColor)).toBe(activeFill);
+      await tiles.click();
       await page.getByRole('link', { name: 'small.png', exact: true }).click();
       await page.getByRole('heading', { name: 'Rename file: small.png', exact: true }).waitFor();
       const nameInput = page.getByLabel('File name', { exact: true });
@@ -2081,7 +2097,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       const observed = page.waitForResponse((response) => {
         const url = new URL(response.url());
 
-        return url.pathname === base && url.searchParams.has('pageSize') && !url.searchParams.has('foldersOnly');
+        return url.pathname === base && url.searchParams.get('root') === 'images'
+          && !url.searchParams.has('foldersOnly');
       });
       const started = performance.now();
 
@@ -2090,6 +2107,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
 
       expect(response.status()).toBe(200);
       expect(await response.json()).toMatchObject({ total: 100_000 });
+      expect(new URL(response.url()).searchParams.get('pageSize')).toBe('25');
       const files = page.locator('#files-workspace .file-browser');
 
       await files.getByRole('link', { name: '000000.png', exact: true }).waitFor();
@@ -2098,6 +2116,46 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       console.info(JSON.stringify({
         browserFiles: 100_000, shown: 25, readyMs: Math.round(performance.now() - started),
       }));
+      const pager = files.getByRole('navigation', { name: 'File pages', exact: true });
+      const previous = pager.getByRole('button', { name: 'Previous', exact: true });
+      const nextPage = pager.getByRole('button', { name: 'Next', exact: true });
+      const checkbox = files.getByRole('checkbox', { name: 'Include subfolders', exact: true });
+      const [bar, back, status, next, check] = await Promise.all([
+        pager.boundingBox(), previous.boundingBox(), pager.getByRole('status').boundingBox(),
+        nextPage.boundingBox(), checkbox.boundingBox(),
+      ]);
+
+      expect(check!.width).toBe(20);
+      expect(check!.height).toBe(20);
+      expect((back!.x + next!.x + next!.width) / 2).toBeCloseTo(bar!.x + bar!.width / 2, 0);
+      expect(status!.y + status!.height / 2).toBeCloseTo(back!.y + back!.height / 2, 0);
+      expect(status!.y + status!.height / 2).toBeCloseTo(next!.y + next!.height / 2, 0);
+      expect(await files.getByRole('combobox').count()).toBe(1);
+      await pager.screenshot({ path: path.resolve('.tmp/files-pager-centered.png') });
+      await nextPage.click();
+      await files.getByRole('link', { name: '000025.png', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      const settings = page.getByRole('combobox', { name: 'Files per page in the media library', exact: true });
+
+      await settings.waitFor();
+      expect(await settings.inputValue()).toBe('25');
+      await settings.selectOption('50');
+      const configuredPage = page.waitForResponse((reply) => {
+        const url = new URL(reply.url());
+
+        return url.pathname === base && url.searchParams.get('root') === 'images'
+          && url.searchParams.get('page') === '1' && url.searchParams.get('pageSize') === '50'
+          && !url.searchParams.has('foldersOnly');
+      });
+
+      await page.getByRole('button', { name: 'Files', exact: true }).click();
+      expect((await configuredPage).status()).toBe(200);
+      await files.getByRole('link', { name: '000049.png', exact: true }).waitFor();
+      expect(await files.getByRole('link').count()).toBe(50);
+      await page.reload();
+      await files.getByRole('link', { name: '000049.png', exact: true }).waitFor();
+      expect(await files.getByRole('link').count()).toBe(50);
+      expect(full).not.toHaveBeenCalled();
     } finally {
       await context.close();
       await browser.close();

@@ -818,7 +818,7 @@
         {:else}
           <p class="_file-hint">{$messages.filesIntro}</p>
           {#if loaded}
-            <FileBrowser siteId={site.siteId} root={selectedRoot} {folderId} version={treeVersion}
+            <FileBrowser siteId={site.siteId} root={selectedRoot} {folderId} version={treeVersion} {active}
               disabled={busy} {canReadContent} onFolder={(id) => openFolder(id, selectedRoot)}
               onFile={openFile} fileHref={(item) => basePath + '/' + item.fileId} {onUnauthorized}
               onPage={(result) => {

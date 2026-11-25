@@ -1,8 +1,8 @@
 {
   "format": 1,
   "version": "0.17.0",
-  "commit": "50534a232f98eac80b5ad59aac8be0c614054096",
-  "checksum": "7be14e5cd1d02ff2c5da8f6b9e43aee4a50aff4887d6706d0e9f4d01d1aa7bef",
+  "commit": "838be127eaf96f4431d49691d91e8e66092a3b2f",
+  "checksum": "2013786e07571dab8fc60a4a503e362a8f1add49a78d32053e28b5c8d7d6a93d",
   "files": [
     {
       "path": ".dockerignore",
@@ -56,13 +56,13 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 30288,
-      "sha256": "6dcf2817eccc6758703d5122bcf5f196ad64e85efe2501d176457404d7e126eb"
+      "bytes": 30526,
+      "sha256": "f40ca89b5cb074a4cc85a24750a53f6dd889de83cf0b3daad9d2229400ef23fe"
     },
     {
       "path": "CHANGLOG.ru.md",
-      "bytes": 54101,
-      "sha256": "312a43996fca1d387efcfc88114a0e9f62a622df09b1620926c8118df087b459"
+      "bytes": 54476,
+      "sha256": "c5a73dde66c1c4502ca36f571829f7b63e5985936200edd92ef5cb43db7be509"
     },
     {
       "path": "Dockerfile",
@@ -321,8 +321,8 @@
     },
     {
       "path": "admin/src/features/dumps/DumpsWorkspace.svelte",
-      "bytes": 21807,
-      "sha256": "ac0f4c1b92de29876feb8f2dcfc3c14daf70f49605283199918a4fce25661793"
+      "bytes": 21885,
+      "sha256": "680909d25c6fe6dbd546366881d8c3979f2e4a6415727ae1256b50847e5a54f1"
     },
     {
       "path": "admin/src/features/dumps/dumps-api.ts",
@@ -336,8 +336,8 @@
     },
     {
       "path": "admin/src/features/files/FileBrowser.svelte",
-      "bytes": 11985,
-      "sha256": "45f250e29e8a643548350f731cfa30721478707c497e9e0b47fd6133d8e01026"
+      "bytes": 15824,
+      "sha256": "0b6480a9d26b5964043722033361c449c942087cc595e397c35c60b6d56ab9be"
     },
     {
       "path": "admin/src/features/files/FileIcon.svelte",
@@ -356,8 +356,8 @@
     },
     {
       "path": "admin/src/features/files/FilesWorkspace.svelte",
-      "bytes": 38461,
-      "sha256": "3ec2928b8e0118c855e635e79d7511bedcf15e168dd4ce2b8796866e4e84af50"
+      "bytes": 38470,
+      "sha256": "112d48bafc69330484fc7deec4e3747a2a9ccf45d9e7b5b146e9f89952149bb3"
     },
     {
       "path": "admin/src/features/files/ImageLibraryDialog.svelte",
@@ -393,6 +393,11 @@
       "path": "admin/src/features/files/image-outputs.ts",
       "bytes": 695,
       "sha256": "caccd88d1d7a98831c4a36e4f8d2817213433da96b70844281bc21c008b31f47"
+    },
+    {
+      "path": "admin/src/features/files/media-page-size.ts",
+      "bytes": 1009,
+      "sha256": "14da8d4a834135691f4d7ab1891a0ff1689159a520a9017dca08e4e7983d1049"
     },
     {
       "path": "admin/src/features/files/missing-file-references.ts",
@@ -591,8 +596,8 @@
     },
     {
       "path": "admin/src/features/settings/SettingsWorkspace.svelte",
-      "bytes": 19102,
-      "sha256": "f72e41cdf9f2fd5d8f698c382b04925cf29a0919f46605e51bb30703395bf64b"
+      "bytes": 20549,
+      "sha256": "56647433f78c6ea47bbb6ede41d9edec304d404f90d567bb0044c3eb214b9b1f"
     },
     {
       "path": "admin/src/features/settings/SiteFaviconInput.svelte",
@@ -741,13 +746,13 @@
     },
     {
       "path": "admin/src/i18n/locales/en/dumps.ts",
-      "bytes": 3260,
-      "sha256": "7a6319543f259e09204d3e36ff6d345671578c12f79e10356722145d7f28d919"
+      "bytes": 3345,
+      "sha256": "1dc7b4c00e2a36755b55b692741b5be47b43e67ffa2d01c3b60479c6674155a8"
     },
     {
       "path": "admin/src/i18n/locales/en/files.ts",
-      "bytes": 7252,
-      "sha256": "e774f0ed3d938d1baf9b39215c0950166c75c9c00ab5b34dcb9ef887d5615374"
+      "bytes": 7367,
+      "sha256": "856792d09b1a2cdb34fa2684d3132684dc01332859fe80ff2acb37a585f42c40"
     },
     {
       "path": "admin/src/i18n/locales/en/hooks.ts",
@@ -786,8 +791,8 @@
     },
     {
       "path": "admin/src/i18n/locales/en/settings.ts",
-      "bytes": 3348,
-      "sha256": "6419e62f7c648a4e178d95fdd73ea0b2fcdc362cb95fe05d32379ce14d799b7a"
+      "bytes": 3530,
+      "sha256": "b1a95d79a79ed4ecd1f19eafd84262fc5f368398236673ea42cbb23fc0dd9cd6"
     },
     {
       "path": "admin/src/i18n/locales/en/shell.ts",
@@ -846,13 +851,13 @@
     },
     {
       "path": "admin/src/i18n/locales/ru/dumps.ts",
-      "bytes": 4954,
-      "sha256": "6d9be9a5384f05f1a33ade1f446399fa8b2c7e1fcc83dc3e3eb71ecad74975ed"
+      "bytes": 5089,
+      "sha256": "85fdd696456a4637249b068e6911014136ad7171cc22cf2532ea9538c255385b"
     },
     {
       "path": "admin/src/i18n/locales/ru/files.ts",
-      "bytes": 11443,
-      "sha256": "d4c2dd2e685da2425ed33d3d29aa923187f1a7a015b2b2b1e8ccf43fa0d2c775"
+      "bytes": 11584,
+      "sha256": "3197abff96e9524471c019409453bc1af66154fa0d800d8a755850ab7bd9d417"
     },
     {
       "path": "admin/src/i18n/locales/ru/hooks.ts",
@@ -891,8 +896,8 @@
     },
     {
       "path": "admin/src/i18n/locales/ru/settings.ts",
-      "bytes": 4907,
-      "sha256": "18adfedf07b65da224cb9805b936234bf5c882395d29a991dbc2a02c930b1599"
+      "bytes": 5181,
+      "sha256": "e4c6fcab487fdf0fad0147574a17f7216a407bf1a491d0b18c1fc74455441d4a"
     },
     {
       "path": "admin/src/i18n/locales/ru/shell.ts",
@@ -1766,8 +1771,8 @@
     },
     {
       "path": "docs/arch/site-dumps.md",
-      "bytes": 12860,
-      "sha256": "05d55cdf290b06b6201c404fc98a1da031bc653657b0c105cfa03c47a3cc395f"
+      "bytes": 12976,
+      "sha256": "49c59f56c2f716654f1d5e12b78617e38a72d5cd148e0e9425035df461dac93e"
     },
     {
       "path": "docs/arch/site-editing-and-url-behavior.md",
@@ -1776,8 +1781,8 @@
     },
     {
       "path": "docs/arch/site-files.md",
-      "bytes": 17626,
-      "sha256": "656d1211f0b96a37ca98d9cc01d54ee9dcbac2298ec1fbbaba07846f0c93bca8"
+      "bytes": 18080,
+      "sha256": "1c188b0186e72b998704865df67d4f96d5484733fc5c92e4a9c9d543e9da38ea"
     },
     {
       "path": "docs/arch/snippet-worker-pool.md",
@@ -2685,6 +2690,41 @@
       "sha256": "73d8e9cb324495a0b3c3d4e4dd6e83ec70aa3b0ce60cf07bf31deea7a3daf08b"
     },
     {
+      "path": "docs/changes/0.17.0/media-browser-layout/00-state--06-complete--done.md",
+      "bytes": 349,
+      "sha256": "cfc0119cce7f21bb46d7f3af5ef68f288dc1b78d46e00e9343fce6b7f8c3edb9"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/10-behavior.md",
+      "bytes": 249,
+      "sha256": "bdb73c2e7aa21ce494d6190711a0267b1a2db59b460f8abf5cbaa4bfbdca27f1"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/20-existing-behavior.md",
+      "bytes": 237,
+      "sha256": "b091776473a9b1c30ddf85d5750dcd52575a2d842f96a6c8b3efce70dd28ac4c"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/30-design.md",
+      "bytes": 291,
+      "sha256": "1755e818e4af6d95be953e5cd1e11a9348a7dac6aa1084b913bbee9a4bb55292"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/40-cases.md",
+      "bytes": 543,
+      "sha256": "351e1c18b32b0d49519598b59256835dd8160e4dd8dbfd7777aa0ff2475342d4"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/50-verification.md",
+      "bytes": 1079,
+      "sha256": "198f94257f4a812967af2b93019f304ad7cac79b11ab0f298d2d746c932896fa"
+    },
+    {
+      "path": "docs/changes/0.17.0/media-browser-layout/60-decisions.md",
+      "bytes": 231,
+      "sha256": "e26b67a3b9d4bba4c70023924e15a9beb0c674b00b1d0fd0f59a20455f7b7de8"
+    },
+    {
       "path": "docs/changes/1.0.0/admin-pages-tree-pagination/00-state--01-scope--active.md",
       "bytes": 301,
       "sha256": "3ee27ac927a7a203200a84af1bf3b6d126d6493952ab224cae65d06b21b5d028"
@@ -2876,8 +2916,8 @@
     },
     {
       "path": "docs/defects/admin/README.md",
-      "bytes": 3866,
-      "sha256": "f33fe1ec063b5142c8ca205f7559f06e978360cb32d1fae00546adc537b3205a"
+      "bytes": 4094,
+      "sha256": "3e038d1841fee3732fa00df90a57db3f5988ba8c3f8308c3109717b5a5fd1b61"
     },
     {
       "path": "docs/defects/admin/access-heading-spacing.md",
@@ -2918,6 +2958,11 @@
       "path": "docs/defects/admin/installation-dump-form-layout.md",
       "bytes": 710,
       "sha256": "505227da44bad92d885d20019b3f0c5aec2be3ad5b1f929679c7ef24b33f019f"
+    },
+    {
+      "path": "docs/defects/admin/media-browser-control-alignment.md",
+      "bytes": 745,
+      "sha256": "59a379a76e61d35430faa522801fcfd9e4dcd5bacb1abc182a48b3b49f6013e9"
     },
     {
       "path": "docs/defects/admin/mobile-draft-validation-focus.md",
@@ -10686,8 +10731,8 @@
     },
     {
       "path": "test/integration/admin-users-http.integration.spec.ts",
-      "bytes": 236432,
-      "sha256": "dfd921f1400d2271142934a0f66b621b34a30b15514a427d52306eca7e5bd63a"
+      "bytes": 238495,
+      "sha256": "53c06823035f3c5d2ba42c4d9b367f815e46d4a7d7d22855e953bedc28a855e7"
     },
     {
       "path": "test/integration/admin-users-ui.integration.spec.ts",
@@ -10801,8 +10846,8 @@
     },
     {
       "path": "test/integration/file-library.integration.spec.ts",
-      "bytes": 98706,
-      "sha256": "f7bb5a08f908fca48a10ae7133f20f57168692c6303a7c943045d540588e413c"
+      "bytes": 102180,
+      "sha256": "c5dc5286d678bb9a61be1e3c05060149ff8f8515629d48706932adc3228ba023"
     },
     {
       "path": "test/integration/files-layout.integration.spec.ts",

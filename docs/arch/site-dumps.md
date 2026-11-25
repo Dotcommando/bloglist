@@ -36,6 +36,8 @@ All site operations require an existing site and the corresponding action grant.
 Site Admin can list, create, upload and restore full archives for an assigned
 site. System Admin can also download, delete and handle partial archives. Local
 operations require the configured trusted operator identity.
+The export form explains the category restriction when only full site archives
+are available to the signed-in user.
 HTTP retains Host/Origin, cookie, custom-header, no-query and no-store protection.
 
 | Operation | REST route | Input / result |

@@ -15,6 +15,7 @@ export default {
   dumpsUnresolvedFileReferences: 'Unresolved file references in the selected data: {count}.',
   dumpsOmitUnresolvedFiles: 'Restore without unresolved file references if the add-on data permits it',
   dumpsDumpType: 'Dump type',
+  dumpsPartialSystemAdmin: 'Category dumps are available to system administrators.',
   dumpsNoItemsToExport: 'No items to export.',
   dumpsSelectAll: 'Select all',
   dumpsExportItems: 'Export items',

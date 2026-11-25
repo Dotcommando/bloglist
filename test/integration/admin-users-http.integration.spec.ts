@@ -619,6 +619,55 @@ it('manages accounts through real HTTP, session revocation and last-account guar
     await verifyMigrations(connection, 'migrations');
   }));
 
+it('shows category dump choices only to a system administrator', { timeout: 40000 }, () =>
+  withAdminHttpFixture(async ({ origin, password, request, login }) => {
+    const owner = await login('user-1@example.test');
+    const created = await request('/sites', {
+      mark: 'DumpCategories',
+      name: 'Dump categories',
+      primaryDomain: 'dump-categories.test',
+      languages: ['en'],
+      defaultLanguage: 'en',
+    }, owner);
+
+    expect(created.status).toBe(201);
+    const siteId = string(object(await created.json()).siteId);
+    const route = '/sites/' + siteId;
+    const email = 'dump-category-site-admin@example.test';
+
+    expect(await request('/users', { email, password, roleId: 'cms.system.site-admin', siteId }, owner))
+      .toHaveProperty('status', 201);
+    const siteAdmin = await login(email);
+
+    expect(await request(route + '/dumps/create', { type: 'Chunks', itemIds: ['chunk'] }, siteAdmin))
+      .toHaveProperty('status', 403);
+    const browser = await launchAdminBrowser();
+
+    try {
+      for (const [account, types] of [
+        [email, ['Site']],
+        ['user-1@example.test', ['Site', 'Snippets', 'Chunks', 'Templates', 'Addons', 'Files']],
+      ] as const) {
+        const page = await browser.newPage();
+
+        await signInAdminBrowser(page, origin, account, password);
+        await page.goto(origin + '/admin' + route);
+        await page.getByRole('button', { name: 'Settings', exact: true }).click();
+        await page.getByRole('button', { name: 'Dumps', exact: true }).click();
+        const choices = page.getByLabel('Dump type', { exact: true });
+
+        await choices.waitFor();
+        expect(await choices.locator('option').evaluateAll((options) => options.map((option) =>
+          option instanceof HTMLOptionElement ? option.value : null))).toEqual(types);
+        expect(await page.getByText('Category dumps are available to system administrators.').isVisible())
+          .toBe(account === email);
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  }));
+
 it('separates all four archive operations and protects the global group', { timeout: 60000 }, () =>
   withAdminHttpFixture(async ({ base, origin, connection, directory, password, request, login }) => {
     const owner = await login('user-1@example.test');

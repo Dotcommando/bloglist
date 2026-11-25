@@ -301,6 +301,7 @@
       <label class="_form-field">{$messages.dumpsDumpType}
         <select bind:value={type} aria-label={$messages.dumpsDumpType}>{#each types as category (category)}
           <option value={category}>{typeName(category)}</option>{/each}</select>
+        {#if siteOnly}<small>{$messages.dumpsPartialSystemAdmin}</small>{/if}
       </label>
       {#if selectable}
         {#if !catalogue}<p role="status">{$messages.loadingSites}</p>

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+Center [the media browser pager and its status](docs/defects/admin/media-browser-control-alignment.md),
+group the header controls and move the page size to Settings / General.
+Explain the existing permission boundary for category dumps.
+
 Use [separate responsive installation archive cards](docs/defects/admin/installation-dump-form-layout.md)
 and the shared CMS file chooser.
 
