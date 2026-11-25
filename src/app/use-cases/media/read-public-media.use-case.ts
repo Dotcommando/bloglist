@@ -1,6 +1,4 @@
-import { mediaPath, mediaRoot } from '../../../domain/media/file-library.js';
 import { SITE_FAVICON_PATH } from '../../../domain/media/site-favicon.js';
-import { BusinessError, BusinessErrorCode } from '../../../domain/shared/business-error.js';
 import type { IPublicMediaContent, IReadPublicMedia } from '../../../ports/inbound/media/read-public-media.port.js';
 import type { IResolveSite } from '../../../ports/inbound/sites/resolve-site.port.js';
 import type { IAssetStoragePort } from '../../../ports/outbound/media/asset-storage.port.js';
@@ -26,25 +24,40 @@ export class ReadPublicMediaUseCase implements IReadPublicMedia {
 
       return icon ? { content: icon.content, etag: '"' + icon.version + '"', dispose: () => icon.dispose() } : null;
     }
-
-    const { library, pending } = await this.libraries.read(site.siteId);
-
-    if (pending) {
-      throw new BusinessError(BusinessErrorCode.Conflict, 'Media update is pending');
+    if (!input.path.startsWith(this.publicPath + '/')) {
+      return null;
     }
 
-    for (const file of library.files) {
-      const output = file.outputs.find((output) => this.publicPath + '/' + mediaRoot(file) + '/'
-        + mediaPath(library, file, output.suffix) === input.path);
+    const path = input.path.slice(this.publicPath.length + 1);
+    let last: string | undefined;
 
-      if (output) {
-        const reference = { contentId: output.contentId };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await this.libraries.publicOutput(site.siteId, path);
 
-        await this.storage.assertOwned(site.siteId, file.image.assetId, file.image.assetVersion, reference);
+      if (!result || last === result.output.contentId) {
+        return null;
+      }
+
+      const { image, output } = result;
+      const reference = { contentId: output.contentId };
+      const etag = '"' + image.assetVersion + '-' + output.key + '"';
+
+      await this.storage.assertOwned(site.siteId, image.assetId, image.assetVersion, reference);
+
+      if (this.storage.readPinned) {
+        const file = await this.storage.readPinned(site.siteId, reference);
+
+        if (file) {
+          return { ...file, etag };
+        }
+      } else {
         const content = await this.storage.read(site.siteId, reference);
 
-        return content ? { content, etag: '"' + file.image.assetVersion + '-' + output.key + '"' } : null;
+        if (content) {
+          return { content, etag };
+        }
       }
+      last = output.contentId;
     }
 
     return null;

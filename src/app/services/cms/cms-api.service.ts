@@ -213,7 +213,7 @@ export class CmsApiService {
     if (group === 'tvs' && method === 'savePage' && typeof arguments_.expectedUpdatedAt === 'string') {
       arguments_.expectedUpdatedAt = new Date(arguments_.expectedUpdatedAt);
     }
-    if (arguments_.content !== undefined) {
+    if (arguments_.content !== undefined && !(group === 'files' && method === 'uploadFile')) {
       const content = inputObject(arguments_.content);
       const bytes = content.bytes;
 

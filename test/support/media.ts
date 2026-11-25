@@ -27,6 +27,7 @@ export function libraryOperations(overrides: Partial<IFileLibraryOperations>): I
 
   return {
     list: unavailable,
+    browse: { ...unavailable, file: unavailable.execute },
     createFolder: unavailable,
     upload: unavailable,
     changeImage: unavailable,

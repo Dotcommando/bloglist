@@ -14,6 +14,7 @@ import { applyMigrations } from '../../src/adapters/outbound/persistence/mongoos
 import { pageSnapshotPath } from '../../src/adapters/outbound/publication/files/page-content-snapshot.js';
 import type { AddonPackageRegistry } from '../../src/adapters/outbound/runtime/addons/addon-package-registry.js';
 import type { CmsApiService } from '../../src/app/services/cms/cms-api.service.js';
+import { ImageUploadMode, MediaRoot } from '../../src/domain/media/file-library.js';
 import { BrowserInteraction, HtmlDelivery, LoaderPhase } from '../../src/domain/pages/page-rendering.js';
 import { PublishedResolutionKind } from '../../src/domain/publication/published-resolution.js';
 import { ParameterKind } from '../../src/domain/publication/render-plan.js';
@@ -25,7 +26,9 @@ import { createLocalApplication } from '../../src/infra/local-application.js';
 import { createPublicHttpApplication } from '../../src/infra/public-http.application.js';
 import { CREATE_SITE } from '../../src/infra/sites/sites.tokens.js';
 import type { CmsApi } from '../../src/ports/inbound/cms/cms-api.port.js';
+import type { IStreamMediaUpload } from '../../src/ports/inbound/media/file-library.port.js';
 import type { ICreateSite } from '../../src/ports/inbound/sites/create-site.port.js';
+import { binary } from '../support/media.js';
 import { siteInput } from '../support/sites.js';
 
 describe('CMS API through real local composition', () => {
@@ -80,6 +83,48 @@ describe('CMS API through real local composition', () => {
     if (root && path.resolve(root).startsWith(path.resolve('.tmp') + path.sep)) {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it('streams a bounded batch with a scoped identity and resumable item results', async () => {
+    const site = await application.get<ICreateSite>(CREATE_SITE).execute({
+      ...siteInput(), mark: 'BackgroundFiles', primaryDomain: 'background-files.test',
+    });
+    const client = application.get<CmsApiService>(CMS_API).forContext({
+      siteId: site.siteId, actorId: 'background-files-test',
+    });
+    const scope = { parentId: null, root: MediaRoot.Files, name: 'Background' };
+    const folders = await Promise.all([client.files.ensureFolder(scope), client.files.ensureFolder(scope)]);
+    const folderId = folders[0]!.folderId;
+
+    expect(folders.map((folder) => folder.folderId)).toEqual([folderId, folderId]);
+    const document = '%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n';
+    const input = (name: string): Omit<IStreamMediaUpload, 'siteId'> => ({
+      folderId,
+      filename: name + '.pdf',
+      idempotencyKey: name,
+      mode: ImageUploadMode.Original,
+      content: binary(document, 'application/pdf'),
+    });
+    const results = await client.files.uploadBatch({
+      files: [
+        input('first'), { ...input('invalid'), filename: 'invalid.exe' }, input('second'),
+      ],
+    });
+    const [first, invalid, second] = results;
+
+    expect(first).toMatchObject({ ok: true, file: { name: 'first.pdf', folderId } });
+    expect(invalid).toMatchObject({ ok: false });
+    expect(second).toMatchObject({ ok: true, file: { name: 'second.pdf', folderId } });
+
+    if (!first?.ok || !second?.ok) {
+      throw new Error('Expected two file receipts');
+    }
+
+    const retried = await client.files.uploadFile({ ...input('first'), content: binary('ignored', 'application/pdf') });
+
+    expect(retried.fileId).toBe(first.file.fileId);
+    expect((await client.files.getFiles({ fileIds: [second.file.fileId, 'missing', first.file.fileId] }))
+      .map((file) => file?.fileId ?? null)).toEqual([second.file.fileId, null, first.file.fileId]);
   });
 
   it('keeps contextual site lists and hostname resolution isolated through real composition', async () => {

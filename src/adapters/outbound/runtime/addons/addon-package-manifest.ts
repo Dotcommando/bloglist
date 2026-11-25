@@ -99,6 +99,7 @@ export function readTransferCollections(value: unknown): readonly IAddonCollecti
   if (
     new Set(result.map((item) => item.name)).size !== result.length
     || result.some((item) => item.references.some((ref) => ref.collection !== 'pages'
+      && ref.collection !== 'media_files'
       && !result.some((owner) => owner.name === ref.collection)))
   ) {
     throw new Error('Unknown collection reference');

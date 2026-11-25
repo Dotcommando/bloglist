@@ -12,6 +12,7 @@ import {
   type ISiteDumpReview, SiteDumpType,
 } from '../../../../domain/dumps/site-dump.js';
 import { BusinessError, BusinessErrorCode } from '../../../../domain/shared/business-error.js';
+import { nameKey } from '../../persistence/media-records.js';
 import type { IAddonCollectionTransfer, IRuntimeAddonRegistration } from '../../runtime/addons/addon-package.types.js';
 import { packageConfiguration } from '../../runtime/addons/addon-package-configuration.js';
 import { packageObject, readAddonDefinition, readTransferCollections }
@@ -22,7 +23,10 @@ import { child, treeRecords } from './dump-files.js';
 import type { IPartialAddonTransfer } from './partial-dump.adapter.js';
 import type { IPartialDump } from './partial-dump-archive.js';
 
-function visitFields(value: unknown, parts: readonly string[], apply: (value: string) => string): unknown {
+const omittedReference = Symbol('omittedReference');
+
+function visitFields(value: unknown, parts: readonly string[],
+  apply: (value: string) => string | typeof omittedReference): unknown {
   if (!parts.length) {
     if (value === null || value === undefined) {
       return value;
@@ -44,7 +48,7 @@ function visitFields(value: unknown, parts: readonly string[], apply: (value: st
       throw new Error('Invalid reference array');
     }
 
-    return value.map((child: unknown) => visitFields(child, tail, apply));
+    return value.map((child: unknown) => visitFields(child, tail, apply)).filter((item) => item !== omittedReference);
   }
 
   const item = packageObject(value);
@@ -52,9 +56,78 @@ function visitFields(value: unknown, parts: readonly string[], apply: (value: st
   if (!head || !Object.hasOwn(item, head)) {
     return value;
   }
-  item[head] = visitFields(item[head], tail, apply);
+
+  const next = visitFields(item[head], tail, apply);
+
+  if (next === omittedReference) {
+    delete item[head];
+  } else {
+    item[head] = next;
+  }
 
   return item;
+}
+
+function archivedFiles(member: Record<string, unknown>): ReadonlyMap<string, string | null> {
+  const files = new Map<string, string | null>();
+
+  if (member.files === undefined) {
+    return files;
+  }
+  if (!Array.isArray(member.files)) {
+    throw new Error('Invalid file mapping');
+  }
+
+  for (const value of member.files) {
+    const { fileId, address } = packageObject(value);
+
+    if (
+      typeof fileId !== 'string'
+      || files.has(fileId)
+      || address !== null
+      && (typeof address !== 'string'
+      || !/^(?:images|files)\/.+/.test(address))
+    ) {
+      throw new Error('Invalid file mapping');
+    }
+    files.set(fileId, address);
+  }
+
+  return files;
+}
+
+export function missingAddonDumpFiles(dump: IPartialDump): number {
+  return dump.addons.reduce((count, member) =>
+    count + [...archivedFiles(member).values()].filter((address) => address === null).length, 0);
+}
+
+class TargetFiles {
+  private readonly identities = new Set<string>();
+  private readonly addresses = new Map<string, string | null>();
+
+  add({ fileId, publicPaths }: mongo.Document): void {
+    if (typeof fileId !== 'string' || !Array.isArray(publicPaths)) {
+      return;
+    }
+    this.identities.add(fileId);
+
+    for (const path of publicPaths) {
+      if (typeof path === 'string') {
+        const key = nameKey(path);
+        const current = this.addresses.get(key);
+
+        this.addresses.set(key, current === undefined || current === fileId ? fileId : null);
+      }
+    }
+  }
+
+  match(fileId: string, address: string | null, sameSite: boolean): string | null {
+    if (sameSite && this.identities.has(fileId)) {
+      return fileId;
+    }
+
+    return address === null ? null : this.addresses.get(nameKey(address)) ?? null;
+  }
 }
 
 async function* ownedRows(filename: string): AsyncGenerator<{
@@ -108,6 +181,7 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
     }
 
     const pageTitles = new Map<string, string>();
+    const mediaPaths = new Map<string, string>();
     const connections = new Map<string, string>();
 
     for await (const row of databaseRecords(documents)) {
@@ -116,6 +190,13 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
       }
       if (row.collection === 'pages') {
         pageTitles.set(String(row.document._id), String(row.document.title));
+      }
+      if (
+        row.collection === 'media_files'
+        && typeof row.document.fileId === 'string'
+        && typeof row.document.publicPaths?.[0] === 'string'
+      ) {
+        mediaPaths.set(row.document.fileId, row.document.publicPaths[0]);
       }
       if (row.collection === 'site_addons') {
         connections.set(String(row.document.addonKey), row.bytes);
@@ -131,14 +212,21 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
       }
 
       const pages = new Set<string>();
+      const files = new Set<string>();
 
       if (parts.businessData) {
         for await (const row of databaseRecords(documents)) {
           const owner = collections?.find((item) => item.name === row.collection);
 
-          for (const reference of owner?.references.filter((ref) => ref.collection === 'pages') ?? []) {
+          for (const reference of owner?.references ?? []) {
+            const selected = reference.collection === 'pages' ? pages
+              : reference.collection === 'media_files' ? files : null;
+
+            if (!selected) {
+              continue;
+            }
             visitFields(row.document, reference.path.split('.'), (id) => {
-              pages.add(id);
+              selected.add(id);
 
               return id;
             });
@@ -171,6 +259,9 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
 
             return { pageId, title };
           }),
+          ...(files.size ? {
+            files: [...files].map((fileId) => ({ fileId, address: mediaPaths.get(fileId) ?? null })),
+          } : {}),
           package: directory !== null,
         },
       };
@@ -249,6 +340,7 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
   async review(siteId: string, dump: IPartialDump, current: string): Promise<ISiteDumpReview> {
     await this.registrations(dump, false);
     const connections = new Map<string, string>();
+    const targetFiles = new TargetFiles();
     const targetPages: { pageId: string; title: string }[] = [];
 
     for await (const row of databaseRecords(current)) {
@@ -260,6 +352,9 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
       }
       if (row.collection === 'pages') {
         targetPages.push({ pageId: String(row.document._id), title: String(row.document.title) });
+      }
+      if (row.collection === 'media_files') {
+        targetFiles.add(row.document);
       }
     }
     const pages = new Map<string, string>();
@@ -300,9 +395,12 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
       targetPages,
       pages: [...pages].map(([pageId, title]) => ({ pageId, title })),
       addonParts: dump.addonParts!,
+      allowFileOmission: siteId !== dump.siteId,
       items: dump.addons.map((member) => {
         const definition = readAddonDefinition(member.definition);
         const targetId = connections.get(definition.addonKey) ?? null;
+        const unresolved = [...archivedFiles(member)].filter(([fileId, address]) =>
+          !targetFiles.match(fileId, address, siteId === dump.siteId)).length;
 
         return {
           id: definition.addonKey,
@@ -310,6 +408,7 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
           name: definition.name.ru + ' / ' + definition.name.en,
           action: targetId ? DumpItemAction.Replace : DumpItemAction.Create,
           targetId,
+          ...(unresolved ? { unresolvedFileReferences: unresolved } : {}),
           targets: targetId ? [{ id: targetId, key: definition.addonKey, name: definition.name.en }] : [],
         };
       }),
@@ -346,6 +445,9 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
 
     const connections = new Map<string, mongo.Document>();
     const targetPages = new Set<string>();
+    const targetMedia = new TargetFiles();
+    const mediaMappings = new Map<string, string>();
+    const sameSite = siteId === dump.siteId;
 
     for await (const row of databaseRecords(documents)) {
       if (row.collection === 'site_addons') {
@@ -353,6 +455,19 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
       }
       if (row.collection === 'pages') {
         targetPages.add(String(row.document._id));
+      }
+      if (row.collection === 'media_files') {
+        targetMedia.add(row.document);
+      }
+    }
+
+    for (const member of dump.addons) {
+      for (const [fileId, address] of archivedFiles(member)) {
+        const destination = targetMedia.match(fileId, address, sameSite);
+
+        if (destination) {
+          mediaMappings.set(JSON.stringify([member.addonKey, fileId]), destination);
+        }
       }
     }
     const collections = new Map<string, IAddonCollectionTransfer>();
@@ -378,7 +493,20 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
           throw new Error('Unknown add-on collection');
         }
 
-        for (const reference of descriptor.references.filter((item) => item.collection === 'pages')) {
+        for (const reference of descriptor.references) {
+          if (reference.collection === 'media_files') {
+            visitFields(row.document, reference.path.split('.'), (from) => {
+              if (!sameSite && !options.omitUnresolvedFiles && !mediaMappings.has(JSON.stringify([row.owner, from]))) {
+                throw new BusinessError(BusinessErrorCode.Validation, 'Add-on file has no unique target path');
+              }
+
+              return from;
+            });
+            continue;
+          }
+          if (reference.collection !== 'pages') {
+            continue;
+          }
           visitFields(row.document, reference.path.split('.'), (from) => {
             if (!options.pageMappings?.[from] || !targetPages.has(options.pageMappings[from]!)) {
               throw new BusinessError(BusinessErrorCode.Validation,
@@ -505,6 +633,9 @@ export class FileAddonDumpTransfer implements IPartialAddonTransfer {
               }
 
               return to;
+            }
+            if (reference.collection === 'media_files') {
+              return mediaMappings.get(JSON.stringify([row.owner, from])) ?? (sameSite ? from : omittedReference);
             }
 
             const mapped = identities.get(JSON.stringify([reference.collection, from]));

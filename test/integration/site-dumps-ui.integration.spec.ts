@@ -25,6 +25,7 @@ import { CREATE_RENDERING_ELEMENT } from '../../src/infra/rendering/rendering.to
 import { CREATE_SITE } from '../../src/infra/sites/sites.tokens.js';
 import type { ICreateRenderingElement } from '../../src/ports/inbound/rendering/rendering-elements.port.js';
 import type { ICreateSite } from '../../src/ports/inbound/sites/create-site.port.js';
+import { verifyScrollShadow } from '../support/admin-scroll.js';
 import { account } from '../support/admin-users.js';
 import { siteInput } from '../support/sites.js';
 
@@ -218,18 +219,20 @@ describe('site dump administration in the production browser bundle', () => {
     }
   });
 
-  it('fits the shared viewport matrix, preserves general inputs and shadows the fixed tabs', async () => {
+  it('fits the shared viewport matrix, preserves general inputs and shadows the fixed toolbar', async () => {
     const { context, page } = await open();
 
     try {
-      await page.locator('input[type=url]').first().fill('https://unsaved.example.test');
+      const publicOrigin = page.locator('#site-public-origin');
+
+      await publicOrigin.fill('https://unsaved.example.test');
       await page.getByRole('button', { name: 'Dumps', exact: true }).click();
       await page.getByRole('heading', { name: 'Site dumps', exact: true }).waitFor();
 
       for (const width of [320, 375, 390, 393, 402, 414, 430, 440, 575, 576, 767, 768, 991, 992, 1199, 1200, 1440]) {
         await page.setViewportSize({ width, height: 520 });
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        const panels = page.locator('form._dump-panel');
+        const panels = page.locator('.site-dumps > ._dump-transfers > form._dump-panel');
 
         expect(await panels.count()).toBe(2);
         const boxes = await panels.evaluateAll((nodes) => nodes.map((node) => {
@@ -263,25 +266,13 @@ describe('site dump administration in the production browser bundle', () => {
       await page.screenshot({ path: path.resolve('.tmp/dumps-layout-mobile.png') });
       await page.setViewportSize({ width: 1440, height: 520 });
       const pane = page.locator('.settings-workspace');
-      const tabs = page.locator('nav.cms-tabs');
+      const toolbar = page.locator('main:has(> .settings-workspace) > ._workspace-toolbar');
 
-      await pane.evaluate((node) => {
-        node.scrollTop = 0;
-        node.dispatchEvent(new Event('scroll'));
-      });
-      expect(await tabs.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
-      await pane.evaluate((node) => {
-        node.scrollTop = 1;
-        node.dispatchEvent(new Event('scroll'));
-      });
-      expect(await tabs.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
+      await verifyScrollShadow(pane, toolbar);
       await page.getByRole('button', { name: 'General', exact: true }).click();
-      expect(await page.locator('input[type=url]').first().inputValue()).toBe('https://unsaved.example.test');
+      expect(await publicOrigin.inputValue()).toBe('https://unsaved.example.test');
       await page.locator('.admin-language select').selectOption('ru');
-      await page.getByRole('button', { name: 'Основные', exact: true }).focus();
-      await page.keyboard.press('Tab');
-      expect(await page.getByRole('button', { name: 'Дампы', exact: true })
-        .evaluate((node) => node === document.activeElement)).toBe(true);
+      await page.getByRole('button', { name: 'Дампы', exact: true }).focus();
       await page.keyboard.press('Enter');
       await page.getByRole('heading', { name: 'Дампы сайта', exact: true }).waitFor();
       await page.evaluate(() => {

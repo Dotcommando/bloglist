@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { request as httpRequest, type Server } from 'node:http';
 import { createServer } from 'node:net';
 import path from 'node:path';
@@ -13,10 +13,15 @@ import { chromium } from 'playwright-core';
 import sharp from 'sharp';
 
 import { createCloudflareWorker } from '../../src/adapters/inbound/gateway/cloudflare/worker.js';
+import {
+  MediaReferenceUpdatesAdapter,
+} from '../../src/adapters/outbound/media/references/media-reference-updates.adapter.js';
 import { assetBinary } from '../../src/adapters/outbound/media/sharp/asset-bytes.js';
 import {
   MongooseAdminUserStore,
 } from '../../src/adapters/outbound/persistence/mongoose/admin-users/admin-user-store.adapter.js';
+import { fileRecord, mediaRecords, MongooseFileLibraryStore }
+  from '../../src/adapters/outbound/persistence/mongoose/media/file-library-store.adapter.js';
 import { applyMigrations, verifyMigrations } from '../../src/adapters/outbound/persistence/mongoose/migrations.js';
 import {
   ScryptAdminPasswordAdapter,
@@ -27,14 +32,21 @@ import type {
 import type {
   FileLibraryProjectionAdapter,
 } from '../../src/adapters/outbound/storage/files/media/file-library-projection.adapter.js';
+import type { CmsApiService } from '../../src/app/services/cms/cms-api.service.js';
 import type { RequestDocumentCacheService } from '../../src/app/services/publication/request-document-cache.service.js';
+import {
+  PublishMediaAddressReleaseUseCase,
+} from '../../src/app/use-cases/publication/publish-media-address-release.use-case.js';
 import { AdminUser } from '../../src/domain/admin-users/admin-user.js';
 import { ImageUploadMode, type IMediaLibraryView, MediaRoot } from '../../src/domain/media/file-library.js';
 import { BrowserInteraction, HtmlDelivery, LoaderPhase } from '../../src/domain/pages/page-rendering.js';
 import { ParameterKind } from '../../src/domain/publication/render-plan.js';
 import { RequestCacheScope } from '../../src/domain/publication/request-cache.policy.js';
+import type { IBinaryContent } from '../../src/domain/shared/binary-content.js';
+import { BusinessError, BusinessErrorCode } from '../../src/domain/shared/business-error.js';
 import { TemplateVariableKind } from '../../src/domain/template-variables/template-variable.js';
 import { AppModule } from '../../src/infra/app.module.js';
+import { CMS_API } from '../../src/infra/cms/cms.tokens.js';
 import {
   ASSET_STORAGE, FILE_LIBRARY_OPERATIONS, FILE_LIBRARY_PROJECTION,
   FILE_LIBRARY_STORE,
@@ -43,6 +55,7 @@ import { migrateMediaLayout } from '../../src/infra/media/migrate-media-layout.j
 import { GET_PAGE, UPDATE_PAGE } from '../../src/infra/pages/pages.tokens.js';
 import { CREATE_PAGE } from '../../src/infra/pages/pages.tokens.js';
 import { createPublicHttpApplication } from '../../src/infra/public-http.application.js';
+import type { IPublicHttpSettings } from '../../src/infra/public-http.settings.js';
 import { PUBLISH_PAGE } from '../../src/infra/publication/publication.tokens.js';
 import {
   CONFIGURE_PAGE_RENDERING, PUBLISH_SITE_RELEASE, RELEASE_ACTIVATION,
@@ -79,6 +92,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
   let connection: Connection;
   let local: INestApplicationContext;
   let app: INestApplication<Server>;
+  let httpSettings: IPublicHttpSettings;
   let root: string;
   let siteId: string;
   let otherSiteId: string;
@@ -193,7 +207,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     }
     await new Promise<void>((resolve) => probe.close(() => resolve()));
     origin = 'http://127.0.0.1:' + address.port;
-    app = await createPublicHttpApplication({
+    httpSettings = {
       backgroundWork: false,
       mongoUri,
       database,
@@ -206,7 +220,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       adminAuth: { origin },
       edgeProxySecret: 'synthetic-edge-secret',
       adminRoot: path.resolve('admin/dist'),
-    });
+    };
+    app = await createPublicHttpApplication(httpSettings);
     const login = await command('/api/admin/auth/login', { email: 'files-admin@example.test', password }, '');
 
     expect(login.status).toBe(200);
@@ -429,24 +444,67 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     expect((await operations.list.execute({ siteId: otherSiteId })).files).toEqual([]);
     await expect(operations.readContent.execute({ siteId: otherSiteId, fileId: file.fileId, key: 'original' }))
       .rejects.toMatchObject({ code: 'NotFound' });
-    const changed = await operations.changeImage.execute({
+    await expect(operations.changeImage.execute({
+      siteId,
+      expectedVersion: library.version,
+      fileId: file.fileId,
+      filename: 'broken.png',
+      content: assetBinary(Buffer.from('broken'), 'image/png'),
+    })).rejects.toThrow();
+    const projection = local.get<FileLibraryProjectionAdapter>(FILE_LIBRARY_PROJECTION);
+    const install = projection.installChange.bind(projection);
+    let entered = (): void => {};
+    let release = (): void => {};
+    const staged = new Promise<void>((resolve) => entered = resolve);
+    const resume = new Promise<void>((resolve) => release = resolve);
+    const paused = vi.spyOn(projection, 'installChange').mockImplementationOnce(async (...args) => {
+      entered();
+      await resume;
+
+      return install(...args);
+    });
+    const replacement = await png(600, 300, '#0099ff');
+    const changing = operations.changeImage.execute({
       siteId,
       expectedVersion: library.version,
       fileId: file.fileId,
       filename: 'entirely-different.png',
-      content: assetBinary(await png(600, 300, '#0099ff'), 'image/png'),
+      content: assetBinary(replacement, 'image/png'),
     });
+    const settled = Promise.allSettled([changing]);
+
+    try {
+      await Promise.race([staged, changing]);
+      const [head, get] = await Promise.all([fetch(origin + url, { method: 'HEAD' }), fetch(origin + url)]);
+
+      expect(head.status).toBe(200);
+      expect(get.status).toBe(200);
+      expect(head.headers.get('etag')).toBe(publicResponse.headers.get('etag'));
+      expect(get.headers.get('etag')).toBe(publicResponse.headers.get('etag'));
+      expect((await sharp(Buffer.from(await get.arrayBuffer())).metadata()).width).toBe(1000);
+    } finally {
+      release();
+      await settled;
+      paused.mockRestore();
+    }
+    const changed = await changing;
     const replaced = changed.files.find((item) => item.fileId === file.fileId)!;
 
     expect(replaced.outputs.map((item) => item.url)).toEqual(file.outputs.map((item) => item.url));
     expect(replaced.name).toBe('photo.png');
+    expect(replaced.createdAt).toBe(file.createdAt);
+    expect(replaced.updatedAt).not.toBe(file.updatedAt);
+    expect(await operations.browse.file({ siteId, fileId: file.fileId })).toEqual(replaced);
 
     for (const output of replaced.outputs) {
       const response = await operations.readContent.execute({ siteId, fileId: file.fileId, key: output.key });
 
       expect(output.byteSize).toBe(response.content.byteSize);
     }
-    expect((await fetch(origin + url)).status).toBe(200);
+    const updated = await fetch(origin + url, { method: 'HEAD' });
+
+    expect(updated.status).toBe(200);
+    expect(updated.headers.get('etag')).not.toBe(publicResponse.headers.get('etag'));
     const response = await operations.readContent.execute({ siteId, fileId: file.fileId, key: 'original' });
     const chunks = [];
 
@@ -457,8 +515,154 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     await verifyMigrations(connection, 'migrations');
   });
 
+  it('serves unaffected public bytes during a bulk upload and frees definitively rejected assets', async () => {
+    const store = local.get<IMediaLibraryStore>(FILE_LIBRARY_STORE);
+    const original = await png(30, 20);
+    const upload = async (filename: string): Promise<IMediaLibraryView> => operations.upload.execute({
+      siteId,
+      filename,
+      expectedVersion: (await store.status(siteId)).version,
+      folderId: null,
+      mode: ImageUploadMode.Original,
+      content: assetBinary(original, 'image/png'),
+    });
+    const first = await upload('bulk-logo.png');
+    const logo = first.files[0]!;
+    const url = origin + logo.outputs[0]!.url;
+    const head = await fetch(url, { method: 'HEAD' });
+    const etag = head.headers.get('etag');
+    const assets = connection.collection('assets');
+    const before = await assets.countDocuments({ siteId });
+    const objects = path.join(root, 'data/127.0.0.1/.private/objects');
+    const beforeObjects = await readdir(objects, { recursive: true, withFileTypes: true });
+    const rejected = vi.spyOn(store, 'append').mockRejectedValueOnce(
+      new BusinessError(BusinessErrorCode.StaleWrite, 'Another writer won'));
+
+    try {
+      await expect(upload('discarded.png')).rejects.toMatchObject({ code: BusinessErrorCode.StaleWrite });
+      expect(await assets.countDocuments({ siteId })).toBe(before);
+      expect((await readdir(objects, { recursive: true, withFileTypes: true })).filter((item) => item.isFile())
+        .map((item) => item.name).sort()).toEqual(beforeObjects.filter((item) => item.isFile())
+        .map((item) => item.name).sort());
+    } finally {
+      rejected.mockRestore();
+    }
+
+    const bulk = async (): Promise<void> => {
+      for (let index = 0; index < 25; index++) {
+        await upload('bulk-' + index + '.png');
+      }
+    };
+
+    await Promise.all([bulk(), (async () => {
+      for (let index = 0; index < 25; index++) {
+        const response = await fetch(url, { method: index % 2 === 0 ? 'HEAD' : 'GET' });
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('etag')).toBe(etag);
+        await response.arrayBuffer();
+      }
+    })()]);
+
+    await operations.delete.execute({
+      siteId,
+      fileId: logo.fileId,
+      expectedVersion: (await store.status(siteId)).version,
+      force: true,
+    });
+    expect((await fetch(url, { method: 'HEAD' })).status).toBe(404);
+    const recreated = (await upload('bulk-logo.png')).files[0]!;
+
+    expect(recreated.fileId).not.toBe(logo.fileId);
+    expect(recreated.outputs[0]!.url).toBe(logo.outputs[0]!.url);
+    expect((await fetch(url, { method: 'HEAD' })).status).toBe(200);
+  });
+
+  it('uses file revisions for card edits while an importer is uploading other images', async () => {
+    const siteId = (await local.get<ICreateSite>(CREATE_SITE).execute({
+      ...siteInput(), mark: 'ConcurrentCard', primaryDomain: 'concurrent-card.test',
+    })).siteId;
+    const client = local.get<CmsApiService>(CMS_API).forContext({ siteId, actorId: 'importer' });
+
+    using fullCatalogue = vi.spyOn(MongooseFileLibraryStore.prototype, 'read');
+    const image = await png(12, 8);
+    const content = (): IBinaryContent => assetBinary(image, 'image/png');
+    const uploaded = await operations.upload.execute({
+      siteId,
+      filename: 'original.png',
+      expectedVersion: '0',
+      folderId: null,
+      content: content(),
+      mode: ImageUploadMode.Original,
+    });
+    const opened = uploaded.files[0]!;
+    const base = '/api/admin/sites/' + siteId + '/files/' + opened.fileId;
+    const scope = { expectedVersion: uploaded.version, expectedFileVersion: opened.revision };
+    const { folderId: folder } = await client.files.ensureFolder({
+      name: 'Moved', parentId: null, root: MediaRoot.Images,
+    });
+    const firstImport = client.files.uploadBatch({
+      files: Array.from({ length: 12 }, (_, index) => ({
+        folderId: null,
+        filename: 'import-' + index + '.png',
+        idempotencyKey: 'batch-' + index,
+        mode: ImageUploadMode.Original,
+        content: content(),
+      })),
+    });
+    const swapped = await command(base + '/change', {
+      ...scope,
+      filename: 'replacement.png',
+      base64: (await png(10, 9, '#451321')).toString('base64'),
+    });
+    const imports = await firstImport;
+
+    expect(imports.every((item) => item.ok)).toBe(true);
+    expect(swapped.status).toBe(200);
+    const changed: IMediaLibraryView = await swapped.json();
+    const sameFile = await command(base + '/move', { ...scope, folderId: null, name: 'stale.png' });
+
+    expect(sameFile.status).toBe(409);
+    const moved = await command(base + '/move', {
+      ...scope,
+      expectedFileVersion: changed.files[0]!.revision,
+      folderId: folder,
+      name: 'renamed.png',
+    });
+
+    expect(moved.status).toBe(200);
+    expect((await moved.json()).files[0]).toMatchObject({
+      fileId: opened.fileId, folderId: folder, name: 'renamed.png',
+    });
+    expect(fullCatalogue).not.toHaveBeenCalled();
+  });
+
+  it('rejects a picker upload by detected MIME before storing it', async () => {
+    const siteId = (await local.get<ICreateSite>(CREATE_SITE).execute({
+      ...siteInput(), mark: 'MimePicker', primaryDomain: 'mime-picker.test',
+    })).siteId;
+    const store = local.get<IMediaLibraryStore>(FILE_LIBRARY_STORE);
+    const base = '/api/admin/sites/' + siteId + '/files';
+    const body = {
+      mode: ImageUploadMode.Original,
+      expectedVersion: '0',
+      filename: 'picker.png',
+      folderId: null,
+      base64: (await png(4, 4)).toString('base64'),
+    };
+    const rejected = await command(base, { ...body, mimeTypes: ['image/jpeg'] });
+
+    expect(rejected.status).toBe(400);
+    expect(await rejected.json()).toEqual({ error: 'FilePickerType' });
+    expect(await store.status(siteId)).toEqual({ version: '0', pending: false });
+    expect(await connection.collection('assets').countDocuments({ siteId })).toBe(0);
+    expect(await connection.collection('media_files').countDocuments({ siteId })).toBe(0);
+    expect((await command(base, body)).status).toBe(200);
+  });
+
   it('isolates identical file and folder names between sites in metadata, storage and HTTP', async () => {
     let first = await operations.list.execute({ siteId });
+    const originalIds = first.files.map((file) => file.fileId);
 
     first = await operations.createFolder.execute({
       siteId, expectedVersion: first.version, parentId: null, name: 'Isolation',
@@ -494,7 +698,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     expect(listed.files.map((file) => file.fileId)).toEqual([secondFile.fileId]);
     expect(listed.folders.map((folder) => folder.folderId)).toEqual([second.folders[0]!.folderId]);
     expect((await operations.list.execute({ siteId })).files.map((file) => file.fileId))
-      .toEqual(first.files.map((file) => file.fileId));
+      .toEqual([...originalIds, firstFile.fileId]);
+    expect(first.files).toHaveLength(1);
     expect(listed.files.some((file) => file.fileId === firstFile.fileId)).toBe(false);
     const store = local.get<IMediaLibraryStore>(FILE_LIBRARY_STORE);
     const firstStored = (await store.read(siteId)).library.files.find((file) => file.fileId === firstFile.fileId)!;
@@ -751,15 +956,18 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
 
       page.setDefaultTimeout(6000);
       await page.goto(origin + '/admin/sites/' + treeSiteId + '/files');
-      const rootSelect = page.getByRole('button', { name: 'assets/files', exact: true });
+      const rootSelect = page.locator('#files-drawer').getByRole('button', { name: 'assets/files', exact: true });
 
       await rootSelect.click();
       const contents = page.locator('#files-workspace .folder-contents');
 
       await contents.getByRole('heading', { name: 'Folder contents', exact: true }).waitFor();
-      expect(await contents.innerText()).toContain('Direct children: folders — 1 · files — 1');
+      await contents.getByText('Direct children: folders — 1 · files — 1').waitFor();
       expect(await contents.getByRole('link', { name: 'root.csv', exact: true }).getAttribute('href'))
         .toContain('/files/');
+      await contents.getByRole('button', { name: 'List', exact: true }).click();
+      await contents.getByRole('columnheader', { name: 'Modified', exact: true }).waitFor();
+      await contents.getByRole('button', { name: 'Grid', exact: true }).click();
       await page.screenshot({ path: '.tmp/folder-contents-desktop.png' });
       await contents.getByRole('link', { name: 'root.csv', exact: true }).click();
       await page.getByRole('heading', { name: 'Rename file: root.csv', exact: true }).waitFor();
@@ -769,25 +977,20 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       const outer = tree.getByRole('button', { name: 'Outer', exact: true, includeHidden: true });
       const row = outer.locator('..');
       const toggle = page.locator('[data-folder-toggle="' + outerId + '"]');
+      const root = rootSelect.locator('..');
 
-      for (const [rootName, child] of [
-        ['assets/files', row],
-        ['assets/files', page.getByRole('button', { name: 'root.csv', exact: true })],
-        ['assets/images', page.getByRole('button', { name: 'root.png', exact: true })],
-      ] as const) {
-        const root = page.getByRole('button', { name: rootName, exact: true }).locator('..');
-
-        expect((await child.boundingBox())!.x - (await root.boundingBox())!.x).toBe(16);
-      }
+      expect((await row.boundingBox())!.x - (await root.boundingBox())!.x).toBe(16);
+      expect(await tree.getByRole('button', { name: 'root.csv', exact: true }).count()).toBe(0);
+      expect(await tree.getByRole('button', { name: 'root.png', exact: true }).count()).toBe(0);
       expect(await row.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(233, 238, 226)');
       await outer.hover();
       expect(await row.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(229, 236, 220)');
       await outer.click();
       expect(await toggle.getAttribute('aria-expanded')).toBe('false');
       expect(await tree.getByRole('button', { name: 'Inner', exact: true }).count()).toBe(0);
-      expect(await contents.innerText()).toContain('Direct children: folders — 1 · files — 0');
+      await contents.getByText('Direct children: folders — 1 · files — 0').waitFor();
       await contents.getByRole('button', { name: 'Inner', exact: true }).click();
-      expect(await contents.innerText()).toContain('This folder is empty');
+      await contents.getByText('This folder is empty.', { exact: false }).waitFor();
       await outer.click();
       expect(await toggle.getAttribute('aria-expanded')).toBe('true');
       await toggle.click();
@@ -878,7 +1081,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       expect(library.files).toHaveLength(2);
       const contents = main.locator('.folder-contents');
 
-      expect(await contents.innerText()).toContain('Direct children: folders — 0 · files — 2');
+      await contents.getByText('Direct children: folders — 0 · files — 2').waitFor();
       expect(await contents.getByRole('link').count()).toBe(2);
 
       for (const file of accepted) {
@@ -980,7 +1183,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       mode: ImageUploadMode.Original,
       content: assetBinary(await png(20, 10), 'image/png'),
     })).rejects.toMatchObject({ code: 'Validation' });
-    library = await operations.upload.execute({
+    await operations.upload.execute({
       siteId: docsSiteId,
       expectedVersion: library.version,
       filename: 'picture.png',
@@ -988,7 +1191,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       mode: ImageUploadMode.Responsive,
       content: assetBinary(await png(20, 10), 'image/png'),
     });
-    const urls = library.files.flatMap((file) => file.outputs.map((output) => output.url));
+    const urls = (await operations.list.execute({ siteId: docsSiteId })).files
+      .flatMap((file) => file.outputs.map((output) => output.url));
 
     await local.get<IUpdateSite>(UPDATE_SITE).execute({ siteId: docsSiteId, primaryDomain: 'renamed.test' });
     expect((await operations.list.execute({ siteId: docsSiteId })).files.flatMap((file) =>
@@ -1068,7 +1272,10 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       siteId, fileId: current.fileId, expectedVersion: 'intentionally-old', force: true,
     });
 
-    expect(result.files).toEqual(library.files.filter((item) => item.fileId !== file.fileId));
+    expect(result.files).toEqual([]);
+    expect((await operations.list.execute({ siteId })).files).toEqual(
+      library.files.filter((item) => item.fileId !== file.fileId),
+    );
     expect((await fetch(origin + imageUrl)).status).toBe(404);
     await expect(readFile(originalPath))
       .rejects.toMatchObject({ code: 'ENOENT' });
@@ -1406,10 +1613,61 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     })).status).toBe(404);
     expect((await operations.list.execute({ siteId: site })).version).toBe(library.version);
     expect((await operations.list.execute({ siteId: otherSiteId })).version).toBe(otherLibrary.version);
-    const response = await command(target, move);
+    const failingContent = vi.spyOn(MediaReferenceUpdatesAdapter.prototype, 'replace')
+      .mockRejectedValueOnce(new Error('Content temporarily unavailable'));
+    let response: Response;
+
+    try {
+      response = await command(target, move);
+    } finally {
+      failingContent.mockRestore();
+    }
 
     expect(response.status).toBe(200);
-    library = await response.json();
+    const pending: IMediaLibraryView = await response.json();
+
+    expect(pending.referenceUpdate).toBe('Pending');
+    expect(pending.files[0]?.referencesPending).toBe(true);
+    expect((await publicGet(old, 'reference-edits.test')).status).toBe(404);
+    expect((await local.get<IGetPage>(GET_PAGE).execute({ siteId: site, pageId: page.pageId }))!
+      .toState().contentMd).toContain(old);
+    const blocker = (await operations.upload.execute({
+      siteId: site,
+      expectedVersion: pending.version,
+      filename: 'photo.png',
+      folderId: null,
+      mode: ImageUploadMode.Responsive,
+      content: assetBinary(await png(64, 32), 'image/png'),
+    })).files[0]!;
+
+    expect(await (await command(target, { retryReferences: true })).json()).toMatchObject({
+      referenceUpdate: 'AddressInUse',
+    });
+    expect((await local.get<IGetPage>(GET_PAGE).execute({ siteId: site, pageId: page.pageId }))!
+      .toState().contentMd).toContain(old);
+    await operations.delete.execute({ siteId: site, fileId: blocker.fileId, force: true });
+    const failingPublication = vi.spyOn(PublishMediaAddressReleaseUseCase.prototype, 'execute')
+      .mockRejectedValueOnce(new Error('Publication temporarily unavailable'));
+
+    try {
+      expect(await (await command(target, { retryReferences: true })).json()).toMatchObject({
+        referenceUpdate: 'Pending',
+      });
+    } finally {
+      failingPublication.mockRestore();
+    }
+    expect((await local.get<IGetPage>(GET_PAGE).execute({ siteId: site, pageId: page.pageId }))!
+      .toState().contentMd).not.toContain(old);
+    await app.close();
+    app = await createPublicHttpApplication(httpSettings);
+    const retried = await command(target, { retryReferences: true });
+
+    expect(retried.status).toBe(200);
+    library = await retried.json();
+    expect(library.referenceUpdate).toBeUndefined();
+    expect(library.files[0]?.referencesPending).toBeUndefined();
+    expect(library.files[0]?.revision).toBe(pending.files[0]?.revision);
+    expect(await (await command(target, { retryReferences: true })).json()).toEqual(library);
     const next = library.files[0]!.outputs[0]!.url.replace(/[()]/gu,
       (character) => '%' + character.charCodeAt(0).toString(16).toUpperCase());
 
@@ -1599,13 +1857,14 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     try {
       await page.goto(origin + '/admin/sites/' + siteId + '/files');
       await page.getByRole('heading', { name: 'assets/images', exact: true, level: 1 }).waitFor();
-      await page.getByRole('button', { name: 'small.png', exact: true }).click();
+      await page.getByRole('link', { name: 'small.png', exact: true }).click();
       await page.getByRole('heading', { name: 'Rename file: small.png', exact: true }).waitFor();
       const nameInput = page.getByLabel('File name', { exact: true });
-      const folderInput = page.getByLabel('Folder', { exact: true });
+      const folderInput = page.getByRole('combobox', { name: 'Folder', exact: true });
       const saveName = page.getByRole('button', { name: 'Save name', exact: true });
       const saveFolder = page.getByRole('button', { name: 'Save folder', exact: true });
-      const photos = (await operations.list.execute({ siteId })).folders[0]!.folderId;
+      const folders = (await operations.list.execute({ siteId })).folders;
+      const photos = folders.find((item) => item.name === 'Photos')!.folderId;
 
       expect(await saveName.isDisabled()).toBe(true);
       expect(await saveFolder.isDisabled()).toBe(true);
@@ -1616,7 +1875,9 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await nameInput.fill('small.png');
       expect(await saveName.isDisabled()).toBe(true);
       await nameInput.fill('lighthouse.png');
-      await folderInput.selectOption(photos);
+      await page.getByRole('button', { name: 'Browse folders', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Folder', exact: true })
+        .getByRole('button', { name: 'Photos', exact: true }).click();
       expect(await saveFolder.isEnabled()).toBe(true);
       expect(await saveFolder.getAttribute('class')).toContain('cms-primary');
       await saveName.click();
@@ -1624,9 +1885,8 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
         .getByRole('button', { name: 'Update links', exact: true }).click();
       await page.getByRole('status').filter({ hasText: 'Renamed small.png to lighthouse.png successfully.' }).waitFor();
       await page.getByRole('heading', { name: 'Rename file: lighthouse.png', exact: true }).waitFor();
-      await page.getByRole('button', { name: 'lighthouse.png', exact: true }).waitFor();
       expect(await page.locator('.file-variants').innerText()).toContain('lighthouse.png');
-      expect((await operations.list.execute({ siteId })).files[0]!.folderId).toBeNull();
+      expect((await operations.browse.file({ siteId, fileId: ownedFile.fileId })).folderId).toBeNull();
       expect(await saveName.isDisabled()).toBe(true);
       expect(await folderInput.inputValue()).toBe(photos);
       expect(await saveFolder.isEnabled()).toBe(true);
@@ -1635,7 +1895,7 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       await page.getByRole('dialog', { name: 'Change file address', exact: true })
         .getByRole('button', { name: 'Update links', exact: true }).click();
       await page.getByText('Folder saved.', { exact: true }).waitFor();
-      expect((await operations.list.execute({ siteId })).files[0]).toMatchObject({
+      expect(await operations.browse.file({ siteId, fileId: ownedFile.fileId })).toMatchObject({
         name: 'lighthouse.png', folderId: photos,
       });
       expect(await nameInput.inputValue()).toBe('not-saved.png');
@@ -1692,17 +1952,19 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     });
     const file = previous.files.find((item) => item.name === 'reconcile-source.png')!;
     const image = (await store.read(siteId)).library.files.find((item) => item.fileId === file.fileId)!.image;
-    const install = vi.spyOn(projection, 'install').mockRejectedValueOnce(new Error('output unavailable'));
+    const install = vi.spyOn(projection, 'installChange').mockRejectedValueOnce(new Error('output unavailable'));
 
     try {
       await expect(operations.move.execute({
         siteId, expectedVersion: previous.version, fileId: file.fileId, folderId: null, name: 'recovered.png',
-      })).rejects.toThrow('output unavailable');
+      })).rejects.toMatchObject({ cause: new Error('output unavailable') });
       expect((await store.read(siteId)).pending).toBe(true);
+      expect((await fetch(origin + file.outputs[0]!.url)).status).toBe(200);
       const recovered = await operations.reconcile.execute({ siteId });
 
       expect(recovered.pending).toBe(false);
-      const recoveredFile = recovered.files.find((item) => item.fileId === file.fileId)!;
+      const recoveredFile = await operations.browse.file({ siteId, fileId: file.fileId });
+      const beforeDelete = await operations.list.execute({ siteId });
 
       expect((await fetch(origin + recoveredFile.outputs[0]!.url)).status).toBe(200);
       expect((await store.read(siteId)).library.files.find((item) => item.fileId === file.fileId)!.image.assetVersion)
@@ -1712,10 +1974,11 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
       try {
         await expect(operations.delete.execute({
           siteId, expectedVersion: recovered.version, fileId: file.fileId, force: true,
-        })).rejects.toThrow('cleanup unavailable');
+        })).rejects.toMatchObject({ cause: new Error('cleanup unavailable') });
         expect((await store.read(siteId)).pending).toBe(true);
-        expect((await operations.reconcile.execute({ siteId })).files)
-          .toEqual(recovered.files.filter((item) => item.fileId !== file.fileId));
+        await operations.reconcile.execute({ siteId });
+        expect((await operations.list.execute({ siteId })).files)
+          .toEqual(beforeDelete.files.filter((item) => item.fileId !== file.fileId));
         await expect(readFile(path.join(root, 'data/127.0.0.1/.private/objects',
           ...image.original.contentId.split('/').slice(2))))
           .rejects.toMatchObject({ code: 'ENOENT' });
@@ -1763,4 +2026,81 @@ describe('Files through real composition, storage, HTTP and the built admin', ()
     expect((await publicGet(library.files[0]!.outputs[0]!.url, 'legacy.test')).status).toBe(200);
     expect(await readFile(path.join(legacyRoot, image.original.contentId))).toBeInstanceOf(Buffer);
   });
+
+  it('opens Files in Chrome at 100,000 files without requesting the complete catalogue', async () => {
+    const executablePath = process.env.ZARYA_TEST_BROWSER_EXECUTABLE;
+
+    if (!executablePath) {
+      throw new Error('Explicit test browser required');
+    }
+
+    const bulk = (await local.get<ICreateSite>(CREATE_SITE).execute({
+      ...siteInput(), mark: 'BrowserBulk', primaryDomain: 'browser-bulk.test',
+    })).siteId;
+    const initial = await operations.upload.execute({
+      siteId: bulk,
+      expectedVersion: '0',
+      filename: 'seed.png',
+      folderId: null,
+      mode: ImageUploadMode.Original,
+      content: assetBinary(await png(16, 8, '#688199'), 'image/png'),
+    });
+    const stored = await local.get<IMediaLibraryStore>(FILE_LIBRARY_STORE).locate(bulk, initial.files[0]!.fileId);
+
+    expect(stored).not.toBeNull();
+    const seed = stored!.file;
+    const rows = mediaRecords(connection).files;
+    const library = { siteId: bulk, version: initial.version, folders: [], files: [] };
+
+    for (let count = 0; count < 99_999; count += 1_000) {
+      await rows.insertMany(Array.from({ length: Math.min(1_000, 99_999 - count) }, (_, offset) => {
+        const index = String(count + offset).padStart(6, '0');
+
+        return fileRecord(library, { ...seed, fileId: 'fixture-' + index, name: index + '.png' });
+      }));
+    }
+    const browser = await chromium.launch({ executablePath, headless: true });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
+    const token = cookie.slice(cookie.indexOf('=') + 1);
+    const base = '/api/admin/sites/' + bulk + '/files';
+    const full = vi.fn();
+
+    try {
+      await context.addCookies([{
+        name: 'zarya_admin_session', value: token, url: origin + '/api/admin', httpOnly: true, sameSite: 'Strict',
+      }]);
+      const page = await context.newPage();
+
+      page.on('request', (request) => {
+        const url = new URL(request.url());
+
+        if (request.method() === 'GET' && url.pathname === base && !url.search) {
+          full();
+        }
+      });
+      const observed = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+
+        return url.pathname === base && url.searchParams.has('pageSize') && !url.searchParams.has('foldersOnly');
+      });
+      const started = performance.now();
+
+      await page.goto(origin + '/admin/sites/' + bulk + '/files');
+      const response = await observed;
+
+      expect(response.status()).toBe(200);
+      expect(await response.json()).toMatchObject({ total: 100_000 });
+      const files = page.locator('#files-workspace .file-browser');
+
+      await files.getByRole('link', { name: '000000.png', exact: true }).waitFor();
+      expect(await files.getByRole('link').count()).toBe(25);
+      expect(full).not.toHaveBeenCalled();
+      console.info(JSON.stringify({
+        browserFiles: 100_000, shown: 25, readyMs: Math.round(performance.now() - started),
+      }));
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  }, 120_000);
 });

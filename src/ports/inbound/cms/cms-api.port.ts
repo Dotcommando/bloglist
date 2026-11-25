@@ -10,7 +10,7 @@ import type { IListAdminUsers } from '../admin-users/list-admin-users.port.js';
 import type { IUpdateAdminUser } from '../admin-users/update-admin-user.port.js';
 import type { IHookConfigurationOperations } from '../hooks/hook-configuration.port.js';
 import type { IGetHookHistory, IRetryHookDelivery, ISkipHookDelivery } from '../hooks/hook-execution.port.js';
-import type { IFileLibraryOperations } from '../media/file-library.port.js';
+import type { IFileLibraryOperations, IProgrammaticFiles, IStreamMediaUpload } from '../media/file-library.port.js';
 import type { IGetAsset } from '../media/get-asset.port.js';
 import type { IProcessAsset } from '../media/process-asset.port.js';
 import type { IUploadAsset } from '../media/upload-asset.port.js';
@@ -122,7 +122,10 @@ export interface ICmsCoreOperations {
   readonly chunks: IRenderingOperations;
   readonly snippets: IRenderingOperations;
   readonly tvs: ITemplateVariableOperations;
-  readonly files: Omit<IFileLibraryOperations, 'usages'> & {
+  readonly files: Omit<IFileLibraryOperations, 'usages'> & IProgrammaticFiles & {
+    readonly getFile: { execute: IFileLibraryOperations['browse']['file'] };
+    readonly getFiles: { execute(input: { readonly siteId: string; readonly fileIds: readonly string[] }):
+    Promise<readonly (Awaited<ReturnType<IFileLibraryOperations['browse']['file']>> | null)[]> };
     readonly usages: ICmsFileUsages;
     readonly getAsset: IGetAsset;
     readonly uploadAsset: IUploadAsset;
@@ -177,7 +180,11 @@ export type CmsApi = { readonly extensions: CmsExtensions } & {
     readonly [M in keyof ICmsCoreOperations[G]]: M extends 'list' | 'listVersions' | 'getHistory' | 'history'
       ? (input?: ICmsListInput & Partial<CmsScopedOperationInput<G, ICmsCoreOperations[G][M]>>) =>
       Promise<ICmsList<ListItem<CmsOperationResult<ICmsCoreOperations[G][M]>>>>
-      : (input: CmsScopedOperationInput<G, ICmsCoreOperations[G][M]>) =>
+      : (input: G extends 'files' ? M extends 'uploadFile'
+        ? Omit<IStreamMediaUpload, 'siteId'>
+        : M extends 'uploadBatch' ? { readonly files: readonly Omit<IStreamMediaUpload, 'siteId'>[] }
+          : CmsScopedOperationInput<G, ICmsCoreOperations[G][M]>
+        : CmsScopedOperationInput<G, ICmsCoreOperations[G][M]>) =>
       Promise<CmsOperationResult<ICmsCoreOperations[G][M]>>;
   };
 };

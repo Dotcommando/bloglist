@@ -1,0 +1,1073 @@
+{
+  "id": "0019-normalize-file-libraries",
+  "transform": "NormalizeFileLibrariesV1",
+  "collections": [
+    {
+      "name": "media_libraries",
+      "dumpRole": "SiteContent",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "pending"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "pending": {
+              "bsonType": "bool"
+            },
+            "tvFence": {
+              "bsonType": [
+                "int",
+                "long",
+                "double"
+              ]
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "key": {
+            "siteId": 1
+          },
+          "name": "media_libraries_site_unique",
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "media_folders",
+      "dumpRole": "SiteContent",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "siteId",
+            "folderId",
+            "parentId",
+            "name",
+            "root",
+            "nameKey",
+            "scopePath"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "folderId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "parentId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "root": {
+              "enum": [
+                "images",
+                "files"
+              ]
+            },
+            "nameKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "scopePath": {
+              "bsonType": "string"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "media_folders_identity",
+          "key": {
+            "siteId": 1,
+            "folderId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "media_folders_parent_name",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "parentId": 1,
+            "nameKey": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "media_folders_scope_path",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "scopePath": 1
+          }
+        },
+        {
+          "name": "media_folders_ordered_names",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "parentId": 1,
+            "nameKey": 1,
+            "_id": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "media_files",
+      "dumpRole": "SiteContent",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "siteId",
+            "fileId",
+            "folderId",
+            "name",
+            "mode",
+            "image",
+            "outputs",
+            "previousPaths",
+            "root",
+            "nameKey",
+            "publicPaths",
+            "publicPathKeys",
+            "scopePath",
+            "createdAt",
+            "updatedAt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "fileId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "folderId": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mode": {
+              "enum": [
+                "Original",
+                "Responsive"
+              ]
+            },
+            "image": {
+              "bsonType": "object",
+              "required": [
+                "assetId",
+                "siteId",
+                "filename",
+                "mimeType",
+                "byteSize",
+                "checksum",
+                "original",
+                "visibility",
+                "state",
+                "failure",
+                "version",
+                "createdAt",
+                "updatedAt",
+                "originalDimensions",
+                "profileVersion",
+                "variants",
+                "profileMappings",
+                "assetVersion"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "assetId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "siteId": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "filename": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "mimeType": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "byteSize": {
+                  "bsonType": [
+                    "int",
+                    "long",
+                    "double",
+                    "decimal"
+                  ],
+                  "minimum": 1,
+                  "multipleOf": 1
+                },
+                "checksum": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "original": {
+                  "bsonType": "object",
+                  "required": [
+                    "contentId"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "contentId": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "visibility": {
+                  "enum": [
+                    "Private",
+                    "Public"
+                  ]
+                },
+                "state": {
+                  "enum": [
+                    "Processing",
+                    "Ready",
+                    "Failed"
+                  ]
+                },
+                "failure": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "version": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "createdAt": {
+                  "bsonType": "date"
+                },
+                "updatedAt": {
+                  "bsonType": "date"
+                },
+                "originalDimensions": {
+                  "bsonType": [
+                    "object",
+                    "null"
+                  ],
+                  "required": [
+                    "width",
+                    "height",
+                    "aspectRatio"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "width": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double",
+                        "decimal"
+                      ],
+                      "minimum": 1,
+                      "multipleOf": 1
+                    },
+                    "height": {
+                      "bsonType": [
+                        "int",
+                        "long",
+                        "double",
+                        "decimal"
+                      ],
+                      "minimum": 1,
+                      "multipleOf": 1
+                    },
+                    "aspectRatio": {
+                      "bsonType": [
+                        "double",
+                        "int"
+                      ],
+                      "exclusiveMinimum": true,
+                      "minimum": 0
+                    }
+                  }
+                },
+                "profileVersion": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "variants": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "required": [
+                      "variantId",
+                      "content",
+                      "mimeType",
+                      "byteSize",
+                      "checksum",
+                      "dimensions"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "variantId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "content": {
+                        "bsonType": "object",
+                        "required": [
+                          "contentId"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "contentId": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "mimeType": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "byteSize": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "checksum": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      },
+                      "dimensions": {
+                        "bsonType": "object",
+                        "required": [
+                          "width",
+                          "height",
+                          "aspectRatio"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "width": {
+                            "bsonType": [
+                              "int",
+                              "long",
+                              "double",
+                              "decimal"
+                            ],
+                            "minimum": 1,
+                            "multipleOf": 1
+                          },
+                          "height": {
+                            "bsonType": [
+                              "int",
+                              "long",
+                              "double",
+                              "decimal"
+                            ],
+                            "minimum": 1,
+                            "multipleOf": 1
+                          },
+                          "aspectRatio": {
+                            "bsonType": [
+                              "double",
+                              "int"
+                            ],
+                            "exclusiveMinimum": true,
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "profileMappings": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "required": [
+                      "profileId",
+                      "variantIds"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "profileId": {
+                        "enum": [
+                          "w320",
+                          "w576",
+                          "w768",
+                          "w992",
+                          "w1200",
+                          "w1440"
+                        ]
+                      },
+                      "variantIds": {
+                        "bsonType": "array",
+                        "items": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                },
+                "file": {
+                  "bsonType": "object",
+                  "required": [
+                    "contentId"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "contentId": {
+                      "bsonType": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "mode": {
+                  "enum": [
+                    "Original",
+                    "Responsive"
+                  ]
+                },
+                "assetVersion": {
+                  "bsonType": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "outputs": {
+              "bsonType": "array",
+              "minItems": 1,
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "key",
+                  "suffix",
+                  "mimeType",
+                  "dimensions",
+                  "contentId"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "suffix": {
+                    "bsonType": "string"
+                  },
+                  "mimeType": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "dimensions": {
+                    "bsonType": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "width",
+                      "height",
+                      "aspectRatio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "width": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "height": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "aspectRatio": {
+                        "bsonType": [
+                          "double",
+                          "int"
+                        ],
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "contentId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "previousPaths": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "string",
+                "minLength": 1
+              }
+            },
+            "root": {
+              "enum": [
+                "images",
+                "files"
+              ]
+            },
+            "nameKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "publicPaths": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "publicPathKeys": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "scopePath": {
+              "bsonType": "string"
+            },
+            "createdAt": {
+              "bsonType": "date"
+            },
+            "updatedAt": {
+              "bsonType": "date"
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "media_files_identity",
+          "key": {
+            "siteId": 1,
+            "fileId": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "media_files_folder_name",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "nameKey": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "media_files_public_path",
+          "key": {
+            "siteId": 1,
+            "publicPathKeys": 1
+          },
+          "unique": true
+        },
+        {
+          "name": "media_files_checksum",
+          "key": {
+            "siteId": 1,
+            "image.checksum": 1
+          }
+        },
+        {
+          "name": "media_files_scope_path",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "scopePath": 1
+          }
+        },
+        {
+          "name": "media_files_ordered_names",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "nameKey": 1,
+            "_id": 1
+          }
+        },
+        {
+          "name": "media_files_ordered_createdat",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "createdAt": 1,
+            "_id": 1
+          }
+        },
+        {
+          "name": "media_files_ordered_updatedat",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "updatedAt": 1,
+            "_id": 1
+          }
+        },
+        {
+          "name": "media_files_ordered_mimetype",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "image.mimeType": 1,
+            "_id": 1
+          }
+        },
+        {
+          "name": "media_files_ordered_bytesize",
+          "key": {
+            "siteId": 1,
+            "root": 1,
+            "folderId": 1,
+            "image.byteSize": 1,
+            "_id": 1
+          }
+        },
+        {
+          "name": "media_files_creation_order",
+          "key": {
+            "siteId": 1,
+            "createdAt": 1,
+            "_id": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "media_operations",
+      "dumpRole": "SiteContent",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "siteId",
+            "version",
+            "garbage"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "siteId": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "version": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "garbage": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "assetId",
+                  "siteId",
+                  "filename",
+                  "mimeType",
+                  "byteSize",
+                  "checksum",
+                  "original",
+                  "visibility",
+                  "state",
+                  "failure",
+                  "version",
+                  "createdAt",
+                  "updatedAt",
+                  "originalDimensions",
+                  "profileVersion",
+                  "variants",
+                  "profileMappings",
+                  "assetVersion"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "assetId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "siteId": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "filename": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "mimeType": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "byteSize": {
+                    "bsonType": [
+                      "int",
+                      "long",
+                      "double",
+                      "decimal"
+                    ],
+                    "minimum": 1,
+                    "multipleOf": 1
+                  },
+                  "checksum": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "original": {
+                    "bsonType": "object",
+                    "required": [
+                      "contentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "contentId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "visibility": {
+                    "enum": [
+                      "Private",
+                      "Public"
+                    ]
+                  },
+                  "state": {
+                    "enum": [
+                      "Processing",
+                      "Ready",
+                      "Failed"
+                    ]
+                  },
+                  "failure": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "version": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "createdAt": {
+                    "bsonType": "date"
+                  },
+                  "updatedAt": {
+                    "bsonType": "date"
+                  },
+                  "originalDimensions": {
+                    "bsonType": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "width",
+                      "height",
+                      "aspectRatio"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "width": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "height": {
+                        "bsonType": [
+                          "int",
+                          "long",
+                          "double",
+                          "decimal"
+                        ],
+                        "minimum": 1,
+                        "multipleOf": 1
+                      },
+                      "aspectRatio": {
+                        "bsonType": [
+                          "double",
+                          "int"
+                        ],
+                        "exclusiveMinimum": true,
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "profileVersion": {
+                    "bsonType": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "variants": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "variantId",
+                        "content",
+                        "mimeType",
+                        "byteSize",
+                        "checksum",
+                        "dimensions"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "variantId": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "content": {
+                          "bsonType": "object",
+                          "required": [
+                            "contentId"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentId": {
+                              "bsonType": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "mimeType": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "byteSize": {
+                          "bsonType": [
+                            "int",
+                            "long",
+                            "double",
+                            "decimal"
+                          ],
+                          "minimum": 1,
+                          "multipleOf": 1
+                        },
+                        "checksum": {
+                          "bsonType": "string",
+                          "minLength": 1
+                        },
+                        "dimensions": {
+                          "bsonType": "object",
+                          "required": [
+                            "width",
+                            "height",
+                            "aspectRatio"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "width": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "height": {
+                              "bsonType": [
+                                "int",
+                                "long",
+                                "double",
+                                "decimal"
+                              ],
+                              "minimum": 1,
+                              "multipleOf": 1
+                            },
+                            "aspectRatio": {
+                              "bsonType": [
+                                "double",
+                                "int"
+                              ],
+                              "exclusiveMinimum": true,
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "profileMappings": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "profileId",
+                        "variantIds"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "profileId": {
+                          "enum": [
+                            "w320",
+                            "w576",
+                            "w768",
+                            "w992",
+                            "w1200",
+                            "w1440"
+                          ]
+                        },
+                        "variantIds": {
+                          "bsonType": "array",
+                          "items": {
+                            "bsonType": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "file": {
+                    "bsonType": "object",
+                    "required": [
+                      "contentId"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "contentId": {
+                        "bsonType": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "mode": {
+                    "enum": [
+                      "Original",
+                      "Responsive"
+                    ]
+                  },
+                  "assetVersion": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "change": {
+              "bsonType": "object",
+              "required": [
+                "fileIds",
+                "removedPaths"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "fileIds": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                },
+                "removedPaths": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "indexes": [
+        {
+          "name": "media_operations_site",
+          "key": {
+            "siteId": 1
+          },
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

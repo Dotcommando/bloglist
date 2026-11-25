@@ -102,6 +102,9 @@ describe('explicit persistence migrations', () => {
       '0016-dump-access-and-installation-restore',
       '0017-addon-action-generations',
       '0018-addon-repository-update-action',
+      '0019-normalize-file-libraries',
+      '0020-stage-media-mutations',
+      '0021-guard-media-edits',
     ]);
     expect(first.map((migration) => migration.id)).toEqual([...new Set(first.map((migration) => migration.id))]);
     expect(first.map((migration) => migration.checksum)).toEqual(second.map((migration) => migration.checksum));

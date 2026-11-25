@@ -54,6 +54,30 @@ the retained claim and runtime registry, then use the identical-artifact retry
 when supported. Follow [testing and release evidence](testing.md) before claiming
 the package usable through the host.
 
+## Declare references to Files
+
+Declare each owned field that stores a CMS file ID in its collection's
+`references` array, for example
+`{ "path": "cards.*.imageId", "collection": "media_files" }`.
+Index the site and the declared field together when the domain allows it.
+Use the host file picker, streamed upload and `files.getFiles` to select,
+create and resolve Files. Batched metadata includes output URLs and returns a
+null entry for a missing ID.
+
+Pass the IDs being assigned to `host.fence.check(permit, session, fileIds)`
+inside the same transaction as a guarded write. A write that assigns no file
+references passes an empty list. The fence validates ownership and prevents
+ordinary deletion from racing with assignment. Forced deletion can leave
+an unresolved reference, so consumers handle missing metadata.
+
+Add-on export keeps business records that refer to missing Files. The export
+report counts the missing references and the archive records their IDs.
+Same-site restore prefers an existing file ID and preserves a dangling ID if
+it cannot resolve it. Cross-site restore matches the archived public path to a
+unique target file, including when its content has changed. The review lists
+unresolved references. The operator may explicitly omit those fields or array
+entries when the destination's add-on data schema permits omission.
+
 ## Consolidate migrations for a major version
 
 Ship one `migrations/0000-runtime-v<major>.json` containing the complete current

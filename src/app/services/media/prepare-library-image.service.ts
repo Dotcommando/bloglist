@@ -1,19 +1,21 @@
-import { AssetVisibility } from '../../../domain/media/asset.js';
+import { AssetProcessingState, AssetVisibility } from '../../../domain/media/asset.js';
 import { fileRequirement, type ImageUploadMode, type IMediaFile } from '../../../domain/media/file-library.js';
 import type { IBinaryContent } from '../../../domain/shared/binary-content.js';
 import type { IGetAsset } from '../../../ports/inbound/media/get-asset.port.js';
 import type { IProcessAsset } from '../../../ports/inbound/media/process-asset.port.js';
 import type { IUploadAsset } from '../../../ports/inbound/media/upload-asset.port.js';
-import type { IMediaLibraryAccess } from '../../../ports/outbound/media/file-library.port.js';
+import type { IMediaLibraryAccess, IMediaLibraryStore } from '../../../ports/outbound/media/file-library.port.js';
 
 /** Shared upload/replace preparation using the existing private, awaited media pipeline. */
 export class PrepareLibraryImageService {
   constructor(private readonly upload: IUploadAsset, private readonly get: IGetAsset,
-    private readonly process: IProcessAsset, private readonly access: IMediaLibraryAccess) {}
+    private readonly process: IProcessAsset, private readonly access: IMediaLibraryAccess,
+    private readonly store?: Pick<IMediaLibraryStore, 'discard'>) {}
 
   async prepare(input: { readonly siteId: string;
     readonly filename: string;
     readonly mode: ImageUploadMode;
+    readonly mimeTypes?: readonly string[];
     readonly content: IBinaryContent }): Promise<Pick<IMediaFile, 'image' | 'outputs'>> {
     const actorId = await this.access.actorId();
     const receipt = await this.upload.execute({ ...input, actorId, visibility: AssetVisibility.Private });
@@ -22,6 +24,15 @@ export class PrepareLibraryImageService {
     fileRequirement(asset !== null, 'Uploaded image is unavailable');
     const processed = await this.process.execute({
       ...receipt, siteId: input.siteId, expectedVersion: asset.toState().version,
+    }).catch(async (error: unknown) => {
+      if (this.store) {
+        const failed = (await this.get.execute({ siteId: input.siteId, actorId, ...receipt }))?.toState();
+
+        if (failed?.state === AssetProcessingState.Failed) {
+          await this.store.discard(failed);
+        }
+      }
+      throw error;
     });
     const image = processed.toState();
 

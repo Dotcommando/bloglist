@@ -6,6 +6,7 @@ export enum FileValidationIssue {
   InvalidName = 'FileInvalidName', NameTooLong = 'FileNameTooLong', ReservedName = 'FileReservedName',
   Empty = 'FileEmpty', ImageTooLarge = 'FileImageTooLarge', DocumentTooLarge = 'FileDocumentTooLarge',
   UnsupportedFormat = 'FileUnsupportedFormat', ContentMismatch = 'FileContentMismatch',
+  PickerType = 'FilePickerType',
   CsvEncoding = 'FileCsvEncoding', CsvContent = 'FileCsvContent', JsonContent = 'FileJsonContent',
   ImageContent = 'FileImageContent', ReadFailed = 'FileReadFailed',
 }
@@ -35,6 +36,11 @@ export interface ISiteFile {
   readonly hasVariants: boolean;
   readonly mimeType: string;
   readonly byteSize: number;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+  readonly assetVersion?: string;
+  readonly revision?: string;
+  readonly referencesPending?: boolean;
   readonly originalDimensions: IFileDimensions | null;
   readonly outputs: readonly IFileOutput[];
 }
@@ -48,6 +54,41 @@ export interface IFileLibrary {
   readonly pending: boolean;
   readonly folders: readonly IFileFolder[];
   readonly files: readonly ISiteFile[];
+  readonly referenceUpdate?: 'Pending' | 'AddressInUse';
+}
+
+export function mergeFiles(current: readonly ISiteFile[], updates: readonly ISiteFile[]): readonly ISiteFile[] {
+  const files = new Map(current.map((file) => [file.fileId, file]));
+
+  for (const file of updates) {
+    files.set(file.fileId, file);
+  }
+
+  return [...files.values()];
+}
+
+export enum FileSort { Name = 'name', Created = 'created', Updated = 'updated', Type = 'type', Size = 'size' }
+
+export interface IFileBrowseQuery {
+  readonly root: MediaRoot;
+  readonly folderId: string | null;
+  readonly search: string;
+  readonly recursive: boolean;
+  readonly sort: FileSort;
+  readonly descending: boolean;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly mimeTypes?: readonly string[];
+  readonly foldersOnly?: boolean;
+}
+
+export interface IFileBrowsePage extends IFileLibrary {
+  readonly total: number;
+  readonly folderTotal: number;
+  readonly fileTotal: number;
+  readonly breadcrumbs: readonly IFileFolder[];
+  readonly paths: Readonly<Record<string, string>>;
+  readonly timeZone?: string;
 }
 
 export interface IFileUsage {

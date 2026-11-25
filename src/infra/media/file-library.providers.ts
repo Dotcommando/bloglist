@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { Provider } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import type { Connection } from 'mongoose';
 
 import { PublicMediaController } from '../../adapters/inbound/documents/http/media/public-media.controller.js';
@@ -69,6 +70,7 @@ import {
   FileLibraryProjectionAdapter,
 } from '../../adapters/outbound/storage/files/media/file-library-projection.adapter.js';
 import { FileSiteFaviconStore } from '../../adapters/outbound/storage/files/media/site-favicon-store.adapter.js';
+import { BrowseMediaFolderUseCase } from '../../app/use-cases/media/browse-media-folder.use-case.js';
 import { ReadPublicMediaUseCase } from '../../app/use-cases/media/read-public-media.use-case.js';
 import {
   PublishMediaAddressReleaseUseCase,
@@ -128,6 +130,7 @@ import {
 import { RESOLVE_SITE } from '../sites/sites.tokens.js';
 import { GET_SITE } from '../sites/sites.tokens.js';
 import { ADMIN_TV_OPERATIONS, TV_OPERATIONS, TV_STORE } from '../template-variables/template-variables.tokens.js';
+import { addonFileReferences } from './addon-file-references.factory.js';
 import { fileLibraryOperations } from './file-library-operations.factory.js';
 import { ADMIN_SITE_FAVICON_OPERATIONS, SITE_FAVICON_OPERATIONS, SITE_FAVICON_STORE } from './media.tokens.js';
 import {
@@ -153,25 +156,27 @@ function libraryPersistenceProviders(media: { readonly root: string }): Provider
     },
     {
       provide: FILE_LIBRARY_STORE,
-      inject: [MONGO_CONNECTION, FILE_LIBRARY_PROJECTION, ASSET_STORAGE],
-      useFactory: (connection: Connection, projection: IMediaLibraryProjection, storage: IAssetStoragePort) => {
+      inject: [MONGO_CONNECTION, FILE_LIBRARY_PROJECTION, ASSET_STORAGE, ModuleRef],
+      useFactory: (connection: Connection, projection: IMediaLibraryProjection,
+        storage: IAssetStoragePort, ref: ModuleRef) => {
         const removal = new MediaImageRemovalAdapter(assetModel(connection), storage);
 
-        return new MongooseFileLibraryStore(mediaLibraryModel(connection), projection, removal);
+        return new MongooseFileLibraryStore(mediaLibraryModel(connection), projection, removal,
+          addonFileReferences(connection, ref));
       },
     },
     {
       provide: FILE_LIBRARY_USAGES,
-      inject: [MONGO_CONNECTION, RENDERING_SOURCE, PUBLICATION_STORE, TV_STORE],
+      inject: [MONGO_CONNECTION, RENDERING_SOURCE, PUBLICATION_STORE, TV_STORE, ModuleRef],
       useFactory: (connection: Connection, sources: IRenderingSourcePort, artifacts: IPublicationArtifactSourcePort,
-        variables: ITemplateVariableStore) =>
+        variables: ITemplateVariableStore, ref: ModuleRef) =>
         new MediaUsagesAdapter([
           new PageMediaReferencesAdapter(connection.model<IPageRecord>('Page', pageSchema),
             connection.model<IPagePublicationsRecord>('PagePublications', pagePublicationsSchema)),
           new RenderingMediaReferencesAdapter(sources),
           new TemplateVariableMediaReferencesAdapter(variables),
           new PublicationMediaReferencesAdapter(publicationModels(connection).releases, artifacts),
-        ]),
+        ], addonFileReferences(connection, ref)),
     },
   ];
 }
@@ -347,6 +352,9 @@ export function fileLibraryHttpProviders(settings: IPublicHttpSettings): Provide
                 contentOperations.listPages, contentOperations.getSite, contentOperations.rewritePageMedia), {
                 execute: async (input) => publication.execute({ ...input, actorId: await access.actorId() }),
               }),
+            browse: new BrowseMediaFolderUseCase(store, { requireEditor: (siteId) => access.requireList(siteId) },
+              { nextId: randomUUID, publicPath: media.publicBaseUrl },
+              async (siteId) => (await contentOperations.getSite.execute({ siteId }))?.timeZone ?? 'UTC'),
             async readableUsageTargets(siteId: string, targets: readonly IMediaUsageTarget[]):
             Promise<ReadonlySet<string>> {
               if (!targets.length) {
@@ -385,6 +393,11 @@ export function fileLibraryHttpProviders(settings: IPublicHttpSettings): Provide
 
               if (hasWholeSiteActionGrant(actor, 'cms.template-variables.list', siteId)) {
                 for (const target of targets.filter(({ kind }) => kind === MediaUsageTargetKind.TemplateVariable)) {
+                  readable.add(target.kind + ':' + target.id);
+                }
+              }
+              if (hasWholeSiteActionGrant(actor, 'cms.addons.read', siteId)) {
+                for (const target of targets.filter(({ kind }) => kind === MediaUsageTargetKind.Addon)) {
                   readable.add(target.kind + ':' + target.id);
                 }
               }

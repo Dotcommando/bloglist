@@ -1,8 +1,7 @@
 import type { IMediaLibraryView } from '../../../domain/media/file-library.js';
 import {
-  fileRequirement, folderPath, ImageUploadMode, mediaRoot, validateMediaName,
+  fileRequirement, ImageUploadMode, mediaFilenameRoot, validateMediaName,
 } from '../../../domain/media/file-library.js';
-import { BusinessError, BusinessErrorCode } from '../../../domain/shared/business-error.js';
 import type { ILibraryUpload } from '../../../ports/inbound/media/file-library.port.js';
 import type { FileLibraryService } from '../../services/media/file-library.service.js';
 import type { PrepareLibraryImageService } from '../../services/media/prepare-library-image.service.js';
@@ -12,21 +11,13 @@ export class UploadMediaFileUseCase {
     private readonly prepare: Pick<PrepareLibraryImageService, 'prepare'>) {}
 
   async execute(input: ILibraryUpload): Promise<IMediaLibraryView> {
-    const previous = await this.library.read(input);
+    const version = await this.library.current(input.siteId, input.expectedVersion);
 
     validateMediaName(input.filename);
     fileRequirement(Object.values(ImageUploadMode).includes(input.mode), 'Invalid upload mode');
-    folderPath(previous, input.folderId);
+    await this.library.store.checkName(input.siteId, mediaFilenameRoot(input.filename), input.folderId, input.filename);
 
     const prepared = await this.prepare.prepare(input);
-
-    if (
-      previous.files.some((file) => mediaRoot(file) === mediaRoot(prepared) && file.folderId === input.folderId
-      && file.name.normalize('NFC').toLowerCase() === input.filename.normalize('NFC').toLowerCase())
-    ) {
-      throw new BusinessError(BusinessErrorCode.Conflict, 'Image name is already in use');
-    }
-
     const file = {
       ...prepared,
       fileId: this.library.values.nextId(),
@@ -36,6 +27,12 @@ export class UploadMediaFileUseCase {
       previousPaths: [],
     };
 
-    return this.library.save(previous, { ...previous, files: [...previous.files, file] });
+    try {
+      const saved = await this.library.store.append(input.siteId, file, this.library.values.nextId(), version);
+
+      return this.library.view(input.siteId, saved);
+    } catch (error) {
+      return this.library.discardRejected(prepared.image, error);
+    }
   }
 }

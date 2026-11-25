@@ -13,7 +13,8 @@ import { databaseRecords, type DumpDatabase, encodeDocument } from '../mongoose/
 import { writeDumpRecords } from './dump-archive.js';
 import { checked, child, fileHash, missing, treeRecords } from './dump-files.js';
 import { DumpFileArea, type IPreparedDump } from './dump-prepared.js';
-import { extractPartialDump } from './partial-dump-archive.js';
+import { missingAddonDumpFiles } from './partial-dump-addons.js';
+import { extractPartialDump, fileDumpCollections } from './partial-dump-archive.js';
 import { dumpElementCatalog, dumpElementKind, mergeDumpElements, reviewDumpElements } from './partial-dump-elements.js';
 import { mergeDumpMedia } from './partial-dump-media.js';
 
@@ -76,7 +77,7 @@ export class FilePartialDumpAdapter {
     }
   }
 
-  async create(siteId: string, options: ISiteDumpCreation, filename: string, work: string): Promise<void> {
+  async create(siteId: string, options: ISiteDumpCreation, filename: string, work: string): Promise<number> {
     const documents = path.join(work, 'current.jsonl');
     const current = await this.database.capture(siteId, documents);
     const kind = dumpElementKind(options.type);
@@ -113,7 +114,7 @@ export class FilePartialDumpAdapter {
         }
 
         for await (const row of databaseRecords(documents)) {
-          if (['assets', 'media_libraries'].includes(row.collection)) {
+          if (fileDumpCollections.has(row.collection)) {
             yield { kind: 'document', collection: row.collection, bytes: row.bytes };
           }
         }
@@ -131,6 +132,8 @@ export class FilePartialDumpAdapter {
     if (extracted.type !== options.type) {
       throw new Error('Invalid generated category');
     }
+
+    return missingAddonDumpFiles(extracted);
   }
 
   async inspect(siteId: string, filename: string, parent: string): Promise<ISiteDumpReview> {

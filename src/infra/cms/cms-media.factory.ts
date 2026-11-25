@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
+import type { ModuleRef } from '@nestjs/core';
 import type { Connection } from 'mongoose';
 
 import { CmsMediaUsagesAdapter } from '../../adapters/inbound/cms/cms-media-usages.adapter.js';
@@ -57,19 +58,23 @@ import {
 import {
   FileLibraryProjectionAdapter,
 } from '../../adapters/outbound/storage/files/media/file-library-projection.adapter.js';
+import { PrepareLibraryImageService } from '../../app/services/media/prepare-library-image.service.js';
+import { ProgrammaticFilesService } from '../../app/services/media/programmatic-files.service.js';
 import { GetAssetUseCase } from '../../app/use-cases/media/get-asset.use-case.js';
 import { ProcessAssetUseCase } from '../../app/use-cases/media/process-asset.use-case.js';
 import { UploadAssetUseCase } from '../../app/use-cases/media/upload-asset.use-case.js';
+import { fileRequirement } from '../../domain/media/file-library.js';
 import type { ICmsCoreOperations } from '../../ports/inbound/cms/cms-api.port.js';
 import type {
   IPublicationArtifactSourcePort,
 } from '../../ports/outbound/publication/publication-artifact-source.port.js';
 import type { IRenderingSourcePort } from '../../ports/outbound/publication/rendering-source.port.js';
+import { addonFileReferences } from '../media/addon-file-references.factory.js';
 import { fileLibraryOperations } from '../media/file-library-operations.factory.js';
 
 export function cmsMediaOperations(media: { readonly root: string; readonly publicBaseUrl: string } | undefined,
   connection: Connection, access: CmsContextAccessAdapter, sources: IRenderingSourcePort,
-  publications: IPublicationArtifactSourcePort): ICmsCoreOperations['files'] {
+  publications: IPublicationArtifactSourcePort, ref: ModuleRef): ICmsCoreOperations['files'] {
   if (!media) {
     const unavailable = {
       execute: async (): Promise<never> => {
@@ -79,6 +84,12 @@ export function cmsMediaOperations(media: { readonly root: string; readonly publ
 
     return {
       list: unavailable,
+      browse: { ...unavailable, file: unavailable.execute },
+      getFile: unavailable,
+      getFiles: unavailable,
+      ensureFolder: unavailable,
+      uploadFile: unavailable,
+      uploadBatch: unavailable,
       createFolder: unavailable,
       upload: unavailable,
       changeImage: unavailable,
@@ -98,8 +109,9 @@ export function cmsMediaOperations(media: { readonly root: string; readonly publ
   const model = assetModel(connection);
   const assets = new MongooseAssetRepository(model);
   const projection = new FileLibraryProjectionAdapter(media.root, storage, scope);
+  const addonReferences = addonFileReferences(connection, ref);
   const store = new MongooseFileLibraryStore(mediaLibraryModel(connection), projection,
-    new MediaImageRemovalAdapter(model, storage));
+    new MediaImageRemovalAdapter(model, storage), addonReferences);
   const inspection = new AssetInspectionAdapter();
   const images = new SharpImageProcessingAdapter();
   const values = {
@@ -113,15 +125,35 @@ export function cmsMediaOperations(media: { readonly root: string; readonly publ
       connection.model<IPagePublicationsRecord>('PagePublications', pagePublicationsSchema)),
     new RenderingMediaReferencesAdapter(sources),
     new PublicationMediaReferencesAdapter(publicationModels(connection).releases, publications),
-  ]);
+  ], addonReferences);
   const operations = fileLibraryOperations(store, access, { nextId: randomUUID, publicPath: media.publicBaseUrl },
     usages, assets, storage, inspection, images, values);
+  const get = new GetAssetUseCase(assets, access, storage);
+  const upload = new UploadAssetUseCase(assets, storage, inspection, access, values);
+  const process = new ProcessAssetUseCase(assets, storage, images, access, values);
+  const fileValues = { nextId: randomUUID, publicPath: media.publicBaseUrl };
+  const programmatic = new ProgrammaticFilesService(store, access, fileValues,
+    new PrepareLibraryImageService(upload, get, process, access, store),
+    (siteId, actorId, key) => createHash('sha256').update(JSON.stringify([siteId, actorId, key])).digest('hex'));
 
   return {
     ...operations,
+    ensureFolder: { execute: (input) => programmatic.ensureFolder(input) },
+    uploadFile: { execute: (input) => programmatic.uploadFile(input) },
+    uploadBatch: { execute: (input) => programmatic.uploadBatch(input) },
+    getFile: { execute: (input) => operations.browse.file(input) },
+    getFiles: {
+      execute: async ({ siteId, fileIds }) => {
+        await access.requireEditor(siteId);
+        fileRequirement(Array.isArray(fileIds) && fileIds.length <= 100 && fileIds.every((id) =>
+          typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id)), 'Invalid media file identities');
+
+        return store.metadata(siteId, fileIds, media.publicBaseUrl);
+      },
+    },
     usages: new CmsMediaUsagesAdapter(operations.usages),
-    getAsset: new GetAssetUseCase(assets, access, storage),
-    uploadAsset: new UploadAssetUseCase(assets, storage, inspection, access, values),
-    processAsset: new ProcessAssetUseCase(assets, storage, images, access, values),
+    getAsset: get,
+    uploadAsset: upload,
+    processAsset: process,
   };
 }

@@ -4,6 +4,26 @@
 
 ## Unreleased
 
+Use [separate responsive installation archive cards](docs/defects/admin/installation-dump-form-layout.md)
+and the shared CMS file chooser.
+
+Store Files metadata and recovery journals as individual records. Apply named
+output changes incrementally. Share the paginated folder browser between Files,
+the image selector and the add-on file picker. SDK 0.7.0 adds scoped media reads,
+folder creation and bounded streamed uploads.
+Keep [stable catalog order](docs/defects/media/split-catalog-order-drift.md)
+and wait for [short-lived writer contention](docs/defects/media/batch-storage-writer-contention.md).
+Serve the previous bytes while a replacement is prepared and installed. Load
+folder branches and file pages on demand. Resolve SDK metadata in one batch
+and support declared add-on file references in deletion and portable restore.
+Fix [public-read contention](docs/defects/media/public-file-read-catalog-contention.md)
+and recover [abandoned writer markers](docs/defects/media/abandoned-site-writer-marker.md).
+Restore add-on file references [after replacement](docs/defects/media/addon-files-checksum-restore.md)
+and export data with [missing files](docs/defects/media/addon-export-dangling-file.md).
+Add [link repair retry](docs/defects/media/file-move-reference-retry.md),
+[file-level edit guards](docs/defects/media/file-card-catalog-revision.md) and
+[picker MIME validation before storage](docs/defects/media/picker-mime-after-save.md).
+
 ## CMS 0.16.1 (2026-11-21)
 
 Show the active version and update source on each add-on card. Update from GitHub

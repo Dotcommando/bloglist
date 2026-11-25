@@ -64,8 +64,12 @@ export function parseDumpApplication(body: Record<string, unknown>): ISiteDumpAp
     return undefined;
   }
   if (
-    Object.keys(body).some((key) => !['version', 'choices', 'pageMappings', 'addonParts'].includes(key))
+    Object.keys(body).some((key) => ![
+      'version', 'choices', 'pageMappings', 'addonParts', 'omitUnresolvedFiles',
+    ].includes(key))
     || !Array.isArray(body.choices)
+    || body.omitUnresolvedFiles !== undefined
+    && typeof body.omitUnresolvedFiles !== 'boolean'
   ) {
     throw new HttpFailure(400, 'Invalid import selection');
   }
@@ -89,5 +93,6 @@ export function parseDumpApplication(body: Record<string, unknown>): ISiteDumpAp
       ),
     }),
     ...(body.addonParts === undefined ? {} : { addonParts: parts(body.addonParts) }),
+    ...(typeof body.omitUnresolvedFiles === 'boolean' ? { omitUnresolvedFiles: body.omitUnresolvedFiles } : {}),
   };
 }

@@ -2,7 +2,11 @@ import { ContentRequestError, object, request, string } from '../../shared/api/c
 import { DumpType, type IDumpApplication, type IDumpCreation, type IDumpReview } from './dumps.types';
 
 export interface ISiteDumpRow {
-  readonly type: DumpType; readonly filename: string; readonly byteSize: number; readonly createdAt: string;
+  readonly type: DumpType;
+  readonly filename: string;
+  readonly byteSize: number;
+  readonly createdAt: string;
+  readonly missingFileReferences?: number;
 }
 
 function dump(value: unknown): ISiteDumpRow {
@@ -22,7 +26,13 @@ function dump(value: unknown): ISiteDumpRow {
 
   const type = Object.values(DumpType).find((type) => type === row.type) ?? DumpType.Unknown;
 
-  return { type, filename, createdAt, byteSize: row.byteSize };
+  return {
+    type,
+    filename,
+    createdAt,
+    byteSize: row.byteSize,
+    ...(typeof row.missingFileReferences === 'number' ? { missingFileReferences: row.missingFileReferences } : {}),
+  };
 }
 
 export function formatDumpSize(bytes: number): string {
@@ -91,6 +101,7 @@ function review(value: unknown): IDumpReview {
   return {
     type,
     version: string(row.version),
+    ...(row.allowFileOmission === true ? { allowFileOmission: true } : {}),
     items: row.items.map((value: unknown) => {
       const item = object(value);
 
@@ -98,6 +109,8 @@ function review(value: unknown): IDumpReview {
         id: string(item.id),
         name: string(item.name),
         key: string(item.key),
+        ...(typeof item.unresolvedFileReferences === 'number'
+          ? { unresolvedFileReferences: item.unresolvedFileReferences } : {}),
         ...(item.action === undefined ? {} : { action: string(item.action) }),
         ...(item.targetId === undefined ? {} : { targetId: item.targetId === null ? null : string(item.targetId) }),
         ...(item.targets === undefined ? {} : {

@@ -1,4 +1,5 @@
 import type { ICurrentAdminUser } from '../../../../../domain/admin-auth/admin-auth-session.js';
+import { hasWholeSiteActionGrant } from '../../../../../domain/authorization/admin-authorization.js';
 import { BusinessError, BusinessErrorCode } from '../../../../../domain/shared/business-error.js';
 import type { IGetCurrentAdminUser } from '../../../../../ports/inbound/admin-auth/get-current-admin-user.port.js';
 import type { IGetSite } from '../../../../../ports/inbound/sites/get-site.port.js';
@@ -43,6 +44,15 @@ export class SessionMediaAccessAdapter implements IMediaLibraryAccess, IAssetAcc
 
     if (actorId !== await this.actorId()) {
       throw new BusinessError(BusinessErrorCode.Forbidden, 'Foreign media actor');
+    }
+  }
+
+  async requireList(siteId: string): Promise<void> {
+    await this.requireEditor(siteId);
+    const { user } = await this.user!;
+
+    if (!hasWholeSiteActionGrant(user.authorization, 'cms.files.list', siteId)) {
+      throw new BusinessError(BusinessErrorCode.Forbidden, 'File list permission required');
     }
   }
 

@@ -8,6 +8,7 @@ export enum MediaValidationIssue {
   ImageTooLarge = 'FileImageTooLarge',
   DocumentTooLarge = 'FileDocumentTooLarge',
   UnsupportedFormat = 'FileUnsupportedFormat',
+  PickerType = 'FilePickerType',
   ContentMismatch = 'FileContentMismatch',
   CsvEncoding = 'FileCsvEncoding',
   CsvContent = 'FileCsvContent',

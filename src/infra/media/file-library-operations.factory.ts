@@ -1,5 +1,6 @@
 import { FileLibraryService } from '../../app/services/media/file-library.service.js';
 import { PrepareLibraryImageService } from '../../app/services/media/prepare-library-image.service.js';
+import { BrowseMediaFolderUseCase } from '../../app/use-cases/media/browse-media-folder.use-case.js';
 import { ChangeMediaImageUseCase } from '../../app/use-cases/media/change-media-image.use-case.js';
 import { CreateMediaFolderUseCase } from '../../app/use-cases/media/create-media-folder.use-case.js';
 import { DeleteMediaFileUseCase } from '../../app/use-cases/media/delete-media-file.use-case.js';
@@ -43,14 +44,15 @@ export function fileLibraryOperations(
   references?: IMediaReferenceUpdates,
   publication?: IApplyPublishedMediaAddresses,
 ): IFileLibraryOperations {
-  const library = new FileLibraryService(store, access, values, usages);
+  const library = new FileLibraryService(store, access, values, usages, () => assetValues.now());
   const upload = new UploadAssetUseCase(repository, storage, inspection, access, assetValues);
   const get = new GetAssetUseCase(repository, access, storage);
   const process = new ProcessAssetUseCase(repository, storage, images, access, assetValues);
-  const preparation = new PrepareLibraryImageService(upload, get, process, access);
+  const preparation = new PrepareLibraryImageService(upload, get, process, access, store);
 
   return {
     list: new ListMediaFilesUseCase(store, access, values),
+    browse: new BrowseMediaFolderUseCase(store, access, values),
     createFolder: new CreateMediaFolderUseCase(library),
     upload: new UploadMediaFileUseCase(library, preparation),
     changeImage: new ChangeMediaImageUseCase(library, preparation),

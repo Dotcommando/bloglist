@@ -8,6 +8,7 @@ export function adminMediaUsage(siteId: string, usage: IMediaUsage): {
   readonly editorPath: string;
 } {
   const sections: Record<MediaUsageTargetKind, string> = {
+    [MediaUsageTargetKind.Addon]: 'addons',
     [MediaUsageTargetKind.Page]: 'pages',
     [MediaUsageTargetKind.Template]: 'templates',
     [MediaUsageTargetKind.Chunk]: 'chunks',

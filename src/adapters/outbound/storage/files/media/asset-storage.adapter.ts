@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { link, lstat, mkdir, stat, unlink } from 'node:fs/promises';
+import { link, lstat, mkdir, open, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 import { AssetVisibility } from '../../../../../domain/media/asset.js';
@@ -13,7 +13,7 @@ import {
 } from '../../../../../ports/outbound/media/asset-storage.port.js';
 import type { ISiteStorageScope } from '../../../../../ports/outbound/sites/site-storage.port.js';
 import { ASSET_MIME_TYPES } from '../../../media/sharp/asset-inspection.adapter.js';
-import { digestFile, fileContent, writeFileContent } from '../binary-file.js';
+import { digestFile, FILE_CHUNK_BYTES, fileContent, writeFileContent } from '../binary-file.js';
 import { SiteAssetDirectoryAdapter } from './site-asset-directory.adapter.js';
 
 function safeKey(value: string): string {
@@ -113,6 +113,52 @@ export class FileAssetStorageAdapter implements IAssetStoragePort, IAssetDeliver
 
   async delete(siteId: string, reference: IContentReference): Promise<void> {
     await this.directories.withWrite(siteId, () => this.deleteOwned(siteId, reference));
+  }
+
+  async readPinned(siteId: string, reference: IContentReference):
+  Promise<{ content: IBinaryContent; dispose(): Promise<void> } | null> {
+    const target = await this.resolve(siteId, reference);
+    const mimeType = ASSET_MIME_TYPES[path.extname(target).slice(1)];
+
+    if (!mimeType) {
+      throw new RangeError('Unknown object type');
+    }
+
+    const handle = await open(target, 'r').catch((error: unknown) => {
+      if (isMissing(error)) {
+        return null;
+      }
+      throw error;
+    });
+
+    if (!handle) {
+      return null;
+    }
+
+    try {
+      const { size } = await handle.stat();
+      const bytes = {
+        async *[Symbol.asyncIterator](): AsyncGenerator<Uint8Array> {
+          let position = 0;
+
+          while (position < size) {
+            const chunk = Buffer.allocUnsafe(Math.min(FILE_CHUNK_BYTES, size - position));
+            const { bytesRead } = await handle.read(chunk, 0, chunk.byteLength, position);
+
+            if (!bytesRead) {
+              throw new Error('Immutable object was truncated during delivery');
+            }
+            position += bytesRead;
+            yield chunk.subarray(0, bytesRead);
+          }
+        },
+      };
+
+      return { content: { byteSize: size, mimeType, bytes }, dispose: () => handle.close() };
+    } catch (error) {
+      await handle.close();
+      throw error;
+    }
   }
 
   private async deleteOwned(siteId: string, reference: IContentReference): Promise<void> {

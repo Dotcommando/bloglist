@@ -68,6 +68,9 @@ System Admin uses a separate panel under Settings / Dumps. The route site
 identifies the serving process for creation. The archive always covers the
 installation.
 
+Create and Restore use the same responsive cards as site transfers.
+The restore card uses the shared CMS file selector for the local archive.
+
 | Operation | REST route under `/api/admin/sites/:siteId/dumps/installation` | Input / result |
 | --- | --- | --- |
 | Create | POST `/create` | Empty JSON object / metadata, 201 |

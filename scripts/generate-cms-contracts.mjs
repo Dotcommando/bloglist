@@ -70,6 +70,12 @@ function render(type, hint = 'Value') {
   if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) {
     return 'unknown';
   }
+  if (
+    type.symbol?.getName() === 'AsyncIterable'
+    && checker.typeToString(type).startsWith('AsyncIterable<Uint8Array')
+  ) {
+    return 'AsyncIterable<Uint8Array>';
+  }
   if (names.has(type.id)) {
     return names.get(type.id);
   }

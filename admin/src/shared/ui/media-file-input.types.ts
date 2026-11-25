@@ -1,1 +1,1 @@
-export enum MediaFileInputVariant { Image = 'Image', ImageSize = 'ImageSize' }
+export enum MediaFileInputVariant { File = 'File', Image = 'Image', ImageSize = 'ImageSize' }

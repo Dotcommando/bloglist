@@ -9,25 +9,29 @@ export class ChangeMediaImageUseCase {
     private readonly prepare: Pick<PrepareLibraryImageService, 'prepare'>) {}
 
   async execute(input: Parameters<IFileLibraryOperations['changeImage']['execute']>[0]): Promise<IMediaLibraryView> {
-    const previous = await this.library.read(input);
-    const file = this.library.file(previous, input.fileId);
+    const previous = await this.library.entry(
+      input.siteId, input.fileId, input.expectedVersion, input.expectedFileVersion,
+    );
+    const { file } = previous;
+
+    fileRequirement(!file.pendingReferences?.length, 'Finish the pending file reference update');
     const prepared = await this.prepare.prepare({ ...input, mode: file.mode });
 
-    fileRequirement(mediaRoot(file) === mediaRoot(prepared), 'Replacement belongs to another root');
-    const fallback = prepared.outputs.reduce((a, b) =>
-      (a.dimensions?.width ?? 0) >= (b.dimensions?.width ?? 0) ? a : b);
-    const retained = file.outputs.map((old) => {
-      const output = prepared.outputs.find((item) => item.key === old.key) ?? fallback;
+    try {
+      fileRequirement(mediaRoot(file) === mediaRoot(prepared), 'Replacement belongs to another root');
+      const fallback = prepared.outputs.reduce((a, b) =>
+        (a.dimensions?.width ?? 0) >= (b.dimensions?.width ?? 0) ? a : b);
+      const retained = file.outputs.map((old) => {
+        const output = prepared.outputs.find((item) => item.key === old.key) ?? fallback;
 
-      return { ...output, key: old.key, suffix: old.suffix };
-    });
-    const additional = prepared.outputs.filter((output) => !retained.some((old) => old.suffix === output.suffix));
-    const outputs = [...retained, ...additional];
+        return { ...output, key: old.key, suffix: old.suffix };
+      });
+      const additional = prepared.outputs.filter((output) => !retained.some((old) => old.suffix === output.suffix));
+      const outputs = [...retained, ...additional];
 
-    return this.library.save(previous, {
-      ...previous,
-      files: previous.files.map((item) => item.fileId === file.fileId
-        ? { ...file, image: prepared.image, outputs } : item),
-    });
+      return await this.library.saveFile(input.siteId, previous, { ...file, image: prepared.image, outputs });
+    } catch (error) {
+      return this.library.discardRejected(prepared.image, error);
+    }
   }
 }

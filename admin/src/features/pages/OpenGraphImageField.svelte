@@ -5,7 +5,7 @@
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import { MediaFileInputVariant } from '../../shared/ui/media-file-input.types';
   import MediaFileInput from '../../shared/ui/MediaFileInput.svelte';
-  import type { IFileLibrary, ISiteFile } from '../files/files.types';
+  import { type IFileLibrary, type ISiteFile, mergeFiles } from '../files/files.types';
   import { fileContentUrl, listFiles } from '../files/files-api';
   import { imageOutputs } from '../files/image-outputs';
   import ImageLibraryDialog from '../files/ImageLibraryDialog.svelte';
@@ -142,7 +142,8 @@
 
 {#if open && !readonly}
   <ImageLibraryDialog {siteId} {canReadContent} selectedFileId={selected?.fileId ?? ''} onSelect={select}
-    onLibraryChange={updateLibrary} {onUnauthorized} onClose={() => open = false} />
+    onLibraryChange={(next) => updateLibrary({ ...next, files: mergeFiles(library?.files ?? [], next.files) })}
+    {onUnauthorized} onClose={() => open = false} />
 {/if}
 
 <style>

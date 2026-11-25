@@ -1,183 +1,193 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
   import { messages } from '../../i18n/i18n';
-  import FileIcon from './FileIcon.svelte';
-  import { fileRoot, type IFileFolder, type ISiteFile, MediaRoot } from './files.types';
+  import { ContentRequestError } from '../../shared/api/content-api';
+  import { FileSort, type IFileBrowsePage, type IFileFolder, MediaRoot } from './files.types';
+  import { browseFiles } from './files-api';
 
-  let { folders, files, selectedId, selectedFolder, selectedRoot = MediaRoot.Images,
-    disabled, onSelect, onFolder, onMove }: {
-    folders: readonly IFileFolder[];
-    files: readonly ISiteFile[];
-    selectedId: string | null;
+  let { siteId, version, selectedFolder, selectedRoot, onlyRoot, disabled, trail = [],
+    onFolder, onFolders, onUnauthorized }: {
+    siteId: string;
+    version: string;
     selectedFolder: string | null;
-    selectedRoot?: MediaRoot;
+    selectedRoot: MediaRoot;
+    onlyRoot?: MediaRoot;
+    trail?: readonly IFileFolder[];
     disabled: boolean;
-    onMove?: ((file: ISiteFile, folderId: string | null) => void) | undefined;
-    onSelect: (file: ISiteFile) => void;
     onFolder: (folderId: string | null, root: MediaRoot) => void;
+    onFolders: (folders: readonly IFileFolder[]) => void;
+    onUnauthorized: () => void;
   } = $props();
+  const roots = $derived(onlyRoot ? [onlyRoot] : [MediaRoot.Images, MediaRoot.Files]);
+  const pageSize = 25;
   const expanded = new SvelteSet<string>();
   const closedRoots = new SvelteSet<MediaRoot>();
+  const branches = new SvelteMap<string, {
+    root: MediaRoot;
+    parent: string | null;
+    page: number;
+    result?: IFileBrowsePage;
+    loading: boolean;
+    error: boolean;
+  }>();
 
-  let draggedId = $state<string | null>(null);
-  let dropTarget = $state<string | null>(null);
-
-  function canDrop(folderId: string | null, root: MediaRoot): ISiteFile | undefined {
-    const file = files.find((item) => item.fileId === draggedId);
-
-    return onMove && !disabled && file && fileRoot(file) === root && file.folderId !== folderId ? file : undefined;
+  function key(root: MediaRoot, parent: string | null): string {
+    return root + ':' + (parent ?? '');
   }
 
-  function dragOver(event: DragEvent, folderId: string | null, root: MediaRoot): void {
-    if (canDrop(folderId, root)) {
-      event.preventDefault();
-      dropTarget = folderId ?? root;
+  async function load(root: MediaRoot, parent: string | null, page = 1): Promise<void> {
+    const id = key(root, parent);
+    const site = siteId;
+    const previous = branches.get(id)?.result;
+    const request = { root, parent, page, loading: true, error: false, ...(previous ? { result: previous } : {}) };
 
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
+    branches.set(id, request);
+
+    try {
+      const result = await browseFiles(site, {
+        root,
+        folderId: parent,
+        page,
+        pageSize,
+        foldersOnly: true,
+        search: '',
+        recursive: false,
+        sort: FileSort.Name,
+        descending: false,
+      });
+
+      if (site === siteId && branches.get(id) === request) {
+        branches.set(id, { ...request, result, loading: false });
+        onFolders([...result.breadcrumbs, ...result.folders]);
+      }
+    } catch (error) {
+      if (site === siteId && branches.get(id) === request) {
+        branches.set(id, { ...request, loading: false, error: true });
+
+        if (error instanceof ContentRequestError && error.status === 401) {
+          onUnauthorized();
+        }
       }
     }
-  }
-
-  function drop(event: DragEvent, folderId: string | null, root: MediaRoot): void {
-    const file = canDrop(folderId, root);
-
-    event.preventDefault();
-    dropTarget = null;
-    draggedId = null;
-
-    if (file) {
-      if (folderId) {
-        expanded.add(folderId);
-      }
-      closedRoots.delete(root);
-      onMove?.(file, folderId);
-    }
-  }
-
-  function toggle(folderId: string): void {
-    if (expanded.has(folderId)) {
-      expanded.delete(folderId);
-    } else {
-      expanded.add(folderId);
-    }
-  }
-
-  function childFolders(parentId: string | null, root: MediaRoot): IFileFolder[] {
-    return folders.filter((folder) => folder.parentId === parentId && (folder.root ?? MediaRoot.Images) === root)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  function childFiles(parentId: string | null, root: MediaRoot): ISiteFile[] {
-    return files.filter((file) => file.folderId === parentId && fileRoot(file) === root)
-      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   $effect(() => {
-    const currentFolders = folders;
-    const currentFolder = selectedFolder;
-    const currentFile = selectedId;
+    void version;
+    void siteId;
+    void roots;
 
     untrack(() => {
-      let id = currentFolders.find((folder) => folder.folderId === currentFolder)?.folderId;
-      const visited = new SvelteSet<string>();
-
-      if (currentFile && id) {
-        expanded.add(id);
+      for (const root of roots) {
+        if (!closedRoots.has(root)) {
+          void load(root, null, branches.get(key(root, null))?.page);
+        }
       }
 
-      while (id && !visited.has(id)) {
-        visited.add(id);
-        const parent = currentFolders.find((folder) => folder.folderId === id)?.parentId;
-
-        if (parent) {
-          expanded.add(parent);
+      for (const value of [...branches.values()]) {
+        if (value.parent && expanded.has(value.parent)) {
+          void load(value.root, value.parent, value.page);
         }
-        id = parent ?? undefined;
+      }
+    });
+  });
+
+  function toggle(root: MediaRoot, folder: string): void {
+    if (expanded.has(folder)) {
+      expanded.delete(folder);
+    } else {
+      expanded.add(folder);
+
+      if (!branches.has(key(root, folder))) {
+        void load(root, folder);
+      }
+    }
+  }
+
+  $effect(() => {
+    const path = trail;
+    const root = selectedRoot;
+
+    untrack(() => {
+      for (const folder of path.slice(0, -1)) {
+        expanded.add(folder.folderId);
+
+        if (!branches.has(key(root, folder.folderId))) {
+          void load(root, folder.folderId);
+        }
       }
     });
   });
 </script>
 
-{#snippet branch(parentId: string | null, root: MediaRoot)}
-  <ul class="file-tree-list">
-    {#each childFolders(parentId, root) as folder (folder.folderId)}
+{#snippet branch(parent: string | null, root: MediaRoot)}
+  {@const entry = branches.get(key(root, parent))}
+  <ul class="file-tree-list" aria-busy={entry?.loading ?? false}>
+    {#each entry?.result?.folders ?? [] as folder (folder.folderId)}
       <li>
-        <div class="_file-tree-row"
-          class:_file-tree-row__selected={selectedFolder === folder.folderId && !selectedId}>
+        <div class="_file-tree-row" class:_file-tree-row__selected={selectedFolder === folder.folderId}>
           <button class="tree-disclosure" type="button" {disabled} data-folder-toggle={folder.folderId}
             aria-expanded={expanded.has(folder.folderId)}
             aria-label={$messages.folderToggle.replace('{name}', () => folder.name)}
-            onclick={() => toggle(folder.folderId)}>{expanded.has(folder.folderId) ? '▾' : '▸'}</button>
+            onclick={() => toggle(root, folder.folderId)}>{expanded.has(folder.folderId) ? '▾' : '▸'}</button>
           <button class="_file-tree-item _file-tree-item__folder"
-            aria-current={selectedFolder === folder.folderId && !selectedId ? 'page' : undefined}
-            class:_file-tree-item__drop={dropTarget === folder.folderId}
-            ondragover={(event) => dragOver(event, folder.folderId, root)}
-            ondragleave={() => dropTarget = null} ondrop={(event) => drop(event, folder.folderId, root)}
-            {disabled} onclick={() => onFolder(folder.folderId, folder.root ?? MediaRoot.Images)}>
-            <svg class="_source-symbol" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 7V5h7l2 2h9v13H3Z" />
-            </svg>
+            aria-current={selectedFolder === folder.folderId ? 'page' : undefined}
+            {disabled} onclick={() => onFolder(folder.folderId, root)}>
+            {@render folderIcon()}
             <span class="cms-drawer-label" title={folder.name}>{folder.name}</span>
           </button>
         </div>
         {#if expanded.has(folder.folderId)}{@render branch(folder.folderId, root)}{/if}
       </li>
     {/each}
-    {#each childFiles(parentId, root) as file (file.fileId)}
-      <li><button class="_file-tree-item _file-tree-item__file"
-        aria-current={selectedId === file.fileId ? 'page' : undefined}
-        draggable={Boolean(onMove) && !disabled}
-        ondragstart={(event) => {
-          draggedId = file.fileId;
-
-          if (event.dataTransfer) {
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', file.fileId);
-          }
-        }}
-        ondragend={() => {
-          draggedId = null;
-          dropTarget = null;
-        }}
-        {disabled} onclick={() => onSelect(file)}>
-        <FileIcon mimeType={file.mimeType} />
-        <span class="cms-drawer-label" title={file.name}>{file.name}</span>
-      </button></li>
-    {/each}
+    {#if entry?.error}
+      <li><button class="cms-secondary" type="button" {disabled}
+        onclick={() => void load(root, parent, entry.page)}>{$messages.fileBrowseRetry}</button></li>
+    {/if}
+    {#if entry?.result && entry.result.total > pageSize}
+      <li class="_folder-pages">
+        <button class="cms-secondary" type="button" disabled={disabled || entry.loading || entry.page === 1}
+          onclick={() => void load(root, parent, entry.page - 1)}>{$messages.fileBrowsePrevious}</button>
+        <span>{entry.page} / {Math.ceil(entry.result.total / pageSize)}</span>
+        <button class="cms-secondary" type="button"
+          disabled={disabled || entry.loading || entry.page * pageSize >= entry.result.total}
+          onclick={() => void load(root, parent, entry.page + 1)}>{$messages.fileBrowseNext}</button>
+      </li>
+    {/if}
   </ul>
 {/snippet}
 
+{#snippet folderIcon()}
+  <svg class="_source-symbol" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M3 7V5h7l2 2h9v13H3Z" />
+  </svg>
+{/snippet}
+
 <nav aria-label={$messages.fileTree}>
-  {#each [MediaRoot.Images, MediaRoot.Files] as root (root)}
+  {#each roots as root (root)}
     <div class="_file-tree-row _file-tree-root"
-      class:_file-tree-row__selected={selectedRoot === root && !selectedFolder && !selectedId}>
+      class:_file-tree-row__selected={selectedRoot === root && !selectedFolder}>
       <button class="tree-disclosure" type="button" {disabled} aria-expanded={!closedRoots.has(root)}
         aria-label={$messages.folderToggle.replace('{name}', () => 'assets/' + root)} onclick={() => {
           if (closedRoots.has(root)) {
             closedRoots.delete(root);
+
+            if (!branches.has(key(root, null))) {
+              void load(root, null);
+            }
           } else {
             closedRoots.add(root);
           }
         }}>{closedRoots.has(root) ? '▸' : '▾'}</button>
       <button class="_file-tree-item _file-tree-item__folder"
-        aria-current={selectedRoot === root && !selectedFolder && !selectedId ? 'page' : undefined}
-        class:_file-tree-item__drop={dropTarget === root}
-        ondragover={(event) => dragOver(event, null, root)}
-        ondragleave={() => dropTarget = null} ondrop={(event) => drop(event, null, root)}
-        {disabled} onclick={() => onFolder(null, root)}>
-        <svg class="_source-symbol" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 7V5h7l2 2h9v13H3Z" />
-        </svg>
-        assets/{root}
-      </button>
+        aria-current={selectedRoot === root && !selectedFolder ? 'page' : undefined}
+        {disabled} onclick={() => onFolder(null, root)}>{@render folderIcon()}assets/{root}</button>
     </div>
     {#if !closedRoots.has(root)}{@render branch(null, root)}{/if}
   {/each}
 </nav>
 
 <style>
-  ._file-tree-item__drop { outline: 2px solid var(--cms-accent); outline-offset: -2px; }
+  ._folder-pages { display: flex; align-items: center; gap: 6px; }
 </style>

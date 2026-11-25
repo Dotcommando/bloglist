@@ -13,7 +13,9 @@ describe('file library persistence', () => {
 
     vi.spyOn(query, 'lean').mockReturnValue(query);
     vi.spyOn(query, 'exec').mockResolvedValue(null);
-    const store = new MongooseFileLibraryStore(model, { install: vi.fn() }, { remove: vi.fn() });
+    const store = new MongooseFileLibraryStore(model, {
+      install: vi.fn(), installChange: vi.fn(),
+    }, { remove: vi.fn() });
 
     expect(await store.read('site-1')).toEqual({
       library: { siteId: 'site-1', version: '0', folders: [], files: [] }, pending: false,

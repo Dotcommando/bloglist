@@ -22,6 +22,8 @@
   } = $props();
   let trigger = $state<HTMLButtonElement>();
   let previewFailed = $state(false);
+  const chooseText = $derived(variant === MediaFileInputVariant.File
+    ? $messages.tvSelectFile : $messages.tvChooseImage);
 
   $effect(() => {
     void previewUrl;
@@ -36,6 +38,11 @@
 {#snippet selectedFile()}
       {#if previewUrl && !previewFailed}
         <img class="_media-file-preview" src={previewUrl} alt="" onerror={() => previewFailed = true} />
+      {:else if variant === MediaFileInputVariant.File}
+        <svg class="_media-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.5" aria-hidden="true">
+          <path d="M6 3h8l4 4v14H6zM14 3v5h4M9 13h6m-6 4h6" />
+        </svg>
       {:else}
         <svg class="_media-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="1.5" aria-hidden="true">
@@ -44,7 +51,7 @@
         </svg>
       {/if}
       <span id={id + '-filename'} class="_media-file-name" title={filename ?? undefined}
-        class:_media-file-name__empty={!filename}>{filename ?? $messages.tvChooseImage}</span>
+        class:_media-file-name__empty={!filename}>{filename ?? chooseText}</span>
 {/snippet}
 
 <div class="media-file-input" aria-busy={loading}>
@@ -56,7 +63,7 @@
     {:else}
     <button bind:this={trigger} {id} type="button" class="_media-file-open" disabled={disabled || loading || !onChoose}
       aria-labelledby={id + '-label'} aria-describedby={id + '-filename' + (describedBy ? ' ' + describedBy : '')}
-      aria-haspopup={readonly ? undefined : 'dialog'}
+      aria-haspopup={variant === MediaFileInputVariant.File ? undefined : 'dialog'}
       onclick={() => {
         if (!readonly) {
           onChoose?.();

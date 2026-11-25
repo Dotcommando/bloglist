@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
 
   import { ContentRequestError } from '../../shared/api/content-api';
-  import type { IFileLibrary } from '../files/files.types';
+  import { type IFileLibrary, mergeFiles } from '../files/files.types';
   import { listFiles } from '../files/files-api';
   import { isEmptyTvValue, type ITvCatalog, type TvValue } from '../template-variables/template-variables.types';
   import { listTemplateVariables, savePageTemplateVariables } from '../template-variables/template-variables-api';
@@ -71,7 +71,7 @@
   }
 
   export function updateLibrary(next: IFileLibrary): void {
-    library = next;
+    library = { ...next, files: mergeFiles(library?.files ?? [], next.files) };
     mediaVersion = next.version;
   }
 </script>

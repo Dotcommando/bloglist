@@ -7,19 +7,19 @@ export class CreateMediaFolderUseCase {
   constructor(private readonly library: FileLibraryService) {}
 
   async execute(input: Parameters<IFileLibraryOperations['createFolder']['execute']>[0]): Promise<IMediaLibraryView> {
-    const previous = await this.library.read(input);
+    const expectedVersion = await this.library.current(input.siteId, input.expectedVersion);
 
     validateMediaName(input.name, true);
 
-    return this.library.save(previous, {
-      ...previous,
-      folders: [...previous.folders, {
-        folderId: this.library.values.nextId(),
-        parentId: input.parentId,
-        name: input.name,
-        root: input.root ?? previous.folders.find((folder) => folder.folderId === input.parentId)?.root
-          ?? MediaRoot.Images,
-      }],
-    });
+    const parent = input.parentId === null ? null : await this.library.store.folder(input.siteId, input.parentId);
+    const version = this.library.values.nextId();
+    const folder = await this.library.store.ensureFolder(input.siteId, {
+      folderId: this.library.values.nextId(),
+      parentId: input.parentId,
+      name: input.name,
+      root: input.root ?? parent?.root ?? MediaRoot.Images,
+    }, version, expectedVersion);
+
+    return { version, folders: [folder], files: [], pending: false };
   }
 }

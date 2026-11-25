@@ -9,6 +9,7 @@ import { migrateAddonRepositoryUpdateAction } from './authorization/addon-reposi
 import { migrateAddonWorkspaceActions } from './authorization/addon-workspace-actions.migration.js';
 import { migrateAuthorization } from './authorization/authorization.migration.js';
 import { migrateDumpAccess } from './authorization/dump-access.migration.js';
+import { normalizeFileLibraries } from './media/normalize-file-library.migration.js';
 import { migratePageTree } from './pages/page-tree.migration.js';
 
 enum MigrationTransform {
@@ -17,6 +18,7 @@ enum MigrationTransform {
   DumpAccessV1 = 'DumpAccessV1',
   AddonWorkspaceActionsV1 = 'AddonWorkspaceActionsV1',
   AddonRepositoryUpdateActionV1 = 'AddonRepositoryUpdateActionV1',
+  NormalizeFileLibrariesV1 = 'NormalizeFileLibrariesV1',
 }
 
 enum MigrationDumpRole { SiteContent = 'SiteContent', Runtime = 'Runtime', Global = 'Global' }
@@ -439,6 +441,8 @@ export async function applyMigrations(connection: Connection, directory: string,
         await migrateAddonWorkspaceActions(connection);
       } else if (migration.transform === MigrationTransform.AddonRepositoryUpdateActionV1) {
         await migrateAddonRepositoryUpdateAction(connection);
+      } else if (migration.transform === MigrationTransform.NormalizeFileLibrariesV1) {
+        await normalizeFileLibraries(connection);
       }
 
       for (const collection of migration.collections) {

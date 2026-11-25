@@ -12,6 +12,7 @@ describe('administration Files HTTP', () => {
     const upload = vi.fn(async () => view);
     const operations: IFileLibraryOperations = {
       list: { execute: async () => view },
+      browse: { execute: vi.fn(), file: vi.fn() },
       createFolder: { execute: async () => view },
       upload: { execute: upload },
       changeImage: { execute: async () => view },

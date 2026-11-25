@@ -255,7 +255,7 @@ export class ProcessDumpCaptureAdapter implements ISiteDumpCapturePort {
       }
       await rename(from, destination);
 
-      return { filename: result.filename, type: result.type, byteSize: result.byteSize, createdAt: result.createdAt };
+      return result;
     } finally {
       if (abort) {
         signal.removeEventListener('abort', abort);

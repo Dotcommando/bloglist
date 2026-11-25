@@ -14,6 +14,7 @@ export interface IDumpChoice {
   readonly action?: string;
   readonly targetId?: string | null;
   readonly targets?: readonly { readonly id: string; readonly key: string; readonly name: string }[];
+  readonly unresolvedFileReferences?: number;
 }
 
 export interface IDumpReview {
@@ -23,6 +24,7 @@ export interface IDumpReview {
   readonly pages: readonly { readonly pageId: string; readonly title: string }[];
   readonly targetPages: readonly { readonly pageId: string; readonly title: string }[];
   readonly addonParts?: IAddonDumpParts;
+  readonly allowFileOmission?: boolean;
 }
 
 export interface IDumpCreation {
@@ -34,4 +36,5 @@ export interface IDumpApplication {
   readonly choices: readonly { readonly id: string; readonly targetId: string | null }[];
   readonly pageMappings?: Readonly<Record<string, string>>;
   readonly addonParts?: IAddonDumpParts;
+  readonly omitUnresolvedFiles?: boolean;
 }

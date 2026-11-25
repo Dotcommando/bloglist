@@ -148,7 +148,7 @@ export async function extractPartialDump(filename: string, directory: string): P
         if (
           document.siteId !== sourceSiteId
           || type === SiteDumpType.Files
-          && !['assets', 'media_libraries'].includes(row.collection)
+          && !fileDumpCollections.has(row.collection)
           || type === SiteDumpType.Addons
           && (typeof row.owner !== 'string'
             || !addons.some((addon) => addon.addonKey === row.owner))
@@ -220,3 +220,7 @@ export async function extractPartialDump(filename: string, directory: string): P
     await output.close();
   }
 }
+
+export const fileDumpCollections: ReadonlySet<string> = new Set([
+  'assets', 'media_libraries', 'media_folders', 'media_files', 'media_operations',
+]);

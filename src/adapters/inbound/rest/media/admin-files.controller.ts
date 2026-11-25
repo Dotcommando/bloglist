@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { ImageUploadMode, MediaRoot } from '../../../../domain/media/file-library.js';
+import { type IMediaBrowseQuery, MediaSortField } from '../../../../domain/media/media-browser.js';
 import { MediaValidationError, MediaValidationIssue } from '../../../../domain/media/media-validation.error.js';
 import { adminMediaUsage } from '../../shared/admin-media-usage.dto.js';
 import { writeFileResponse } from '../../shared/file-response.js';
@@ -34,6 +35,46 @@ function folder(body: Record<string, unknown>, key: string): string | null {
   return id;
 }
 
+function browseQuery(siteId: string, params: URLSearchParams): IMediaBrowseQuery {
+  const allowed = new Set([
+    'root', 'folderId', 'search', 'recursive', 'sort', 'descending', 'page', 'pageSize', 'mimeTypes', 'foldersOnly',
+  ]);
+  const root = params.get('root') ?? MediaRoot.Images;
+  const sort = Object.values(MediaSortField).find((field) => field === (params.get('sort') ?? MediaSortField.Name));
+  const folderId = params.get('folderId');
+  const recursive = params.get('recursive') ?? '0';
+  const descending = params.get('descending') ?? '0';
+  const foldersOnly = params.get('foldersOnly') ?? '0';
+
+  if (
+    [...params.keys()].some((name) => !allowed.has(name) || params.getAll(name).length !== 1)
+    || root !== MediaRoot.Images
+    && root !== MediaRoot.Files
+    || !sort
+    || folderId !== null
+    && !/^[A-Za-z0-9_-]{1,128}$/.test(folderId)
+    || !['0', '1'].includes(recursive)
+    || !['0', '1'].includes(descending)
+    || !['0', '1'].includes(foldersOnly)
+  ) {
+    throw new HttpFailure(400, 'Invalid media browse query');
+  }
+
+  return {
+    siteId,
+    root,
+    folderId,
+    sort,
+    search: (params.get('search') ?? '').trim(),
+    recursive: recursive === '1',
+    descending: descending === '1',
+    foldersOnly: foldersOnly === '1',
+    page: Number(params.get('page') ?? '1'),
+    pageSize: Number(params.get('pageSize') ?? '25'),
+    ...(params.has('mimeTypes') ? { mimeTypes: params.get('mimeTypes')!.split(',') } : {}),
+  };
+}
+
 export class AdminFilesController {
   private readonly boundary: AdminHttpBoundary;
 
@@ -63,18 +104,33 @@ export class AdminFilesController {
       if (request.method === 'GET') {
         if (!fileId && !url.search) {
           sendJson(response, 200, await operations.list.execute({ siteId }));
+        } else if (!fileId && url.searchParams.has('fileId')) {
+          const requested = url.searchParams.get('fileId') ?? '';
+
+          if (url.searchParams.size !== 1 || !/^[A-Za-z0-9_-]{1,128}$/.test(requested)) {
+            throw new HttpFailure(400, 'Invalid media file identity');
+          }
+          sendJson(response, 200, await operations.browse.file({ siteId, fileId: requested }));
+        } else if (!fileId) {
+          sendJson(response, 200, await operations.browse.execute(browseQuery(siteId, url.searchParams)));
         } else if (
           fileId
           && action === 'usages'
-          && [...url.searchParams.keys()].every((key) => key === 'expectedVersion')
+          && [...url.searchParams.keys()].every((key) => key === 'expectedVersion' || key === 'expectedFileVersion')
         ) {
           const expectedVersion = url.searchParams.get('expectedVersion');
+          const expectedFileVersion = url.searchParams.get('expectedFileVersion');
 
           if (!expectedVersion) {
             throw new HttpFailure(400, 'Metadata version required');
           }
 
-          const review = await operations.usages.execute({ siteId, fileId, expectedVersion });
+          const review = await operations.usages.execute({
+            siteId,
+            fileId,
+            expectedVersion,
+            ...(expectedFileVersion === null ? {} : { expectedFileVersion }),
+          });
           const readable = await operations.readableUsageTargets(siteId, review.usages.map((usage) => usage.target));
 
           sendJson(response, 200, {
@@ -114,12 +170,25 @@ export class AdminFilesController {
       const upload = !fileId || action === 'change';
       const uploaded = upload ? readFileUpload(request) : null;
       const body = uploaded?.metadata ?? await readAdminBody(request, 16384);
-      const allowed = !fileId ? ['expectedVersion', 'filename', 'folderId', 'mode']
+
+      if (
+        fileId
+        && action === 'move'
+        && body.retryReferences === true
+        && Object.keys(body).length === 1
+        && operations.move.retry
+      ) {
+        sendJson(response, 200, await operations.move.retry({ siteId, fileId }));
+
+        return;
+      }
+
+      const allowed = !fileId ? ['expectedVersion', 'filename', 'folderId', 'mode', 'mimeTypes']
         : fileId === 'folders' ? ['expectedVersion', 'name', 'parentId', 'root']
           : fileId === 'reconcile' ? []
-            : action === 'change' ? ['expectedVersion', 'filename']
-              : action === 'move' ? ['expectedVersion', 'folderId', 'name', 'updateReferences']
-                : action === 'delete' ? ['expectedVersion', 'force'] : [];
+            : action === 'change' ? ['expectedVersion', 'expectedFileVersion', 'filename']
+              : action === 'move' ? ['expectedVersion', 'expectedFileVersion', 'folderId', 'name', 'updateReferences']
+                : action === 'delete' ? ['expectedVersion', 'expectedFileVersion', 'force'] : [];
 
       if (Object.keys(body).some((key) => !allowed.includes(key))) {
         throw new HttpFailure(400, 'Unknown file fields');
@@ -136,7 +205,12 @@ export class AdminFilesController {
       }
 
       const expectedVersion = text(body, 'expectedVersion');
-      const scope = { siteId, expectedVersion };
+      const scope = {
+        siteId,
+        expectedVersion,
+        ...(body.expectedFileVersion === undefined
+          ? {} : { expectedFileVersion: text(body, 'expectedFileVersion') }),
+      };
       let result;
 
       if (fileId === 'folders' && !action) {
@@ -155,15 +229,25 @@ export class AdminFilesController {
         });
       } else if (!fileId) {
         const mode = text(body, 'mode');
+        const { mimeTypes } = body;
 
         if (mode !== ImageUploadMode.Original && mode !== ImageUploadMode.Responsive) {
           throw new HttpFailure(400, 'Invalid upload mode');
+        }
+        if (
+          mimeTypes !== undefined
+          && (!Array.isArray(mimeTypes)
+          || mimeTypes.length > 25
+          || !mimeTypes.every((type: unknown) => typeof type === 'string' && /^[\w.+-]+\/[\w.+-]+$/.test(type)))
+        ) {
+          throw new HttpFailure(400, 'Invalid accepted file types');
         }
         result = await operations.upload.execute({
           ...scope,
           filename: text(body, 'filename'),
           folderId: folder(body, 'folderId'),
           mode,
+          ...(mimeTypes === undefined ? {} : { mimeTypes }),
           content: uploaded!.content,
         });
       } else if (action === 'change') {

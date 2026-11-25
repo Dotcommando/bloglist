@@ -1485,7 +1485,7 @@
     "scope": "site",
     "admission": "admin",
     "shortDescription": "Move or rename a media file",
-    "description": "Changes the file's name or folder under a library-version guard. The explicit reference-update option can update affected content and active published references.",
+    "description": "Changes the file's name or folder under a file guard. The explicit reference-update option can update affected content and active published references, with a separate retry after the file moves.",
     "domains": [
       "cms.files",
       "cms.pages",

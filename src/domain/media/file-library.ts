@@ -14,6 +14,10 @@ export function mediaRoot(file: Pick<IMediaFile, 'image'>): MediaRoot {
   return file.image.mimeType.startsWith('image/') ? MediaRoot.Images : MediaRoot.Files;
 }
 
+export function mediaFilenameRoot(filename: string): MediaRoot {
+  return /\.(?:jpe?g|png|webp|avif|svg|ico)$/i.test(filename) ? MediaRoot.Images : MediaRoot.Files;
+}
+
 export interface IMediaFolder {
   readonly root?: MediaRoot;
   readonly folderId: string;
@@ -37,6 +41,14 @@ export interface IMediaFile {
   readonly image: IAssetState;
   readonly outputs: readonly IMediaPublicFile[];
   readonly previousPaths: readonly string[];
+  readonly createdAt?: Date;
+  readonly updatedAt?: Date;
+  readonly revision?: string;
+  readonly pendingReferences?: readonly { readonly from: string; readonly key: string }[];
+}
+
+export function mediaFileRevision(file: IMediaFile): string {
+  return file.revision ?? file.image.assetVersion + ':' + (file.updatedAt ?? file.image.updatedAt).toISOString();
 }
 
 export interface IMediaLibrary {
@@ -47,6 +59,7 @@ export interface IMediaLibrary {
 }
 
 export enum MediaUsageTargetKind {
+  Addon = 'Addon',
   TemplateVariable = 'TemplateVariable',
   Page = 'Page',
   Template = 'Template',
@@ -76,6 +89,11 @@ export interface IMediaFileView {
   readonly mode: ImageUploadMode;
   readonly mimeType: string;
   readonly byteSize: number;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+  readonly assetVersion?: string;
+  readonly revision?: string;
+  readonly referencesPending?: boolean;
   readonly originalDimensions: IImageDimensions | null;
   readonly outputs: readonly { readonly key: string;
     readonly url: string;
@@ -89,6 +107,7 @@ export interface IMediaLibraryView {
   readonly folders: readonly IMediaFolder[];
   readonly files: readonly IMediaFileView[];
   readonly pending: boolean;
+  readonly referenceUpdate?: 'Pending' | 'AddressInUse';
 }
 
 export function fileRequirement(condition: unknown, message: string): asserts condition {
@@ -121,7 +140,7 @@ export function validateMediaName(value: string, folder = false): void {
   }
 }
 
-export function folderPath(library: IMediaLibrary, folderId: string | null): string[] {
+export function folderPath(library: Pick<IMediaLibrary, 'folders'>, folderId: string | null): string[] {
   const result: string[] = [];
   const visited = new Set<string>();
   let id = folderId;
@@ -138,11 +157,44 @@ export function folderPath(library: IMediaLibrary, folderId: string | null): str
   return result;
 }
 
-export function mediaPath(library: IMediaLibrary, file: IMediaFile, suffix: string): string {
+export function mediaPath(library: Pick<IMediaLibrary, 'folders'>, file: IMediaFile, suffix: string): string {
+  return mediaPathInFolder(folderPath(library, file.folderId), file, suffix);
+}
+
+export function mediaPathInFolder(folder: readonly string[], file: IMediaFile, suffix: string): string {
   const stem = file.name.replace(/\.[^.]+$/, '');
   const filename = suffix === '' ? file.name : stem + suffix;
 
-  return [...folderPath(library, file.folderId), filename].join('/');
+  return [...folder, filename].join('/');
+}
+
+export function indexFolderPaths(folders: readonly IMediaFolder[]):
+(folderId: string | null) => readonly string[] {
+  const byId = new Map(folders.map((folder) => [folder.folderId, folder]));
+  const cached = new Map<string | null, readonly string[]>([[null, []]]);
+
+  return (folderId) => {
+    const pending: IMediaFolder[] = [];
+    const visited = new Set<string>();
+    let id = folderId;
+
+    while (id !== null && !cached.has(id)) {
+      const folder = byId.get(id);
+
+      fileRequirement(folder && !visited.has(id), 'Missing or cyclic media folder');
+      pending.push(folder);
+      visited.add(id);
+      id = folder.parentId;
+    }
+    let resolved = cached.get(id)!;
+
+    for (const folder of pending.reverse()) {
+      resolved = [...resolved, folder.name];
+      cached.set(folder.folderId, resolved);
+    }
+
+    return resolved;
+  };
 }
 
 export function validateLibrary(library: IMediaLibrary): void {
@@ -151,6 +203,8 @@ export function validateLibrary(library: IMediaLibrary): void {
     'Duplicate folder identity');
   fileRequirement(new Set(library.files.map((file) => file.fileId)).size === library.files.length,
     'Duplicate file identity');
+  const folders = new Map(library.folders.map((folder) => [folder.folderId, folder]));
+  const path = indexFolderPaths(library.folders);
   const paths = new Set<string>();
   const claim = (value: string): void => {
     const key = value.normalize('NFC').toLowerCase();
@@ -164,11 +218,11 @@ export function validateLibrary(library: IMediaLibrary): void {
   for (const folder of library.folders) {
     validateMediaName(folder.name, true);
     const root = folder.root ?? MediaRoot.Images;
-    const parent = library.folders.find((item) => item.folderId === folder.parentId);
+    const parent = folder.parentId === null ? undefined : folders.get(folder.parentId);
 
     fileRequirement(Object.values(MediaRoot).includes(root)
       && (!parent || (parent.root ?? MediaRoot.Images) === root), 'Foreign folder root');
-    claim(root + '/' + folderPath(library, folder.folderId).join('/'));
+    claim(root + '/' + path(folder.folderId).join('/'));
   }
 
   for (const file of library.files) {
@@ -176,7 +230,7 @@ export function validateLibrary(library: IMediaLibrary): void {
     validateMediaName(file.name);
     fileRequirement(file.image.siteId === library.siteId, 'Foreign image');
     const root = mediaRoot(file);
-    const folder = library.folders.find((item) => item.folderId === file.folderId);
+    const folder = file.folderId === null ? undefined : folders.get(file.folderId);
 
     fileRequirement(file.image.state === AssetProcessingState.Ready
       && (root === MediaRoot.Files || file.image.originalDimensions), 'Library files require ready metadata');
@@ -196,7 +250,10 @@ export function validateLibrary(library: IMediaLibrary): void {
         dimensions: file.image.originalDimensions,
       });
     }
-    claim(root + '/' + [...folderPath(library, file.folderId), file.name].join('/'));
+
+    const directory = path(file.folderId);
+
+    claim(root + '/' + mediaPathInFolder(directory, file, ''));
 
     for (const output of file.outputs) {
       const profile = RESPONSIVE_IMAGE_PROFILES.find((profile) => profile.profileId === output.key);
@@ -212,41 +269,57 @@ export function validateLibrary(library: IMediaLibrary): void {
       'Image output differs from prepared metadata');
 
       if (output.suffix !== '') {
-        claim(root + '/' + mediaPath(library, file, output.suffix));
+        claim(root + '/' + mediaPathInFolder(directory, file, output.suffix));
       }
     }
   }
 }
 
+export function mediaFileView(file: IMediaFile, publicPath: string, paths: readonly string[]): IMediaFileView {
+  return {
+    fileId: file.fileId,
+    hasVariants: file.image.variants.length > 0,
+    folderId: file.folderId,
+    name: file.name,
+    mode: file.mode,
+    mimeType: file.image.mimeType,
+    byteSize: file.image.byteSize,
+    createdAt: (file.createdAt ?? file.image.createdAt).toISOString(),
+    updatedAt: (file.updatedAt ?? file.image.updatedAt).toISOString(),
+    assetVersion: file.image.assetVersion,
+    revision: mediaFileRevision(file),
+    ...(file.pendingReferences?.length ? { referencesPending: true } : {}),
+    originalDimensions: file.image.originalDimensions,
+    outputs: file.outputs.map((output, index) => {
+      const byteSize = output.contentId === file.image.file?.contentId ? file.image.byteSize
+        : file.image.variants.find((variant) => variant.content.contentId === output.contentId)?.byteSize;
+
+      fileRequirement(byteSize !== undefined, 'Missing media output size');
+
+      return {
+        key: output.key,
+        url: publicPath + '/' + paths[index]!.split('/').map(encodeURIComponent).join('/'),
+        byteSize,
+        mimeType: output.mimeType,
+        dimensions: output.dimensions,
+      };
+    }),
+  };
+}
+
 export function libraryView(library: IMediaLibrary, publicPath: string, pending: boolean): IMediaLibraryView {
+  const paths = indexFolderPaths(library.folders);
+
   return {
     version: library.version,
     folders: library.folders,
     pending,
-    files: library.files.map((file) => ({
-      fileId: file.fileId,
-      hasVariants: file.image.variants.length > 0,
-      folderId: file.folderId,
-      name: file.name,
-      mode: file.mode,
-      mimeType: file.image.mimeType,
-      byteSize: file.image.byteSize,
-      originalDimensions: file.image.originalDimensions,
-      outputs: file.outputs.map((output) => {
-        const byteSize = output.contentId === file.image.file?.contentId ? file.image.byteSize
-          : file.image.variants.find((variant) => variant.content.contentId === output.contentId)?.byteSize;
+    files: library.files.map((file) => {
+      const prefix = mediaRoot(file) + '/';
+      const directory = paths(file.folderId);
 
-        fileRequirement(byteSize !== undefined, 'Missing media output size');
-
-        return {
-          key: output.key,
-          url: publicPath + '/' + mediaRoot(file) + '/' + mediaPath(library, file, output.suffix)
-            .split('/').map(encodeURIComponent).join('/'),
-          byteSize,
-          mimeType: output.mimeType,
-          dimensions: output.dimensions,
-        };
-      }),
-    })),
+      return mediaFileView(file, publicPath,
+        file.outputs.map((output) => prefix + mediaPathInFolder(directory, file, output.suffix)));
+    }),
   };
 }

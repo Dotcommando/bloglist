@@ -486,7 +486,7 @@ export function cmsCoreOperations(settings: ICmsSettings, ref: ModuleRef, contex
       new MongoosePageTemplateVariables(connection, pageModel, now, (siteId, version, session) =>
         definitions.guard(siteId, version, session),
       (siteId, version, session) => media.guard(siteId, version, session)), tvs),
-    files: cmsMediaOperations(settings.media, connection, access, sources, store),
+    files: cmsMediaOperations(settings.media, connection, access, sources, store, ref),
     addons: {
       list: new ListSiteAddonsUseCase(addonStore, addonCatalog, access),
       get: new GetSiteAddonUseCase(addonStore, addonCatalog, access),

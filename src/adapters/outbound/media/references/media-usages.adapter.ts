@@ -45,7 +45,8 @@ export function mediaReferenceFileIds(value: unknown): string[] {
 }
 
 export class MediaUsagesAdapter implements IMediaUsages {
-  constructor(private readonly sources: readonly IMediaReferenceSources[]) {}
+  constructor(private readonly sources: readonly IMediaReferenceSources[],
+    private readonly addonReferences?: { find(siteId: string, fileId: string): Promise<readonly IMediaUsage[]> }) {}
 
   async find(siteId: string, paths: readonly string[], fileId?: string): Promise<readonly IMediaUsage[]> {
     const patterns = [...new Set(paths.map(decoded))].map((path) =>
@@ -68,6 +69,8 @@ export class MediaUsagesAdapter implements IMediaUsages {
       }
     }
 
-    return [...result.values()];
+    const addons = fileId ? await this.addonReferences?.find(siteId, fileId) ?? [] : [];
+
+    return [...result.values(), ...addons];
   }
 }

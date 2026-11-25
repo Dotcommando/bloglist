@@ -41,6 +41,8 @@ FILE_LIBRARY_OPERATIONS for the existing explicit local operator.
 | Operation | HTTP |
 | --- | --- |
 | ListMediaFiles | GET /api/admin/sites/:siteId/files |
+| BrowseMediaFolder | GET /api/admin/sites/:siteId/files?root=images |
+| GetMediaFile | GET /api/admin/sites/:siteId/files?fileId=… |
 | CreateMediaFolder | POST /api/admin/sites/:siteId/files/folders |
 | UploadMediaFile | POST /api/admin/sites/:siteId/files |
 | ChangeMediaImage | POST /api/admin/sites/:siteId/files/:fileId/change |
@@ -136,21 +138,25 @@ domain directory immediately when media storage is configured; switching the
 selected origin does not relocate it. Existing directories are not migrated by
 this change. See [ADR 0035](../adr/0035-site-onboarding-and-selected-origin.md).
 
-The schema baseline includes asset validation with the optional upload mode and creates
-media_libraries. One site owns one guarded catalog aggregate, including folders,
-file identities, prepared immutable asset metadata, output mappings and historical
-paths. The MongoDB document size ceiling is a hard persistence failure; the
-library does not truncate records. Image bytes remain outside MongoDB.
+Migration 0019 separates the site metadata in `media_libraries` from records in
+`media_folders`, `media_files` and `media_operations`. It copies logical IDs,
+prepared metadata, named paths and any pending journal in a per-site transaction.
+Image bytes remain outside MongoDB. File timestamps start from available asset
+timestamps and the logical creation time survives subsequent replacement.
 Sites may use identical folder and file names independently. Catalog reads and
 writes, private objects and named public directories are scoped by site identity;
 the administration shows only the selected site's catalog.
 
-Before public output changes, an atomic catalog comparison records the new
-version with pending=true and cleanup references. Other mutations reject pending
-output. The filesystem adapter prepares both named trees, then swaps each
-root; identical variants share bytes through hard links. Only prepared usable
-outputs enter `<primaryDomain>/images` or `<primaryDomain>/files`. Private
-originals and prepared objects remain in `<primaryDomain>/.private/`.
+Migration 0020 extends the existing journal with the staged entry and its
+promotion state. A scoped transaction reserves the mutation, then the site
+writer installs the affected named outputs. A second transaction promotes the
+entry. Until promotion, CMS public reads use the preceding entry and its
+immutable private outputs. The journal remains available through cleanup and
+acknowledgement. Reconciliation of migrated pending journals and offline storage
+migration can rebuild both named trees.
+Only prepared usable outputs enter `<primaryDomain>/images` or
+`<primaryDomain>/files`. Originals and prepared objects remain in
+`<primaryDomain>/.private/`.
 
 Finishing a pending projection reloads its matching catalog version while holding
 the site writer lock, before changing named files. A delayed superseded/already
@@ -159,15 +165,16 @@ Stage creation belongs to the lock's cleanup lifetime; a failed preparation cann
 strand its own empty writer.lock. The durable journal remains the recovery source.
 Empty folders are catalog entries and need no public filesystem directory.
 
-The directory renames are not a distributed transaction or a zero-gap static
-switch. A static reader can briefly see 404 during the swap. Bounded Windows
+Filesystem changes and the MongoDB acknowledgement use separate transaction
+boundaries. A static reader can briefly see 404 on an affected path. Bounded Windows
 EPERM/EBUSY retries cover transient filesystem locks. Failed installation or
-cleanup retains the durable pending state. The UI's Finish file update explicitly
-rebuilds the desired projection and completes idempotent cleanup; it never reruns
-image processing. A filesystem writer lock serializes reconcilers on the local
-host, with dead-process detection after restart. Inspect an incomplete lock or
-reused process ID before removing a stranded writer.lock; do not remove a live
-writer's lock. Shared filesystem writers on multiple hosts are unsupported.
+cleanup retains the durable pending state. Finish file update reapplies the
+recorded path changes and completes idempotent cleanup. Reconciliation never reruns
+image processing. The site writer queue serializes reconcilers and directory
+relocations on the local host. Each participant includes the process ID and a
+unique identity in its marker name. The next writer can reclaim a dead
+participant even if it exited before publishing its ticket. Shared filesystem
+writers on multiple hosts are unsupported.
 
 Named output installation is followed by cleanup of superseded/deleted private
 asset versions. Cleanup remains journaled until acknowledged. Backups must include
@@ -180,8 +187,11 @@ With ZARYA_MEDIA_ROOT and ZARYA_MEDIA_PUBLIC_PATH configured, public composition
 serves GET/HEAD named outputs using registered site hostname resolution and owned
 catalog paths. Unknown hosts, missing files, removed or old paths return
 404. URLs are `/assets/images/<path>` or `/assets/files/<path>`, selected by
-the trusted registered hostname. A pending catalog returns 503. Mutable responses use ETag and
-must-revalidate; existence is checked before returning 304.
+the trusted registered hostname. Public lookup uses the indexed path in the
+active file record. GET and HEAD pin the selected content before responding.
+ETag derives from that file's asset version. A replacement keeps the file ID,
+name, public paths and logical creation date. Preparation failure leaves the
+previous content available.
 
 The default `ZARYA_MEDIA_ROOT=./data` contains one directory per primary domain.
 A static web server maps `/assets/images/` to `DATA_ROOT/<domain>/images/` and
@@ -223,12 +233,23 @@ preserved; unrelated draft changes remain unpublished. See
 [ADR 0081](../adr/0081-immediate-published-media-address-updates.md).
 Historical publications remain immutable. No media redirects are created.
 
-File movement commits before sequential source saves; a later failure can leave
-the move and earlier source updates committed. The operation rejects instead
-of acknowledging success, and the editor instructs the administrator to refresh
-Files and check the sources. Retained versions/releases, site-wide source
-configuration and dynamic URLs are not rewritten. Publishing
-the resulting drafts remains a separate action.
+Migration 0021 stores the file edit revision and unfinished link plan on the
+file and in its staged projection entry. The file card guards edits by file
+revision, so unrelated imports can advance the catalogue while conflicting
+edits to the same file are rejected. The existing site fence still serializes
+projection writes. Legacy requests can use the catalogue version.
+
+File movement commits before sequential source saves. If a save or publication
+fails, the new address remains active and the editor offers Retry link update.
+Retry applies the saved address plan to drafts and the active publication
+without projecting the file again. The plan survives a CMS restart and clears
+only after both phases succeed. If another file occupies a planned old address,
+free that address before retrying. An intentionally skipped link update creates
+no recovery plan. Historical releases and dynamic URLs remain as authored.
+
+A restricted picker sends its allowed MIME types with the upload. CMS inspects
+the actual bytes and compares the detected type before storing a private asset.
+The ordinary Files upload supports the full CMS type list.
 
 Missing literal library URLs remain editable in source and TV fields with a
 message below the field identifying the missing address. Missing typed files,

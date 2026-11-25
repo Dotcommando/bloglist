@@ -354,7 +354,7 @@ export class FileSiteDumpStore implements ISiteDumpStore {
         const temporary = child(directory, filename + '.tmp');
 
         try {
-          await this.partials().create(siteId, options, temporary, work);
+          const missingFileReferences = await this.partials().create(siteId, options, temporary, work);
           const info = await lstat(temporary);
 
           if (info.size > maximumDumpBytes) {
@@ -362,7 +362,10 @@ export class FileSiteDumpStore implements ISiteDumpStore {
           }
           await rename(temporary, child(directory, filename));
 
-          return metadata(filename, info.size, options.type);
+          return {
+            ...metadata(filename, info.size, options.type),
+            ...(missingFileReferences ? { missingFileReferences } : {}),
+          };
         } finally {
           await rm(work, { recursive: true, force: true });
           await rm(temporary, { force: true });
@@ -858,6 +861,9 @@ export class FileSiteDumpStore implements ISiteDumpStore {
           }, hookChange);
         } catch (error) {
           if (!swapping) {
+            if (options?.omitUnresolvedFiles && error instanceof Error && 'code' in error && error.code === 121) {
+              throw new BusinessError(BusinessErrorCode.Validation, 'Add-on data requires a file reference');
+            }
             throw error;
           }
 

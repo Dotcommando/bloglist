@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { IAddonAdminHost, IAddonConfiguration } from '@zarya/addon-contracts/addons';
+  import type { IAddonAdminHost, IAddonConfiguration, IAddonFilePickerOptions } from '@zarya/addon-contracts/addons';
   import { onDestroy, onMount, untrack } from 'svelte';
 
   import { type IAdminRoute, sitePath } from '../../app/admin-route';
@@ -10,6 +10,8 @@
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import { showSnackBar, SnackBarVariant } from '../../shared/ui/snack-bar';
   import type { CanUseAction } from '../access/site-actions';
+  import { MediaRoot } from '../files/files.types';
+  import ImageLibraryDialog from '../files/ImageLibraryDialog.svelte';
   import { getSiteTimeZone } from '../urls/urls-api';
   import { addonAdminComponents } from './addon-components';
   import {
@@ -67,10 +69,15 @@
   let connection = $state<{ version: string; configuration: IAddonConfiguration } | null>(null);
   let componentLoading = $state(false);
   let runtime = $state<{ base: string; entry: string; styles: string[] } | null>(null);
+  let filePicker = $state<{ siteId: string;
+    addonKey: string;
+    options: IAddonFilePickerOptions;
+    settle: (fileId: string | null) => void } | null>(null);
   let disposed = false;
   onDestroy(() => {
     disposed = true;
     loadGeneration++;
+    closeFilePicker(null);
   });
   let selectedKey = '';
   let loadGeneration = 0;
@@ -414,6 +421,31 @@
     }
   }
 
+  function closeFilePicker(fileId: string | null): void {
+    const current = filePicker;
+
+    filePicker = null;
+    current?.settle(fileId);
+  }
+
+  function pickFile(options: IAddonFilePickerOptions = {}): Promise<string | null> {
+    const addonKey = route.addonKey;
+
+    if (!active || !addonKey || filePicker || !can('cms.files.list')) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise((settle) => {
+      filePicker = { siteId: site.siteId, addonKey, options, settle };
+    });
+  }
+
+  $effect(() => {
+    if (filePicker && (!active || route.addonKey !== filePicker.addonKey || site.siteId !== filePicker.siteId)) {
+      closeFilePicker(null);
+    }
+  });
+
   const host: IAddonAdminHost = $derived({
     siteId: site.siteId,
     language: addonLanguage,
@@ -438,6 +470,7 @@
     scrollShadow,
     setDirty: onDirtyChange,
     setBusy: onBusy,
+    pickFile,
   });
 
   $effect(() => {
@@ -473,6 +506,15 @@
     }
   });
 </script>
+
+{#if filePicker}
+  <ImageLibraryDialog siteId={filePicker.siteId} selectedFileId={filePicker.options.selectedFileId ?? ''}
+    root={filePicker.options.root === 'files' ? MediaRoot.Files : MediaRoot.Images}
+    startFolder={filePicker.options.folderId ?? null} mimeTypes={filePicker.options.mimeTypes}
+    canReadContent={can('cms.files.read-content')} allowUpload={filePicker.options.allowUpload === true
+      && can('cms.files.upload')} onSelect={(file) => closeFilePicker(file.fileId)}
+    onClose={() => closeFilePicker(null)} {onUnauthorized} />
+{/if}
 
 <section class="addons-workspace" hidden={!active}>
   {#if !route.addonKey}

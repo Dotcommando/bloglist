@@ -30,5 +30,9 @@ export interface IAssetStoragePort {
   assertOwned(siteId: string, assetId: string, assetVersion: string, reference: IContentReference): Promise<void>;
   write(input: WriteAssetContent): Promise<IContentReference>;
   read(siteId: string, reference: IContentReference): Promise<IBinaryContent | null>;
+  readPinned?(siteId: string, reference: IContentReference): Promise<{
+    readonly content: IBinaryContent;
+    dispose(): Promise<void>;
+  } | null>;
   delete(siteId: string, reference: IContentReference): Promise<void>;
 }

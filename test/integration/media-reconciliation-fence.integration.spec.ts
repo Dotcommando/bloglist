@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createConnection } from 'mongoose';
 
 import {
-  mediaLibraryModel, MongooseFileLibraryStore,
+  fileRecord, mediaLibraryModel, mediaRecords, MongooseFileLibraryStore,
 } from '../../src/adapters/outbound/persistence/mongoose/media/file-library-store.adapter.js';
 import { applyMigrations } from '../../src/adapters/outbound/persistence/mongoose/migrations.js';
 import {
@@ -59,8 +59,11 @@ it('does not let a delayed reconciler replace a newer acknowledged named-media p
     }, { primaryDomain: async () => 'example.test' });
     const file = libraryFileFixture();
     const first = { siteId: 'site-1', version: 'v1', folders: [], files: [file] };
+    const records = mediaRecords(connection);
 
-    await model.create({ ...first, _id: first.siteId, pending: true, garbage: [] });
+    await model.create({ siteId: first.siteId, version: first.version, _id: first.siteId, pending: true });
+    await records.files.create(fileRecord(first, file));
+    await records.operations.create({ _id: first.siteId, siteId: first.siteId, version: first.version, garbage: [] });
     const store = new MongooseFileLibraryStore(model, projection, { remove: vi.fn() });
     const install = projection.install.bind(projection);
 
@@ -74,8 +77,10 @@ it('does not let a delayed reconciler replace a newer acknowledged named-media p
     await paused;
     await store.reconcile(first.siteId);
     const next = { ...first, version: 'v2', files: [{ ...file, name: 'current.png' }] };
+    const located = await store.locate(first.siteId, file.fileId);
 
-    await store.commit(next, first.version);
+    expect(located).not.toBeNull();
+    await store.changeFile(first.siteId, located!, next.files[0]!, next.version);
     release();
     expect(await delayed).toEqual([{ status: 'fulfilled', value: undefined }]);
     expect(await store.read(first.siteId)).toMatchObject({ library: { version: 'v2' }, pending: false });

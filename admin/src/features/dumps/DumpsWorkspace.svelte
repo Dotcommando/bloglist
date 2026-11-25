@@ -5,6 +5,8 @@
   import { adminLanguage, adminLocales, type AdminMessageKey, formatMessage, messages } from '../../i18n/i18n';
   import { contentError, type ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import Checkbox from '../../shared/ui/Checkbox.svelte';
+  import { MediaFileInputVariant } from '../../shared/ui/media-file-input.types';
+  import MediaFileInput from '../../shared/ui/MediaFileInput.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import { DumpType, type IDumpReview } from './dumps.types';
   import {
@@ -22,6 +24,7 @@
     onUnauthorized: () => void;
     onBusy: (busy: boolean) => void;
   } = $props();
+  const id = $props.id();
   const types = $derived(siteOnly
     ? [DumpType.Site] : Object.values(DumpType).filter((type) => type !== DumpType.Unknown));
   let rows = $state<ISiteDumpRow[]>([]);
@@ -29,8 +32,10 @@
   let busy = $state(false);
   let error = $state<ContentErrorMessage | null>(null);
   let success = $state<AdminMessageKey | ''>('');
+  let missingOnExport = $state(0);
   let selection = $state<FileList | undefined>();
   let installationSelection = $state<FileList | undefined>();
+  let installationInput = $state<HTMLInputElement>();
   let installationFilename = $state<string>();
   let type = $state(DumpType.Site);
   let catalogue = $state<IDumpReview | null>(null);
@@ -46,8 +51,12 @@
   let importConfiguration = $state(true);
   let importBusinessData = $state(true);
   let importPackage = $state(false);
+  let omitUnresolvedFiles = $state(false);
   let generation = 0;
   const selectable = $derived(![DumpType.Site, DumpType.Files].includes(type));
+  const unresolvedFiles = $derived(importBusinessData ? (review?.items ?? [])
+    .filter((item) => importIds.has(item.id))
+    .reduce((count, item) => count + (item.unresolvedFileReferences ?? 0), 0) : 0);
 
   function typeName(value: DumpType): string {
     const names = {
@@ -129,6 +138,7 @@
     onBusy(true);
     error = null;
     success = '';
+    missingOnExport = 0;
 
     try {
       await action();
@@ -153,6 +163,7 @@
     importConfiguration = details.addonParts?.configuration ?? true;
     importBusinessData = details.addonParts?.businessData ?? true;
     importPackage = details.addonParts?.package ?? false;
+    omitUnresolvedFiles = false;
   }
   async function restore(row: ISiteDumpRow): Promise<void> {
     if (row.type !== DumpType.Site) {
@@ -190,6 +201,7 @@
         ...(details.type === DumpType.Addons ? {
           pageMappings,
           addonParts: { configuration: importConfiguration, businessData: importBusinessData, package: importPackage },
+          omitUnresolvedFiles: details.allowFileOmission === true && unresolvedFiles > 0 && omitUnresolvedFiles,
         } : {}),
       });
       window.location.reload();
@@ -220,47 +232,68 @@
   </header>
   {#if error}<p class="cms-error" role="alert">{$messages[error]}</p>{/if}
   {#if success}<p class="cms-success" role="status">{$messages[success]}</p>{/if}
+  {#if missingOnExport}<p role="status">
+    {formatMessage($messages.dumpsMissingFileReferences, { count: String(missingOnExport) })}
+  </p>{/if}
   {#if !siteOnly}
-    <form class="_dump-panel" aria-label={$messages.dumpsInstallation} onsubmit={(event) => {
-      event.preventDefault();
-      const file = installationSelection?.[0];
+    <section class="_dump-heading" aria-labelledby={id + '-installation'}>
+      <h2 class="_dump-section-title" id={id + '-installation'}>{$messages.dumpsInstallation}</h2>
+      <div class="_dump-transfers _dump-installation-transfers">
+        <div class="_dump-panel">
+          <h3 class="_dump-section-title">{$messages.dumpsInstallationCreateTitle}</h3>
+          <p class="_dump-intro">{$messages.dumpsInstallationScope}</p>
+          {#if installationFilename}
+            <a class="_dump-installation-download"
+              href={installationDumpDownloadUrl(siteId, installationFilename)} download={installationFilename}>
+              {installationFilename}
+            </a>
+          {/if}
+          <div class="_dump-actions">
+            <button type="button" class="cms-primary" disabled={busy || loading} onclick={() => {
+              void run(async () => {
+                installationFilename = await createInstallationDump(siteId);
+              });
+            }}>{$messages.dumpsCreateInstallation}</button>
+          </div>
+        </div>
+        <form class="_dump-panel" onsubmit={(event) => {
+          event.preventDefault();
+          const file = installationSelection?.[0];
 
-      if (file && window.confirm($messages.dumpsConfirmInstallationRestore)) {
-        void run(async () => {
-          await restoreInstallationDump(siteId, file);
-          window.location.reload();
-        });
-      }
-    }}>
-      <h2 class="_dump-section-title">{$messages.dumpsInstallation}</h2>
-      <button type="button" class="cms-primary" disabled={busy || loading} onclick={() => {
-        void run(async () => {
-          installationFilename = await createInstallationDump(siteId);
-        });
-      }}>{$messages.dumpsCreateInstallation}</button>
-      {#if installationFilename}
-        <a href={installationDumpDownloadUrl(siteId, installationFilename)} download={installationFilename}>
-          {installationFilename}
-        </a>
-      {/if}
-      <label class="_form-field">{$messages.dumpsInstallationFile}
-        <input type="file" accept=".gz" bind:files={installationSelection} disabled={busy || loading} />
-      </label>
-      <button type="submit" class="cms-secondary" disabled={busy || loading || !installationSelection?.length}>
-        {$messages.dumpsRestoreInstallation}
-      </button>
-    </form>
+          if (file && window.confirm($messages.dumpsConfirmInstallationRestore)) {
+            void run(async () => {
+              await restoreInstallationDump(siteId, file);
+              window.location.reload();
+            });
+          }
+        }}>
+          <h3 class="_dump-section-title">{$messages.dumpsInstallationRestoreTitle}</h3>
+          <input hidden type="file" accept=".gz,application/gzip" bind:this={installationInput}
+            bind:files={installationSelection} disabled={busy || loading} />
+          <MediaFileInput id={id + '-installation-file'} label={$messages.dumpsInstallationFile}
+            variant={MediaFileInputVariant.File} filename={installationSelection?.[0]?.name ?? null}
+            disabled={busy || loading} onChoose={() => installationInput?.click()} />
+          <div class="_dump-actions">
+            <button type="submit" class="cms-secondary" disabled={busy || loading || !installationSelection?.length}>
+              {$messages.dumpsRestoreInstallation}
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   {/if}
   <div class="_dump-transfers">
   <form class="_dump-panel" aria-label={$messages.dumpsExport} onsubmit={(event) => {
     event.preventDefault();
     void run(async () => {
-      await createSiteDump(siteId, type === DumpType.Site ? undefined : {
+      const created = await createSiteDump(siteId, type === DumpType.Site ? undefined : {
         type,
         ...(selectable ? { itemIds: [...selected] } : {}),
         ...(type === DumpType.Addons ? { addonParts: { configuration, businessData, package: includePackage } } : {}),
       });
+
       success = 'dumpsDumpCreated';
+      missingOnExport = created.missingFileReferences ?? 0;
     });
   }}>
     <h2 class="_dump-section-title">{$messages.dumpsExport}</h2>
@@ -371,6 +404,16 @@
           {#if review.addonParts.package}<Checkbox bind:checked={importPackage}>
             {$messages.dumpsInstallAndConnectPackage}</Checkbox>{/if}
         </fieldset>
+        {#if unresolvedFiles}
+          <p role="status">
+            {formatMessage($messages.dumpsUnresolvedFileReferences, { count: String(unresolvedFiles) })}
+          </p>
+          {#if review.allowFileOmission}
+            <Checkbox bind:checked={omitUnresolvedFiles} disabled={busy || loading}>
+              {$messages.dumpsOmitUnresolvedFiles}
+            </Checkbox>
+          {/if}
+        {/if}
         {#if importBusinessData && review.pages.length}
           <fieldset class="_url-fieldset" disabled={busy || loading}>
             <legend>{$messages.dumpsPageMapping}</legend>
@@ -387,6 +430,7 @@
         {/if}
       {/if}
       <div class="_dump-actions"><button type="button" class="cms-primary" disabled={busy || loading
+        || !!(review.allowFileOmission && unresolvedFiles && !omitUnresolvedFiles)
         || review.type !== DumpType.Files && !importIds.size} onclick={() => {
           void applyImport();
         }}>
@@ -455,3 +499,8 @@
   {/if}
   </section>
 </section>
+
+<style>
+  ._dump-installation-transfers { align-items: stretch; }
+  ._dump-installation-download { overflow-wrap: anywhere; }
+</style>

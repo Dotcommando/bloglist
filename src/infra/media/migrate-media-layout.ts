@@ -3,7 +3,9 @@ import path from 'node:path';
 import { createConnection } from 'mongoose';
 
 import { assetModel } from '../../adapters/outbound/persistence/mongoose/media/asset.repository.js';
-import { mediaLibraryModel } from '../../adapters/outbound/persistence/mongoose/media/file-library-store.adapter.js';
+import {
+  mediaLibraryModel, readMediaLibrary,
+} from '../../adapters/outbound/persistence/mongoose/media/file-library-store.adapter.js';
 import { verifyMigrations } from '../../adapters/outbound/persistence/mongoose/migrations.js';
 import { type ISiteRecord, siteSchema } from '../../adapters/outbound/persistence/mongoose/sites/site.schema.js';
 import {
@@ -94,8 +96,10 @@ export async function migrateMediaLayout(settings: ILocalApplicationSettings, fr
 
     const libraries = mediaLibraryModel(connection);
 
-    for (const library of await libraries.find({}).lean().exec()) {
-      if (library.pending) {
+    for await (const entry of libraries.find({}).select({ siteId: 1 }).lean().cursor()) {
+      const { library, pending } = await readMediaLibrary(libraries, entry.siteId);
+
+      if (pending) {
         throw new Error('Finish pending file updates before migrating storage');
       }
 

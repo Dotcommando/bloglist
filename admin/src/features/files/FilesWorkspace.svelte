@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
   import { followAdminLink, type IAdminRoute, navigateAdmin, sitePath } from '../../app/admin-route';
   import { adminLanguage, messages } from '../../i18n/i18n';
@@ -8,17 +8,19 @@
   import { contentError, ContentErrorMessage, ContentRequestError } from '../../shared/api/content-api';
   import { scrollShadow } from '../../shared/browser/scroll-shadow';
   import CmsDialog from '../../shared/ui/CmsDialog.svelte';
-  import FolderContents from '../../shared/ui/FolderContents.svelte';
   import MiddleEllipsis from '../../shared/ui/MiddleEllipsis.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import { showSnackBar, SnackBarVariant } from '../../shared/ui/snack-bar';
   import type { CanUseAction } from '../access/site-actions';
   import { formatFileSize } from './file-size';
+  import FileBrowser from './FileBrowser.svelte';
   import {
-    fileRoot, FileUsageGroup, FileValidationIssue, type IFileLibrary, type IFileReview, ImageUploadMode,
-    type ISiteFile, MediaRoot,
+    fileRoot, FileSort, FileUsageGroup, FileValidationIssue, type IFileFolder, type IFileLibrary, type IFileReview,
+    ImageUploadMode, type ISiteFile, MediaRoot,
   } from './files.types';
-  import { changeImage, fileCommand, fileContentUrl, imageUsages, listFiles, uploadImage } from './files-api';
+  import {
+    browseFiles, changeImage, fileCommand, fileContentUrl, getFile, imageUsages, uploadImage,
+  } from './files-api';
   import FileTree from './FileTree.svelte';
   import { imageMarkup } from './image-markup';
   import InlineFileName from './InlineFileName.svelte';
@@ -33,6 +35,9 @@
     onBusy: (busy: boolean) => void;
   } = $props();
   let library = $state<IFileLibrary>({ version: '0', pending: false, folders: [], files: [] });
+  const knownFolders = new SvelteMap<string, IFileFolder>();
+  let reload = $state(0);
+  let pickingDestination = $state(false);
   let loaded = $state(false);
   let loading = $state(false);
   let busy = $state(false);
@@ -74,21 +79,27 @@
   const preview = $derived(file ? file.outputs.at(-1) : null);
   const isImage = $derived(file?.mimeType.startsWith('image/') ?? false);
   const rootLabel = $derived('assets/' + selectedRoot);
-  const childFolders = $derived(library.folders.filter((item) => item.parentId === folderId
-    && (item.root ?? MediaRoot.Images) === selectedRoot).toSorted((a, b) => a.name.localeCompare(b.name)));
-  const childFiles = $derived(library.files.filter((item) => item.folderId === folderId
-    && fileRoot(item) === selectedRoot).toSorted((a, b) => a.name.localeCompare(b.name)));
-  const folderItems = $derived([
-    ...childFolders.map((item) => ({
-      id: item.folderId, label: item.name, detail: $messages.fileFolder,
-    })),
-    ...childFiles.map((item) => ({
-      id: item.fileId,
-      label: item.name,
-      href: basePath + '/' + item.fileId,
-      detail: item.mimeType + ' · ' + formatFileSize(item.byteSize, $adminLanguage),
-    })),
-  ]);
+  const treeVersion = $derived(library.version + ':' + reload);
+  const destinations = $derived([...knownFolders.values()]
+    .filter((item) => (item.root ?? MediaRoot.Images) === selectedRoot));
+  const activeTrail = $derived.by(() => {
+    const trail = [];
+    const visited = new SvelteSet<string>();
+    let id = folderId;
+
+    while (id && !visited.has(id)) {
+      const item = knownFolders.get(id);
+
+      if (!item) {
+        break;
+      }
+      trail.unshift(item);
+      visited.add(id);
+      id = item.parentId;
+    }
+
+    return trail;
+  });
   const acceptedFiles = $derived(selectedRoot === MediaRoot.Images
     ? '.jpg,.jpeg,.png,.webp,.avif,.svg,.ico' : '.doc,.docx,.xls,.xlsx,.csv,.pdf,.json,.woff2');
   const visibleQueue = $derived(queue.filter((entry) => entry.root === selectedRoot));
@@ -105,6 +116,7 @@
     [FileValidationIssue.ImageTooLarge]: $messages.fileImageTooLarge,
     [FileValidationIssue.DocumentTooLarge]: $messages.fileDocumentTooLarge,
     [FileValidationIssue.UnsupportedFormat]: $messages.fileUnsupportedFormat,
+    [FileValidationIssue.PickerType]: $messages.filePickerType,
     [FileValidationIssue.ContentMismatch]: $messages.fileContentMismatch,
     [FileValidationIssue.CsvEncoding]: $messages.fileCsvEncoding,
     [FileValidationIssue.CsvContent]: $messages.fileCsvContent,
@@ -125,7 +137,6 @@
     expectedVersion: string;
     usages: IFileReview['usages'];
   } | null>(null);
-  let referenceFailure = $state(false);
 
   function failure(value: unknown): void {
     if (value instanceof ContentRequestError && value.status === 401) {
@@ -159,9 +170,9 @@
     review = null;
 
     try {
-      const result = await imageUsages(site.siteId, selected.fileId, version);
+      const result = await imageUsages(site.siteId, selected.fileId, version, selected.revision);
 
-      if (captured === generation && selectedId === selected.fileId && library.version === version) {
+      if (captured === generation && selectedId === selected.fileId && file?.revision === selected.revision) {
         review = result;
       }
     } catch (value) {
@@ -180,6 +191,7 @@
       return;
     }
     generation++;
+    loading = false;
     selectedId = id;
     folderSaved = false;
     const selected = library.files.find((item) => item.fileId === id);
@@ -216,21 +228,42 @@
     error = null;
 
     try {
-      const result = await listFiles(site.siteId);
+      const selected = id ? await getFile(site.siteId, id) : null;
+      const result = await browseFiles(site.siteId, {
+        root: selected ? fileRoot(selected) : selectedRoot,
+        folderId: selected ? selected.folderId : folderId,
+        search: '',
+        recursive: false,
+        descending: false,
+        sort: FileSort.Name,
+        page: 1,
+        pageSize: 25,
+        foldersOnly: true,
+      });
 
       if (captured !== generation) {
         return;
       }
-      library = result;
+      remember([...result.breadcrumbs, ...result.folders]);
+      library = { ...result, files: selected ? [selected] : [] };
       loaded = true;
       selectedId = null;
       select(id);
+      reload++;
     } catch (value) {
       if (captured === generation) {
         failure(value);
       }
     } finally {
-      loading = false;
+      if (captured === generation || selectedId === id) {
+        loading = false;
+      }
+    }
+  }
+
+  function remember(folders: readonly IFileFolder[]): void {
+    for (const folder of folders) {
+      knownFolders.set(folder.folderId, folder);
     }
   }
 
@@ -244,7 +277,10 @@
     onBusy(true);
 
     try {
-      library = await action();
+      const result = await action();
+
+      remember(result.folders);
+      library = result;
       deleteReviewed = false;
       markup = '';
       review = null;
@@ -305,7 +341,8 @@
     if (!replacement || !selected) {
       return;
     }
-    await perform(() => changeImage(site.siteId, selected.fileId, library.version, replacement), replacement.name);
+    await perform(() => changeImage(site.siteId, selected.fileId, library.version, replacement, selected.revision),
+      replacement.name);
     input.value = '';
   }
 
@@ -315,7 +352,7 @@
     if (!canDelete || !selected || busy) {
       return;
     }
-    if (force && (!deleteReviewed || !review?.usages.length || review.version !== library.version)) {
+    if (force && (!deleteReviewed || !review?.usages.length)) {
       return;
     }
     if (!force) {
@@ -332,7 +369,7 @@
     }
     if (
       await perform(() => fileCommand(site.siteId, '/' + selected.fileId + '/delete', {
-        expectedVersion: library.version, force,
+        expectedVersion: library.version, expectedFileVersion: selected.revision, force,
       }))
     ) {
       navigateAdmin(basePath);
@@ -367,7 +404,7 @@
 
     while (next && !visited.has(next)) {
       visited.add(next);
-      const folder = library.folders.find((item) => item.folderId === next);
+      const folder = knownFolders.get(next);
 
       if (!folder) {
         break;
@@ -404,7 +441,14 @@
   }
 
   async function requestMove(selected: ISiteFile, nextName: string, nextFolder: string | null): Promise<void> {
-    if (!canMove || busy || moveRequest || selected.name === nextName && selected.folderId === nextFolder) {
+    if (
+      !canMove
+      || busy
+      || moveRequest
+      || selected.referencesPending
+      || selected.name === nextName
+      && selected.folderId === nextFolder
+    ) {
       return;
     }
 
@@ -413,13 +457,12 @@
 
     busy = true;
     error = null;
-    referenceFailure = false;
     onBusy(true);
 
     try {
-      const found = await imageUsages(site.siteId, selected.fileId, expectedVersion);
+      const found = await imageUsages(site.siteId, selected.fileId, expectedVersion, selected.revision);
 
-      if (captured !== generation || library.version !== expectedVersion) {
+      if (captured !== generation || file?.revision !== selected.revision) {
         return;
       }
       moveRequest = { selected, name: nextName, folderId: nextFolder, expectedVersion, usages: found.usages };
@@ -447,6 +490,7 @@
     const draftDestination = destination;
     const saved = await perform(() => fileCommand(site.siteId, '/' + pending.selected.fileId + '/move', {
       expectedVersion: pending.expectedVersion,
+      expectedFileVersion: pending.selected.revision,
       name: pending.name,
       folderId: pending.folderId,
       updateReferences,
@@ -462,8 +506,6 @@
       showSnackBar(renamed
         ? $messages.fileRenamed.replace('{old}', () => pending.selected.name).replace('{new}', () => pending.name)
         : $messages.fileMoved.replace('{name}', () => pending.name), SnackBarVariant.Success);
-    } else if (updateReferences) {
-      referenceFailure = true;
     }
     moveRequest = null;
   }
@@ -509,7 +551,7 @@
 
     if (active) {
       untrack(() => {
-        if (!loaded) {
+        if (!loaded || id && selectedId !== id) {
           void load(id);
         } else {
           select(id);
@@ -567,13 +609,10 @@
       </div>
       {#if canList}<div use:scrollShadow class="_tree-scroll">
         {#if loading && !loaded}<p role="status" class="cms-loading">{$messages.loadingFiles}</p>
-        {:else}<FileTree folders={library.folders} files={library.files} {selectedId}
-          selectedFolder={folderId} {selectedRoot}
+        {:else}<FileTree siteId={site.siteId} version={treeVersion} trail={activeTrail}
+          selectedFolder={folderId} {selectedRoot} {onUnauthorized} onFolders={remember}
           disabled={busy || loading || library.pending || moveRequest !== null}
-          onSelect={openFile} onFolder={openFolder}
-          onMove={canMove ? (selected, folderId) => {
-            void requestMove(selected, selected.name, folderId);
-          } : undefined} />{/if}
+          onFolder={openFolder} />{/if}
       </div>
       {/if}<div class="_drawer-footer">{site.name}</div>
     </aside>
@@ -599,7 +638,6 @@
         </h1>
       </div>
       <div use:scrollShadow class="_workspace-scroll files-workspace">
-        {#if referenceFailure}<p class="cms-error" role="alert">{$messages.fileReferencesFailed}</p>{/if}
         {#if error}<p class="cms-error" role="alert">{failedFilename ? failedFilename + ': ' : ''}{errorText}</p>{/if}
         {#if library.pending}
           <p class="cms-error" role="alert">{$messages.filesPending}</p>
@@ -607,9 +645,21 @@
             void perform(() => fileCommand(site.siteId, '/reconcile', {}));
           }}>{$messages.reconcileFiles}</button>{/if}
         {:else if file}
+          {#if file.referencesPending}
+            <p class="cms-error" role="alert">{library.referenceUpdate === 'AddressInUse'
+              ? $messages.fileReferencesAddressInUse : $messages.fileReferencesFailed}</p>
+            {#if canMove}<button class="cms-secondary" disabled={busy} onclick={() => {
+              if (file) {
+                const fileId = file.fileId;
+
+                void perform(() => fileCommand(site.siteId, '/' + fileId + '/move', { retryReferences: true }));
+              }
+            }}>{$messages.fileRetryReferences}</button>{/if}
+          {/if}
           {#if preview?.dimensions && canReadContent}
             <img class="_file-preview"
-              src={fileContentUrl(site.siteId, file.fileId, preview.key) + '&v=' + library.version}
+              src={fileContentUrl(site.siteId, file.fileId, preview.key)
+                + '&v=' + encodeURIComponent(file.assetVersion ?? '')}
               width={preview.dimensions.width} height={preview.dimensions.height} alt="" />
           {/if}
           <p class="_file-metadata">
@@ -623,7 +673,7 @@
                 : mayMove ? $messages.fileMoveNeedsUsages : $messages.fileDeleteNeedsUsages}
             </p>
           {/if}
-          {#if can('cms.files.change-image')}<label class="cms-secondary _file-input-label">
+          {#if can('cms.files.change-image') && !file.referencesPending}<label class="cms-secondary _file-input-label">
               {isImage ? $messages.changeImage : $messages.changeFile}
             <input type="file" accept={acceptedFiles} disabled={busy} onchange={(event) => {
               void replace(event);
@@ -633,7 +683,7 @@
             download={file.name}>
             {$messages.downloadOriginal}
           </a>{:else}<p class="_file-hint">{$messages.fileContentReadHint}</p>{/if}
-          {#if canMove}<div class="_file-organization">
+          {#if canMove && !file.referencesPending}<div class="_file-organization">
             <form class="cms-form" onsubmit={(event) => saveOrganization(event, true)}>
               <label class="_form-field" for="file-name">{$messages.fileName}</label>
               <div class="_file-save-row">
@@ -648,11 +698,12 @@
               <div class="_file-save-row">
                 <select id="file-folder" bind:value={destination} disabled={busy}>
                   <option value="">{rootLabel}</option>
-                  {#each library.folders.filter((item) => (item.root ?? MediaRoot.Images) === selectedRoot) as folder
-                    (folder.folderId)}
+                  {#each destinations as folder (folder.folderId)}
                     <option value={folder.folderId}>{folderLabel(folder.folderId)}</option>
                   {/each}
                 </select>
+                <button type="button" class="cms-secondary" disabled={busy}
+                  onclick={() => pickingDestination = true}>{$messages.fileBrowseFolders}</button>
                 <button class={folderDirty ? 'cms-primary' : 'cms-secondary'} disabled={busy || !folderDirty}>
                   {$messages.saveFileFolder}
                 </button>
@@ -767,16 +818,14 @@
         {:else}
           <p class="_file-hint">{$messages.filesIntro}</p>
           {#if loaded}
-            <FolderContents summary={$messages.folderFilesSummary.replace('{folders}', String(childFolders.length))
-              .replace('{files}', String(childFiles.length))} items={folderItems} disabled={busy}
-              onSelect={(id) => {
-                const folder = childFolders.find((item) => item.folderId === id);
-                const child = childFiles.find((item) => item.fileId === id);
+            <FileBrowser siteId={site.siteId} root={selectedRoot} {folderId} version={treeVersion}
+              disabled={busy} {canReadContent} onFolder={(id) => openFolder(id, selectedRoot)}
+              onFile={openFile} fileHref={(item) => basePath + '/' + item.fileId} {onUnauthorized}
+              onPage={(result) => {
+                remember([...result.breadcrumbs, ...result.folders]);
 
-                if (folder) {
-                  openFolder(folder.folderId, selectedRoot);
-                } else if (child) {
-                  openFile(child);
+                if (!busy && (library.version !== result.version || library.pending !== result.pending)) {
+                  library = { ...library, version: result.version, pending: result.pending };
                 }
               }} />
           {/if}
@@ -822,6 +871,17 @@
   </div>
   {/if}
 </div>
+
+<CmsDialog open={pickingDestination} title={$messages.fileFolder} onClose={() => pickingDestination = false}>
+  {#if pickingDestination}
+    <FileTree siteId={site.siteId} version={treeVersion} onlyRoot={selectedRoot}
+      selectedFolder={destination || null} {selectedRoot} {onUnauthorized} disabled={busy}
+      onFolders={remember} onFolder={(id) => {
+        destination = id ?? '';
+        pickingDestination = false;
+      }} />
+  {/if}
+</CmsDialog>
 
 <CmsDialog open={moveRequest !== null} title={$messages.fileAddressChange} {busy}
   onClose={() => {

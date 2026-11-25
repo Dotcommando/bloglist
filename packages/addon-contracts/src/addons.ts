@@ -125,6 +125,14 @@ export interface IAddonShutdownContext extends IAddonShutdownRequest {
   readonly signal: AbortSignal;
 }
 
+export interface IAddonFilePickerOptions {
+  readonly root?: 'images' | 'files';
+  readonly folderId?: string | null;
+  readonly selectedFileId?: string;
+  readonly mimeTypes?: readonly string[];
+  readonly allowUpload?: boolean;
+}
+
 export interface IAddonAdminHost {
   readonly siteId: string;
   readonly timeZone: string;
@@ -136,6 +144,7 @@ export interface IAddonAdminHost {
   scrollShadow(node: HTMLElement): { destroy: () => void };
   setDirty(dirty: boolean): void;
   setBusy(busy: boolean): void;
+  pickFile(options?: IAddonFilePickerOptions): Promise<string | null>;
   readonly language: 'en' | 'ru';
   readonly enabled: boolean;
   readonly pages: readonly IAddonAdminPage[];

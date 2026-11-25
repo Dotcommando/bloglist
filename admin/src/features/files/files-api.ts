@@ -1,5 +1,7 @@
 import { ContentRequestError, request } from '../../shared/api/content-api';
-import type { IFileDimensions, IFileLibrary, IFileOutput, IFileReview, ISiteFile } from './files.types';
+import type {
+  IFileBrowsePage, IFileBrowseQuery, IFileDimensions, IFileLibrary, IFileOutput, IFileReview, ISiteFile,
+} from './files.types';
 import { FileUsageGroup, FileValidationIssue, ImageUploadMode, MediaRoot } from './files.types';
 
 function record(value: unknown): Record<string, unknown> {
@@ -20,6 +22,14 @@ function text(value: unknown): string {
 
 function nullableText(value: unknown): string | null {
   return value === null ? null : text(value);
+}
+
+function count(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error('Invalid file count');
+  }
+
+  return value;
 }
 
 function dimensions(value: unknown): IFileDimensions {
@@ -82,6 +92,11 @@ function siteFile(value: unknown): ISiteFile {
     mode: row.mode,
     hasVariants: row.hasVariants,
     byteSize: row.byteSize,
+    ...(typeof row.createdAt === 'string' ? { createdAt: row.createdAt } : {}),
+    ...(typeof row.updatedAt === 'string' ? { updatedAt: row.updatedAt } : {}),
+    ...(typeof row.assetVersion === 'string' ? { assetVersion: row.assetVersion } : {}),
+    ...(typeof row.revision === 'string' ? { revision: row.revision } : {}),
+    ...(typeof row.referencesPending === 'boolean' ? { referencesPending: row.referencesPending } : {}),
     mimeType: text(row.mimeType),
     originalDimensions: row.originalDimensions === null ? null : dimensions(row.originalDimensions),
     outputs: row.outputs.map(fileOutput),
@@ -103,6 +118,8 @@ function library(value: unknown): IFileLibrary {
   return {
     version: row.version,
     pending: row.pending,
+    ...(row.referenceUpdate === 'Pending' || row.referenceUpdate === 'AddressInUse'
+      ? { referenceUpdate: row.referenceUpdate } : {}),
     files: row.files.map(siteFile),
     folders: row.folders.map((value) => {
       const folder = record(value);
@@ -129,12 +146,58 @@ export async function listFiles(siteId: string): Promise<IFileLibrary> {
   return library(await request(filesBase(siteId)));
 }
 
+export async function getFile(siteId: string, fileId: string): Promise<ISiteFile> {
+  return siteFile(await request(filesBase(siteId) + '?fileId=' + encodeURIComponent(fileId)));
+}
+
+export async function browseFiles(siteId: string, query: IFileBrowseQuery): Promise<IFileBrowsePage> {
+  const params = new URLSearchParams({
+    root: query.root,
+    search: query.search,
+    recursive: query.recursive ? '1' : '0',
+    sort: query.sort,
+    descending: query.descending ? '1' : '0',
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  });
+
+  if (query.folderId) {
+    params.set('folderId', query.folderId);
+  }
+  if (query.mimeTypes?.length) {
+    params.set('mimeTypes', query.mimeTypes.join(','));
+  }
+  if (query.foldersOnly) {
+    params.set('foldersOnly', '1');
+  }
+
+  const data = record(await request(filesBase(siteId) + '?' + params));
+  const paths = Object.fromEntries(Object.entries(record(data.paths)).map(([key, value]) => [key, text(value)]));
+
+  return {
+    ...library(data),
+    total: count(data.total),
+    folderTotal: count(data.folderTotal),
+    fileTotal: count(data.fileTotal),
+    breadcrumbs: library({ ...data, folders: data.breadcrumbs }).folders,
+    paths,
+    ...(typeof data.timeZone === 'string' ? { timeZone: data.timeZone } : {}),
+  };
+}
+
 export async function fileCommand(siteId: string, path: string, body: unknown): Promise<IFileLibrary> {
   return library(await request(filesBase(siteId) + path, body, 120000));
 }
 
-export async function imageUsages(siteId: string, fileId: string, version: string): Promise<IFileReview> {
-  const route = filesBase(siteId) + '/' + fileId + '/usages?expectedVersion=' + encodeURIComponent(version);
+export async function imageUsages(siteId: string, fileId: string, version: string,
+  expectedFileVersion?: string): Promise<IFileReview> {
+  const query = new URLSearchParams({ expectedVersion: version });
+
+  if (expectedFileVersion !== undefined) {
+    query.set('expectedFileVersion', expectedFileVersion);
+  }
+
+  const route = filesBase(siteId) + '/' + fileId + '/usages?' + query;
   const value = record(await request(route));
 
   if (typeof value.version !== 'string' || !Array.isArray(value.usages)) {
@@ -190,19 +253,20 @@ function validateUpload(file: File): void {
 
 }
 
-export async function changeImage(siteId: string, fileId: string, version: string, file: File): Promise<IFileLibrary> {
+export async function changeImage(siteId: string, fileId: string, version: string, file: File,
+  expectedFileVersion?: string): Promise<IFileLibrary> {
   validateUpload(file);
 
   return library(await request(filesBase(siteId) + '/' + fileId + '/change', {
-    expectedVersion: version, filename: file.name,
+    expectedVersion: version, expectedFileVersion, filename: file.name,
   }, 120000, undefined, file));
 }
 
 export async function uploadImage(siteId: string, version: string, folderId: string | null,
-  file: File, mode: ImageUploadMode): Promise<IFileLibrary> {
+  file: File, mode: ImageUploadMode, mimeTypes?: readonly string[]): Promise<IFileLibrary> {
   validateUpload(file);
 
   return library(await request(filesBase(siteId), {
-    expectedVersion: version, folderId, mode, filename: file.name,
+    expectedVersion: version, folderId, mode, filename: file.name, mimeTypes,
   }, 120000, undefined, file));
 }

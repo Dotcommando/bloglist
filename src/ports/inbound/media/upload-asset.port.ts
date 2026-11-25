@@ -5,6 +5,7 @@ import type { IBinaryContent } from '../../../domain/shared/binary-content.js';
 
 export interface IUploadAssetInput {
   readonly mode?: ImageUploadMode;
+  readonly mimeTypes?: readonly string[];
 
   readonly siteId: string;
   readonly actorId: string;

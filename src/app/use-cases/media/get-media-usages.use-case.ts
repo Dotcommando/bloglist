@@ -5,9 +5,10 @@ export class GetMediaUsagesUseCase {
   constructor(private readonly library: FileLibraryService) {}
 
   async execute(input: ILibraryFile): Promise<ILibraryReview> {
-    const current = await this.library.read(input);
-    const file = this.library.file(current, input.fileId);
-    const usages = await this.library.usages.find(input.siteId, this.library.paths(current, file), file.fileId);
+    const current = await this.library.entry(
+      input.siteId, input.fileId, input.expectedVersion, input.expectedFileVersion,
+    );
+    const usages = await this.library.usages.find(input.siteId, this.library.paths(current), current.file.fileId);
 
     return { version: current.version, usages };
   }

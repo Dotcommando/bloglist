@@ -9,8 +9,8 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { type Connection, createConnection } from 'mongoose';
 import sharp from 'sharp';
 
-import { readDumpLibrary } from '../../src/adapters/outbound/backup/files/partial-dump-media.js';
 import { assetBinary } from '../../src/adapters/outbound/media/sharp/asset-bytes.js';
+import { mediaRecords } from '../../src/adapters/outbound/persistence/mongoose/media/file-library-store.adapter.js';
 import { applyMigrations } from '../../src/adapters/outbound/persistence/mongoose/migrations.js';
 import { SiteDumpType } from '../../src/domain/dumps/site-dump.js';
 import { ImageUploadMode } from '../../src/domain/media/image-upload-mode.enum.js';
@@ -224,8 +224,8 @@ describe('portable category dumps with isolated storage', () => {
       chunks.push(bytes);
     }
     expect((await sharp(Buffer.concat(chunks)).metadata()).width).toBeGreaterThan(0);
-    const storedLibrary = await connection.db!.collection('media_libraries').findOne({ siteId: target });
-    const embedded = readDumpLibrary(storedLibrary).files.find((item) => item.name === name)!.image;
+    const stored = await mediaRecords(connection).files.findOne({ siteId: target, name }).lean().exec();
+    const embedded = stored!.image;
     const assets = connection.db!.collection<{ _id: string; original: unknown; version: string }>('assets');
     const asset = await assets.findOne({
       siteId: target,

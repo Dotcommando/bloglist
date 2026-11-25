@@ -41,6 +41,7 @@ import { supportsCmsVersion } from './cms-version.js';
 const retainedSdk = new Map([
   ['0.4.0', '@zarya/addon-contracts-retained-0-4'],
   ['0.5.0', '@zarya/addon-contracts-retained-0-5'],
+  ['0.6.0', '@zarya/addon-contracts-retained-0-6'],
 ]);
 
 interface ILoadedAddon {
@@ -589,6 +590,8 @@ export class AddonPackageRegistry {
     }
 
     const key = manifest.definition.addonKey;
+    const usesFiles = manifest.collections.some((collection) =>
+      collection.references.some((reference) => reference.collection === 'media_files'));
     // Bundles own their model cache while sharing the host's existing MongoDB client and pool.
     const runtimeConnection = this.connection.useDb(this.connection.name, { useCache: false });
     const running = packageObject(await create({
@@ -596,6 +599,17 @@ export class AddonPackageRegistry {
       connection: runtimeConnection,
       cms: this.host.cms?.forAddon(key),
       policy: () => this.host.policy(key),
+      ...(usesFiles ? {
+        fence: {
+          check: (...args: Parameters<IAddonRuntimeHost['fence']['check']>): Promise<void> => {
+            if (args[0]?.addonKey !== key || !Array.isArray(args[2])) {
+              throw new BusinessError(BusinessErrorCode.Validation, 'Declare file identities for this add-on write');
+            }
+
+            return this.host.fence.check(...args);
+          },
+        },
+      } : {}),
       secret: () => this.host.secret(key),
       ...(manifest.authorization ? { authorization: this.requestAuthorization(key, digest) } : {}),
       ...(this.host.hooks ? {

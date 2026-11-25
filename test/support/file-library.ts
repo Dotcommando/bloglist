@@ -7,6 +7,10 @@ import {
   type IMediaFile,
   type IMediaLibrary,
   type IMediaUsage,
+  libraryView,
+  mediaPath,
+  mediaRoot,
+  validateLibrary,
 } from '../../src/domain/media/file-library.js';
 import { BusinessError, BusinessErrorCode } from '../../src/domain/shared/business-error.js';
 import type { IMediaLibraryStore } from '../../src/ports/outbound/media/file-library.port.js';
@@ -71,13 +75,83 @@ export function fileLibraryFixture(): IFileLibraryFixture {
   let current: IMediaLibrary = { siteId: 'site-1', version: 'v1', folders: [], files: [] };
   let id = 1;
   const store: IMediaLibraryStore = {
-    read: vi.fn(async () => ({ library: structuredClone(current), pending: false })),
-    commit: vi.fn(async (next, expected) => {
-      if (current.version !== expected) {
+    append: vi.fn(async (siteId, file, version, expected) => {
+      if (expected !== undefined && current.version !== expected) {
         throw new BusinessError(BusinessErrorCode.StaleWrite, 'stale');
       }
-      current = structuredClone(next);
+
+      const next = { siteId, version, folders: current.folders, files: [...current.files, file] };
+
+      validateLibrary(next);
+      current = next;
+
+      return { version, file, ancestry: current.folders };
     }),
+    ensureFolder: vi.fn(async (siteId, folder, version) => {
+      const next = { ...current, siteId, version, folders: [...current.folders, folder] };
+
+      validateLibrary(next);
+      current = next;
+
+      return folder;
+    }),
+    browse: vi.fn(),
+    metadata: async (siteId, fileIds, publicPath) => {
+      const results = siteId === current.siteId ? libraryView(current, publicPath, false).files : [];
+
+      return fileIds.map((fileId) => results.find((file) => file.fileId === fileId) ?? null);
+    },
+    status: async () => ({ version: current.version, pending: false }),
+    folder: async (siteId, id) =>
+      siteId === current.siteId ? current.folders.find((folder) => folder.folderId === id) ?? null : null,
+    checkName: vi.fn(),
+    discard: vi.fn(),
+    changeFile: vi.fn(async (siteId, before, file, version) => {
+      if (current.version !== before.version) {
+        throw new BusinessError(BusinessErrorCode.StaleWrite, 'stale');
+      }
+
+      const files = current.files.flatMap((item) => item.fileId === before.file.fileId ? file ? [file] : [] : [item]);
+      const next = { ...current, siteId, files, version };
+
+      validateLibrary(next);
+      current = next;
+
+      return file ? { version, file, ancestry: current.folders } : null;
+    }),
+    withReferenceUpdate: async (siteId, fileId, action) => {
+      const located = await store.locate(siteId, fileId);
+
+      if (located && await action(located)) {
+        const file = { ...located.file };
+
+        delete file.pendingReferences;
+        current = { ...current, files: current.files.map((item) => item.fileId === fileId ? file : item) };
+      }
+    },
+    pathOwner: async (siteId, path) => siteId === current.siteId ? current.files.find((file) =>
+      file.outputs.some((output) => mediaRoot(file) + '/' + mediaPath(current, file, output.suffix) === path))
+      ?.fileId ?? null : null,
+    locate: async (siteId, fileId) => {
+      const file = siteId === current.siteId ? current.files.find((item) => item.fileId === fileId) : undefined;
+
+      return file ? { version: current.version, file, ancestry: current.folders } : null;
+    },
+    read: vi.fn(async () => ({ library: structuredClone(current), pending: false })),
+    publicOutput: async (siteId, path) => {
+      if (siteId === current.siteId) {
+        for (const file of current.files) {
+          const output = file.outputs.find((output) => mediaRoot(file) + '/'
+            + mediaPath(current, file, output.suffix) === path);
+
+          if (output) {
+            return { image: file.image, output };
+          }
+        }
+      }
+
+      return null;
+    },
     reconcile: vi.fn(),
   };
   const access = { requireEditor: vi.fn<(siteId: string) => Promise<void>>(), actorId: async () => 'admin' };

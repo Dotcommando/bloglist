@@ -10,6 +10,7 @@ export interface ISiteDump {
   readonly filename: string;
   readonly byteSize: number;
   readonly createdAt: Date;
+  readonly missingFileReferences?: number;
 }
 
 export enum DumpItemAction { Create = 'Create', Replace = 'Replace', ChooseTarget = 'ChooseTarget' }
@@ -27,6 +28,7 @@ export interface IDumpItem {
   readonly action?: DumpItemAction;
   readonly targetId?: string | null;
   readonly targets?: readonly { readonly id: string; readonly key: string; readonly name: string }[];
+  readonly unresolvedFileReferences?: number;
 }
 
 export interface IDumpPageReference { readonly pageId: string; readonly title: string; }
@@ -38,6 +40,7 @@ export interface ISiteDumpReview {
   readonly pages: readonly IDumpPageReference[];
   readonly targetPages: readonly IDumpPageReference[];
   readonly addonParts?: IAddonDumpParts;
+  readonly allowFileOmission?: boolean;
 }
 
 export interface ISiteDumpCreation {
@@ -51,6 +54,7 @@ export interface ISiteDumpApplication {
   readonly choices: readonly { readonly id: string; readonly targetId: string | null }[];
   readonly pageMappings?: Readonly<Record<string, string>>;
   readonly addonParts?: IAddonDumpParts;
+  readonly omitUnresolvedFiles?: boolean;
 }
 
 export const siteDumpFilename = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z_[a-f0-9-]{36}\.jsonl\.gz$/;

@@ -9,7 +9,7 @@
   import CreateButton from '../../shared/ui/CreateButton.svelte';
   import RefreshButton from '../../shared/ui/RefreshButton.svelte';
   import type { CanUseAction } from '../access/site-actions';
-  import type { ISiteFile } from '../files/files.types';
+  import { type ISiteFile, mergeFiles } from '../files/files.types';
   import { listFiles } from '../files/files-api';
   import { ElementKind, type IRenderingElement } from '../rendering/rendering.types';
   import { listElements } from '../rendering/rendering-api';
@@ -220,7 +220,8 @@
               <section class="_definition-group" aria-labelledby="tv-default-heading">
                 <h3 id="tv-default-heading">{$messages.tvDefault}</h3>
                 <TvValueEditor {field} value={field.defaultValue} {files} siteId={site.siteId} id="tv-default"
-                  allowDefault={false} {onUnauthorized} onLibraryChange={(library) => files = library.files}
+                  allowDefault={false} {onUnauthorized}
+                  onLibraryChange={(library) => files = mergeFiles(files, library.files)}
                   onChange={(value) => {
                     if (field) {
                       if (value === undefined) {

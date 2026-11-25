@@ -6,6 +6,7 @@ import {
 } from '../../../domain/media/asset.js';
 import { RESPONSIVE_IMAGE_PROFILE_VERSION, RESPONSIVE_IMAGE_PROFILES } from '../../../domain/media/image-profile.js';
 import { ImageUploadMode } from '../../../domain/media/image-upload-mode.enum.js';
+import type { IContentReference } from '../../../domain/shared/binary-content.js';
 import { BusinessError, BusinessErrorCode } from '../../../domain/shared/business-error.js';
 import type { IProcessAsset, IProcessAssetInput } from '../../../ports/inbound/media/process-asset.port.js';
 import type { IAssetRepository } from '../../../ports/outbound/media/asset.repository.js';
@@ -53,6 +54,7 @@ export class ProcessAssetUseCase implements IProcessAsset {
     await this.repository.commitProcessing(asset, input.expectedVersion);
     const attemptVersion = asset.toState().version;
     let output: IImageProcessingResult | undefined;
+    const written: IContentReference[] = [];
 
     try {
       await this.storage.assertOwned(input.siteId, input.assetId, input.assetVersion, state.original);
@@ -82,6 +84,7 @@ export class ProcessAssetUseCase implements IProcessAsset {
             content: variant.content,
           });
 
+          written.push(content);
           await this.storage.assertOwned(input.siteId, input.assetId, input.assetVersion, content);
           variants.push({
             variantId: variant.variantId,
@@ -104,6 +107,7 @@ export class ProcessAssetUseCase implements IProcessAsset {
           content: original,
         });
 
+        written.push(file);
         await this.storage.assertOwned(input.siteId, input.assetId, input.assetVersion, file);
         processed = {
           file,
@@ -133,6 +137,11 @@ export class ProcessAssetUseCase implements IProcessAsset {
           await this.repository.commitProcessing(observed, attemptVersion);
         } catch {
           throw new Error('Asset processing outcome could not be confirmed');
+        }
+
+        for (const reference of written) {
+          await this.storage.assertOwned(input.siteId, input.assetId, input.assetVersion, reference);
+          await this.storage.delete(input.siteId, reference);
         }
       }
       throw new Error('Asset processing failed');

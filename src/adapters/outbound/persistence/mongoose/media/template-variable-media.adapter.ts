@@ -5,22 +5,22 @@ import { BusinessError, BusinessErrorCode } from '../../../../../domain/shared/b
 import type {
   ITemplateVariableMedia,
 } from '../../../../../ports/outbound/template-variables/template-variables.port.js';
-import type { IMediaLibraryRecord } from './file-library-store.adapter.js';
+import { type IMediaLibraryRecord, readMediaLibrary } from './file-library-store.adapter.js';
 
 export class TemplateVariableMediaAdapter implements ITemplateVariableMedia {
   constructor(private readonly libraries: Model<IMediaLibraryRecord>, private readonly publicPath: string | null) {}
 
   async read(siteId: string): ReturnType<ITemplateVariableMedia['read']> {
-    const record = await this.libraries.findOne({ _id: siteId, siteId }).lean().exec();
+    const { library, pending } = await readMediaLibrary(this.libraries, siteId);
 
-    if (!record) {
+    if (library.version === '0') {
       return { version: '0', files: [], pending: false };
     }
     if (!this.publicPath) {
       throw new Error('TV media references require configured media delivery');
     }
 
-    return libraryView(record, this.publicPath, record.pending);
+    return libraryView(library, this.publicPath, pending);
   }
 
   async guard(siteId: string, version: string, session: ClientSession): Promise<void> {
@@ -28,7 +28,7 @@ export class TemplateVariableMediaAdapter implements ITemplateVariableMedia {
       $inc: { tvFence: 1 },
       ...(version === '0' ? {
         $setOnInsert: {
-          siteId, version: '0', files: [], folders: [], garbage: [], pending: false,
+          siteId, version: '0', pending: false,
         },
       } : {}),
     }, { session, upsert: version === '0' }).exec();

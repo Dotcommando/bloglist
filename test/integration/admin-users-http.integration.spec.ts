@@ -767,11 +767,39 @@ it('separates all four archive operations and protects the global group', { time
       expect(await restricted.getByLabel('Installation archive file', { exact: true }).count()).toBe(0);
 
       const page = await openDumps('user-1@example.test');
-      const input = page.getByLabel('Installation archive file', { exact: true });
-      const restore = page.getByRole('button', { name: 'Restore installation dump', exact: true });
+      const panel = page.getByRole('region', { name: 'Installation archive', exact: true });
+      const picker = panel.getByRole('button', { name: 'Installation archive file', exact: true });
+      const create = panel.getByRole('button', { name: 'Create installation dump', exact: true });
+      const restore = panel.getByRole('button', { name: 'Restore installation dump', exact: true });
+      const cards = panel.locator('._dump-installation-transfers > ._dump-panel');
+
+      expect(await cards.count()).toBe(2);
+      expect(await restore.isDisabled()).toBe(true);
+      expect(await picker.isVisible()).toBe(true);
+      expect(await panel.locator('input[type=file]').isHidden()).toBe(true);
+      const left = (await cards.nth(0).boundingBox())!;
+      const right = (await cards.nth(1).boundingBox())!;
+
+      expect(left.y).toBe(right.y);
+      expect(right.x).toBeGreaterThan(left.x + left.width);
+      expect((await create.boundingBox())!.width).toBeLessThan(left.width - 40);
+      expect((await restore.boundingBox())!.width).toBeLessThan(right.width - 40);
+      await panel.screenshot({ path: path.resolve('.tmp/dump-installation-desktop.png') });
+      await page.setViewportSize({ width: 390, height: 900 });
+      const above = (await cards.nth(0).boundingBox())!;
+      const below = (await cards.nth(1).boundingBox())!;
+
+      expect(above.x).toBe(below.x);
+      expect(below.y).toBeGreaterThan(above.y + above.height);
+      await panel.screenshot({ path: path.resolve('.tmp/dump-installation-mobile.png') });
+      await page.setViewportSize({ width: 1440, height: 900 });
 
       async function upload(buffer: Buffer): Promise<number> {
-        await input.setInputFiles({ name: 'installation.gz', mimeType: 'application/gzip', buffer });
+        const [chooser] = await Promise.all([page.waitForEvent('filechooser'), picker.click()]);
+
+        await chooser.setFiles({ name: 'installation.gz', mimeType: 'application/gzip', buffer });
+        await picker.getByText('installation.gz', { exact: true }).waitFor();
+        expect(await restore.isEnabled()).toBe(true);
         const confirmation = page.waitForEvent('dialog').then(async (dialog) => {
           const message = dialog.message();
 

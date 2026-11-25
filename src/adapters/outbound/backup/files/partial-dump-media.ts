@@ -4,11 +4,15 @@ import path from 'node:path';
 
 import { Asset, AssetProcessingState, AssetVisibility, type IAssetState, type IImageDimensions }
   from '../../../../domain/media/asset.js';
-import { type IMediaFile, type IMediaLibrary, mediaPath, MediaRoot, mediaRoot, validateLibrary }
+import {
+  type IMediaFile, type IMediaFolder, type IMediaLibrary, indexFolderPaths, mediaPathInFolder,
+  MediaRoot, mediaRoot, validateLibrary,
+}
   from '../../../../domain/media/file-library.js';
 import { ImageProfileId } from '../../../../domain/media/image-profile.js';
 import { ImageUploadMode } from '../../../../domain/media/image-upload-mode.enum.js';
 import { BusinessError, BusinessErrorCode } from '../../../../domain/shared/business-error.js';
+import { fileRecord, folderRecord, nameKey } from '../../persistence/media-records.js';
 import { databaseRecords, encodeDocument } from '../mongoose/dump-database.adapter.js';
 import { checked, child } from './dump-files.js';
 import { dumpObject } from './partial-dump-archive.js';
@@ -118,7 +122,7 @@ export function readDumpAsset(value: unknown): IAssetState {
   }).toState();
 }
 
-export function readDumpLibrary(value: unknown): IMediaLibrary {
+function readDumpLibrary(value: unknown): IMediaLibrary {
   const item = dumpObject(value);
 
   if (item.pending === true) {
@@ -160,6 +164,8 @@ export function readDumpLibrary(value: unknown): IMediaLibrary {
           };
         }),
         previousPaths: entries(file.previousPaths).map(text),
+        ...(file.createdAt !== undefined ? { createdAt: instant(file.createdAt) } : {}),
+        ...(file.updatedAt !== undefined ? { updatedAt: instant(file.updatedAt) } : {}),
       };
     }),
   };
@@ -173,26 +179,47 @@ export interface IMergedDumpMedia {
   readonly rows: readonly { readonly collection: string; readonly bytes: string; readonly id: string }[];
 }
 
+async function loadDumpLibrary(siteId: string, documents: string, assets?: IAssetState[]): Promise<IMediaLibrary> {
+  let header: Record<string, unknown> | undefined;
+  const folders: unknown[] = [];
+  const files: unknown[] = [];
+
+  for await (const row of databaseRecords(documents)) {
+    if (row.collection === 'media_libraries') {
+      header = dumpObject(row.document);
+    } else if (row.collection === 'media_folders') {
+      folders.push(row.document);
+    } else if (row.collection === 'media_files') {
+      files.push(row.document);
+    } else if (row.collection === 'assets' && assets) {
+      assets.push(readDumpAsset(row.document));
+    } else if (row.collection === 'media_operations') {
+      throw new BusinessError(BusinessErrorCode.Conflict, 'Media projection is pending');
+    }
+  }
+
+  if (!header && (folders.length || files.length)) {
+    throw new Error('Missing media library header');
+  }
+  if (header?.siteId !== undefined && header.siteId !== siteId) {
+    throw new Error('Foreign media library header');
+  }
+
+  return readDumpLibrary({
+    siteId,
+    version: '0',
+    ...header,
+    folders: header?.folders ?? folders,
+    files: header?.files ?? files,
+  });
+}
+
 /** Merge named library entries, retain existing identities and every unmentioned file/version. */
 export async function mergeDumpMedia(siteId: string, sourceSiteId: string, currentDocuments: string,
   importedDocuments: string, incoming: string, staged: string): Promise<IMergedDumpMedia> {
-  let current: IMediaLibrary = { siteId, version: '0', folders: [], files: [] };
-  let imported: IMediaLibrary = { siteId: sourceSiteId, version: '0', folders: [], files: [] };
   const sourceAssets: IAssetState[] = [];
-
-  for await (const row of databaseRecords(currentDocuments)) {
-    if (row.collection === 'media_libraries') {
-      current = readDumpLibrary(row.document);
-    }
-  }
-
-  for await (const row of databaseRecords(importedDocuments)) {
-    if (row.collection === 'media_libraries') {
-      imported = readDumpLibrary(row.document);
-    } else if (row.collection === 'assets') {
-      sourceAssets.push(readDumpAsset(row.document));
-    }
-  }
+  const current = await loadDumpLibrary(siteId, currentDocuments);
+  const imported = await loadDumpLibrary(sourceSiteId, importedDocuments, sourceAssets);
   const ids = new Map<string, string>();
   const versions = new Map<string, string>();
   const identity = (value: string, map: Map<string, string>): string => {
@@ -249,39 +276,57 @@ export async function mergeDumpMedia(siteId: string, sourceSiteId: string, curre
   };
   const folders = [...current.folders];
   const folderIds = new Map<string, string>();
-  const pathKey = (value: string): string => value.normalize('NFC').toLowerCase();
-  const pending = [...imported.folders];
+  const siblingKey = (root: MediaRoot, parent: string | null, name: string): string =>
+    JSON.stringify([root, parent, nameKey(name)]);
+  const foldersByName = new Map(folders.map((folder) =>
+    [siblingKey(folder.root ?? MediaRoot.Images, folder.parentId, folder.name), folder]));
+  const children = new Map<string | null, IMediaFolder[]>();
 
-  while (pending.length) {
-    const index = pending.findIndex((folder) => folder.parentId === null || folderIds.has(folder.parentId));
+  for (const folder of imported.folders) {
+    const siblings = children.get(folder.parentId) ?? [];
 
-    if (index < 0) {
-      throw new Error('Cyclic imported folders');
-    }
+    siblings.push(folder);
+    children.set(folder.parentId, siblings);
+  }
+  const pending = [...children.get(null) ?? []];
 
-    const source = pending.splice(index, 1)[0]!;
+  for (let index = 0; index < pending.length; index++) {
+    const source = pending[index]!;
     const parentId = source.parentId === null ? null : folderIds.get(source.parentId)!;
-    const existing = folders.find((folder) => (folder.root ?? MediaRoot.Images) === (source.root ?? MediaRoot.Images)
-      && folder.parentId === parentId && pathKey(folder.name) === pathKey(source.name));
+    const key = siblingKey(source.root ?? MediaRoot.Images, parentId, source.name);
+    const existing = foldersByName.get(key);
     const target = existing ?? { ...source, folderId: randomUUID(), parentId };
 
     folderIds.set(source.folderId, target.folderId);
 
     if (!existing) {
       folders.push(target);
+      foldersByName.set(key, target);
+    }
+
+    for (const child of children.get(source.folderId) ?? []) {
+      pending.push(child);
     }
   }
-  const files: IMediaFile[] = [...current.files];
+
+  if (folderIds.size !== imported.folders.length) {
+    throw new Error('Cyclic imported folders');
+  }
+
+  const files = new Map(current.files.map((file) => [siblingKey(mediaRoot(file), file.folderId, file.name), file]));
+  const available = new Set(sourceAssets.map((item) => item.assetVersion));
+  const sourcePath = indexFolderPaths(imported.folders);
+  const targetPath = indexFolderPaths(folders);
   const namedPaths = new Map<string, string>();
 
   for (const source of imported.files) {
-    if (!sourceAssets.some((item) => item.assetVersion === source.image.assetVersion)) {
+    if (!available.has(source.image.assetVersion)) {
       throw new Error('Library image version is missing from the asset catalogue');
     }
 
     const folderId = source.folderId === null ? null : folderIds.get(source.folderId)!;
-    const existing = files.find((file) => file.folderId === folderId && mediaRoot(file) === mediaRoot(source)
-      && pathKey(file.name) === pathKey(source.name));
+    const key = siblingKey(mediaRoot(source), folderId, source.name);
+    const existing = files.get(key);
 
     if (existing) {
       ids.set(source.image.assetId, existing.image.assetId);
@@ -297,20 +342,14 @@ export async function mergeDumpMedia(siteId: string, sourceSiteId: string, curre
       outputs: source.outputs.map((output) => ({ ...output, contentId: contentId(output.contentId) })),
     };
 
-    if (existing) {
-      files.splice(files.indexOf(existing), 1, next);
-    } else {
-      files.push(next);
-    }
+    files.set(key, next);
 
     for (const output of source.outputs) {
-      const target = next.outputs.find((item) => item.key === output.key)!;
-
-      namedPaths.set(mediaRoot(source) + '/' + mediaPath(imported, source, output.suffix),
-        mediaRoot(next) + '/' + mediaPath({ ...current, folders, files }, next, target.suffix));
+      namedPaths.set(mediaRoot(source) + '/' + mediaPathInFolder(sourcePath(source.folderId), source, output.suffix),
+        mediaRoot(next) + '/' + mediaPathInFolder(targetPath(next.folderId), next, output.suffix));
     }
   }
-  const library: IMediaLibrary = { siteId, version: randomUUID(), folders, files };
+  const library: IMediaLibrary = { siteId, version: randomUUID(), folders, files: [...files.values()] };
 
   validateLibrary(library);
   const walk = async (relative: string): Promise<void> => {
@@ -357,8 +396,20 @@ export async function mergeDumpMedia(siteId: string, sourceSiteId: string, curre
   rows.push({
     collection: 'media_libraries',
     id: siteId,
-    bytes: encodeDocument({ _id: siteId, ...library, pending: false, garbage: [] }),
+    bytes: encodeDocument({ _id: siteId, siteId, version: library.version, pending: false }),
   });
+
+  for (const folder of library.folders) {
+    const record = folderRecord(library, folder, targetPath(folder.parentId));
+
+    rows.push({ collection: 'media_folders', id: record._id, bytes: encodeDocument(record) });
+  }
+
+  for (const file of library.files) {
+    const record = fileRecord(library, file, targetPath(file.folderId));
+
+    rows.push({ collection: 'media_files', id: record._id, bytes: encodeDocument(record) });
+  }
 
   return { rows };
 }

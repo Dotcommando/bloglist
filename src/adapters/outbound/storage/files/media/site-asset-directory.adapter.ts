@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { lstat, mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 
 import { normalizeSiteHostname } from '../../../../../domain/sites/site-hostname.policy.js';
 import type { ISiteAssetDirectory, ISiteStorageScope } from '../../../../../ports/outbound/sites/site-storage.port.js';
@@ -19,31 +20,93 @@ function recordedDomain(value: string): string {
   return domain;
 }
 
-async function acquireLock(lockPath: string): Promise<Awaited<ReturnType<typeof open>>> {
-  try {
-    return await open(lockPath, 'wx');
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
-      throw error;
+async function removeParticipant(file: string): Promise<void> {
+  for (const target of [file, file + '.ready', file + '.ticket']) {
+    await unlink(target).catch((error: unknown) => {
+      if (!missing(error)) {
+        throw error;
+      }
+    });
+  }
+}
+
+async function activeParticipants(directory: string, owner: string):
+Promise<readonly { name: string; ticket: number }[]> {
+  const active: { name: string; ticket: number }[] = [];
+
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const pid = Number(/^([1-9]\d*)-[0-9a-f-]{36}\.lock$/.exec(entry.name)?.[1]);
+
+    if (!entry.isFile() || !Number.isSafeInteger(pid) || entry.name === owner) {
+      continue;
     }
 
-    const pid = Number(await readFile(lockPath, 'utf8'));
-
-    if (!Number.isInteger(pid) || pid <= 0) {
-      throw new Error('Site storage relocation is pending');
-    }
+    const file = path.join(directory, entry.name);
 
     try {
       process.kill(pid, 0);
-      throw new Error('Site storage writer is active');
-    } catch (probe) {
-      if (!(probe instanceof Error && 'code' in probe && probe.code === 'ESRCH')) {
-        throw probe;
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+        await removeParticipant(file);
+        continue;
+      }
+      if (!(error instanceof Error && 'code' in error && error.code === 'EPERM')) {
+        throw error;
       }
     }
-    await unlink(lockPath);
 
-    return open(lockPath, 'wx');
+    try {
+      const published = await readFile(file + '.ready', 'utf8').catch((error: unknown) => {
+        if (!missing(error)) {
+          throw error;
+        }
+
+        return '0';
+      });
+      const ticket = Number(published);
+
+      if (!Number.isSafeInteger(ticket) || ticket < 0) {
+        throw new Error('Invalid site storage writer ticket');
+      }
+      active.push({ name: entry.name, ticket });
+    } catch (error) {
+      if (!missing(error)) {
+        throw error;
+      }
+    }
+  }
+
+  return active;
+}
+
+async function acquireLock(directory: string): Promise<() => Promise<void>> {
+  const owner = process.pid + '-' + randomUUID() + '.lock';
+  const file = path.join(directory, owner);
+  const release = (): Promise<void> => removeParticipant(file);
+
+  await mkdir(directory, { recursive: true });
+
+  try {
+    await writeFile(file, '', { flag: 'wx' });
+    // An empty marker is the choosing phase. Its PID is durable in the name.
+    // Only the unique marker of a dead process is reclaimed, so reapers cannot remove a successor.
+    const ticket = (await activeParticipants(directory, owner)).reduce((max, row) => Math.max(max, row.ticket), 0) + 1;
+
+    await writeFile(file + '.ticket', String(ticket), { flag: 'wx' });
+    await rename(file + '.ticket', file + '.ready');
+
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const active = await activeParticipants(directory, owner);
+
+      if (!active.some((row) => row.ticket === 0 || row.ticket < ticket || row.ticket === ticket && row.name < owner)) {
+        return release;
+      }
+      await setTimeout(25);
+    }
+    throw new Error('Site storage writer is active');
+  } catch (error) {
+    await release();
+    throw error;
   }
 }
 
@@ -85,20 +148,17 @@ export class SiteAssetDirectoryAdapter implements ISiteAssetDirectory {
 
   async withWrite<T>(siteId: string, action: (directory: string) => Promise<T>): Promise<T> {
     const directory = await this.resolve(siteId);
-    const lockPath = await checkedStoragePath(this.root, '.storage-index/' + siteId + '.json.lock');
-    const lock = await acquireLock(lockPath);
+    const lockPath = await checkedStoragePath(this.root, '.storage-index/' + siteId + '.json.writers');
+    const release = await acquireLock(lockPath);
 
     try {
-      await lock.writeFile(String(process.pid));
-
       if (path.basename(directory) !== normalizeSiteHostname(await this.sites.primaryDomain(siteId))) {
         throw new Error('Site domain changed; retry the storage operation');
       }
 
       return await action(directory);
     } finally {
-      await lock.close();
-      await unlink(lockPath);
+      await release();
     }
   }
 
@@ -129,12 +189,10 @@ export class SiteAssetDirectoryAdapter implements ISiteAssetDirectory {
       }
     }
     await mkdir(path.dirname(index), { recursive: true });
-    const lockPath = index + '.lock';
-    const lock = await acquireLock(lockPath);
+    const lockPath = await checkedStoragePath(this.root, '.storage-index/' + siteId + '.json.writers');
+    const release = await acquireLock(lockPath);
 
     try {
-      await lock.writeFile(String(process.pid));
-
       // Reload after acquiring the writer lock; another process may have completed a relocation.
       try {
         previous = recordedDomain(await readFile(index, 'utf8'));
@@ -173,8 +231,7 @@ export class SiteAssetDirectoryAdapter implements ISiteAssetDirectory {
 
       return target;
     } finally {
-      await lock.close();
-      await unlink(lockPath);
+      await release();
     }
   }
 

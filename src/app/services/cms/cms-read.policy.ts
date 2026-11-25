@@ -11,7 +11,7 @@ const queries: { readonly [G in keyof ICmsCoreOperations]: readonly (keyof ICmsC
   chunks: ['get', 'list'],
   snippets: ['get', 'list'],
   tvs: ['list', 'getPage'],
-  files: ['list', 'getAsset', 'readContent'],
+  files: ['list', 'browse', 'getFile', 'getFiles', 'getAsset', 'readContent'],
   hooks: ['get', 'list', 'history'],
 };
 

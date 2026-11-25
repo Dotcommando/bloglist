@@ -9,8 +9,14 @@ export class ReadMediaContentUseCase {
   async execute(
     input: Parameters<IFileLibraryOperations['readContent']['execute']>[0],
   ): ReturnType<IFileLibraryOperations['readContent']['execute']> {
-    const current = await this.library.read(input);
-    const file = this.library.file(current, input.fileId);
+    await this.library.access.requireEditor(input.siteId);
+    const located = await this.library.store.locate(input.siteId, input.fileId);
+
+    if (!located) {
+      throw new BusinessError(BusinessErrorCode.NotFound, 'Image not found');
+    }
+
+    const { file } = located;
     const contentId = input.key === 'original' ? file.image.original.contentId
       : file.outputs.find((output) => output.key === input.key)?.contentId;
 

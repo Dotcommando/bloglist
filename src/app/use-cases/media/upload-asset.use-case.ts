@@ -1,6 +1,7 @@
 import { Asset, AssetProcessingState, AssetVisibility } from '../../../domain/media/asset.js';
 import type { IAssetUploadReceipt } from '../../../domain/media/asset-upload-receipt.js';
 import { ImageUploadMode } from '../../../domain/media/image-upload-mode.enum.js';
+import { MediaValidationError, MediaValidationIssue } from '../../../domain/media/media-validation.error.js';
 import { requireCondition, requireText } from '../../../domain/shared/validation.js';
 import type { IUploadAsset, IUploadAssetInput } from '../../../ports/inbound/media/upload-asset.port.js';
 import type { IAssetRepository } from '../../../ports/outbound/media/asset.repository.js';
@@ -23,6 +24,10 @@ export class UploadAssetUseCase implements IUploadAsset {
     const inspected = await this.inspection.inspect(input.filename, input.content);
 
     try {
+      if (input.mimeTypes?.length && !input.mimeTypes.includes(inspected.content.mimeType)) {
+        throw new MediaValidationError(MediaValidationIssue.PickerType);
+      }
+
       const assetId = this.values.nextId();
       const assetVersion = this.values.nextAssetVersion();
       const at = this.values.now();

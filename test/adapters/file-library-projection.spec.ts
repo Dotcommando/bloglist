@@ -16,6 +16,46 @@ vi.mock('node:fs/promises', async (original) => {
 });
 
 describe('named public image projection', () => {
+  it('updates only the named outputs covered by a retryable change journal', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'zarya-file-projection-delta-'));
+    const read = vi.fn(async () => binary('original'));
+    const projection = new FileLibraryProjectionAdapter(root, {
+      read, assertOwned: vi.fn(), write: vi.fn(), delete: vi.fn(),
+    }, { primaryDomain: async () => 'example.test' });
+    const file = libraryFileFixture();
+    const sibling = { ...file, fileId: 'sibling', name: 'sibling.png' };
+    const library = { siteId: 'site-1', version: 'v1', folders: [], files: [file, sibling] };
+    const publicRoot = path.join(root, 'example.test/images');
+    const renamed = { ...file, name: 'renamed.png' };
+    const next = { ...library, version: 'v2', files: [renamed, sibling] };
+    const change = { fileIds: [file.fileId], removedPaths: ['images/photo.png'] };
+
+    try {
+      await projection.install(library, async () => true);
+      read.mockReset().mockRejectedValueOnce(new Error('Storage unavailable'));
+      await expect(projection.installChange(next, change, async () => true)).rejects.toThrow('Storage unavailable');
+      expect(await readFile(path.join(publicRoot, 'photo.png'), 'utf8')).toBe('original');
+      expect(await readFile(path.join(publicRoot, 'sibling.png'), 'utf8')).toBe('original');
+
+      read.mockReset().mockImplementation(async () => binary('replacement'));
+      await expect(projection.installChange(next, change, async () => true)).resolves.toBe(true);
+      expect(read).toHaveBeenCalledTimes(1);
+      await expect(projection.installChange(next, change, async () => true)).resolves.toBe(true);
+      await expect(readFile(path.join(publicRoot, 'photo.png'))).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(path.join(publicRoot, 'renamed.png'), 'utf8')).toBe('replacement');
+      expect(await readFile(path.join(publicRoot, 'sibling.png'), 'utf8')).toBe('original');
+
+      read.mockClear();
+      await expect(projection.installChange({ ...next, files: [sibling] }, {
+        fileIds: [], removedPaths: ['images/renamed.png'],
+      }, async () => true)).resolves.toBe(true);
+      expect(read).not.toHaveBeenCalled();
+      await expect(readFile(path.join(publicRoot, 'renamed.png'))).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('releases the projection lock when staging cannot be created and allows reconciliation retry', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'zarya-file-stage-failure-'));
     const native = await vi.importActual<typeof Fs>('node:fs/promises');

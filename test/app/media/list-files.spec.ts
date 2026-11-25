@@ -25,11 +25,21 @@ describe('ListMediaFiles', () => {
       }))],
     };
     const store: IMediaLibraryStore = {
+      append: vi.fn(),
+      ensureFolder: vi.fn(),
+      browse: vi.fn(),
+      locate: vi.fn(),
+      metadata: vi.fn(),
+      status: vi.fn(),
+      folder: vi.fn(),
+      checkName: vi.fn(),
+      discard: vi.fn(),
+      changeFile: vi.fn(),
+      publicOutput: vi.fn(),
       read: vi.fn(async () => ({
         library: { siteId: 'site-1', version: 'v1', folders: [], files: [file] },
         pending: false,
       })),
-      commit: vi.fn(),
       reconcile: vi.fn(),
     };
     const operation = new ListMediaFilesUseCase(store,
@@ -58,8 +68,18 @@ describe('ListMediaFiles', () => {
   it('requires site authorization and exposes an empty site library without private storage references', async () => {
     const requireEditor = vi.fn();
     const store: IMediaLibraryStore = {
+      append: vi.fn(),
+      ensureFolder: vi.fn(),
+      browse: vi.fn(),
+      locate: vi.fn(),
+      metadata: vi.fn(),
+      status: vi.fn(),
+      folder: vi.fn(),
+      checkName: vi.fn(),
+      discard: vi.fn(),
+      changeFile: vi.fn(),
+      publicOutput: vi.fn(),
       read: vi.fn(async (siteId) => ({ library: { siteId, version: '0', folders: [], files: [] }, pending: false })),
-      commit: vi.fn(),
       reconcile: vi.fn(),
     };
     const operation = new ListMediaFilesUseCase(store,

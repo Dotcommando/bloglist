@@ -73,7 +73,7 @@ describe('file organization and deliberate broken links', () => {
     expect(f.get().files[0]?.name).toBe('new.png');
   });
 
-  it('observes publication failure after source replacement and permits a same-name retry', async () => {
+  it('retains publication work after source replacement and retries without another move', async () => {
     const f = fixture();
     const references = { replace: vi.fn(async () => {}) };
     const publication = {
@@ -94,12 +94,17 @@ describe('file organization and deliberate broken links', () => {
     };
 
     publication.execute.mockRejectedValueOnce(new Error('activation rejected'));
-    await expect(operation.execute(input)).rejects.toThrow('activation rejected');
-    await operation.execute({ ...input, expectedVersion: f.get().version });
+    const moved = await operation.execute(input);
+
+    expect(moved.referenceUpdate).toBe('Pending');
+    expect(moved.files[0]?.referencesPending).toBe(true);
+    const { revision } = f.get().files[0]!;
+
+    await operation.retry(input);
     expect(publication.execute).toHaveBeenCalledTimes(2);
     expect(references.replace).toHaveBeenCalledTimes(2);
-    references.replace.mockRejectedValueOnce(new Error('source rejected'));
-    await expect(operation.execute({ ...input, expectedVersion: f.get().version })).rejects.toThrow('source rejected');
+    expect(f.get().files[0]?.revision).toBe(revision);
+    await operation.retry(input);
     expect(publication.execute).toHaveBeenCalledTimes(2);
   });
 
@@ -133,15 +138,8 @@ describe('file organization and deliberate broken links', () => {
       folderId: 'folder',
       name: 'final.png',
       updateReferences: true,
-    })).rejects.toThrow('source conflict');
-    await operation.execute({
-      siteId: 'site-1',
-      fileId: 'image',
-      expectedVersion: f.get().version,
-      folderId: 'folder',
-      name: 'final.png',
-      updateReferences: true,
-    });
+    })).resolves.toMatchObject({ referenceUpdate: 'Pending' });
+    await operation.retry({ siteId: 'site-1', fileId: 'image' });
     expect(references.replace).toHaveBeenLastCalledWith('site-1', expect.arrayContaining([
       { from: '/media/images/original.png', to: '/media/images/Photos/final.png' },
       { from: '/media/images/old.png', to: '/media/images/Photos/final.png' },
@@ -190,7 +188,7 @@ describe('file organization and deliberate broken links', () => {
     expect(references.replace).not.toHaveBeenCalled();
   });
 
-  it('propagates reference-save rejection without detached tasks or a false success', async () => {
+  it('reports movement separately from a rejected reference save', async () => {
     const f = fixture();
     const references = {
       replace: vi.fn(async () => {
@@ -205,7 +203,7 @@ describe('file organization and deliberate broken links', () => {
       folderId: 'folder',
       name: 'new.png',
       updateReferences: true,
-    })).rejects.toThrow('reference save failed');
+    })).resolves.toMatchObject({ referenceUpdate: 'Pending', files: [{ referencesPending: true }] });
   });
 
   it('shows usages; normal delete refuses used images; Force delete skips server usage and review checks', async () => {
